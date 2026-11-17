@@ -58,11 +58,13 @@ function json(body: unknown, status = 200): Response {
 import { buildAdRows, computeOrderPaise, type AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 import { adReach } from "../_shared/adReach.ts";
+import { checkAdOrder } from "../_shared/adOrderChecks.ts";
 // Claiming the order and inserting its campaigns is one transaction now, shared with
 // razorpay-webhook: ../_shared/adPublish.ts (written 2026-10-13, released with the Seller Home fixes, SH-090).
 import { publishOrder } from "../_shared/adPublish.ts";
 
-// Demo mode has no pre-recorded intent, so record the blocked attempt as its own
+
+// Demo mode has no pre-recorded intent, so record the blocked attempt as its own
 // 'refund_review' ad_orders row (durable trace) instead of vanishing silently.
 // Returns whether the trace actually persisted, so the response never claims a
 // flag that didn't happen.
@@ -165,6 +167,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const vendorId = vendorIdFromJwt(req);
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
     if (!body.spec) return json({ ok: false, error: "missing_spec" }, 400);
+    // The same checks a live order passes before payment (SH-095, SH-096).
+    const checked = await checkAdOrder(url, serviceKey, vendorId, body.spec);
+    if (!checked.ok) return json({ ok: false, demo: true, error: checked.error, message: checked.message, count: 0 });
     // Nothing has been paid in demo mode, so the spec is checked strictly, as an order
     // is before payment: reach the plan doesn't allow is refused with its reason.
     const decision = await adReach(url, serviceKey, vendorId, body.spec, true);

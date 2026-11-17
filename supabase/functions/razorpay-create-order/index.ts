@@ -41,7 +41,8 @@ function json(body: unknown, status = 200): Response {
 // scripts/ad-pricing-check.mjs now asserts the one remaining duplicate (the
 // browser's, in src/lib/adPricing.ts) matches this one across 4000 generated
 // orders, because a drift here quotes the vendor one price and charges another.
-import type { AdSpec } from "../_shared/adPricing.ts";
+import { isVerificationOnly, type AdSpec } from "../_shared/adPricing.ts";
+import { checkAdOrder } from "../_shared/adOrderChecks.ts";
 import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 import { adReach } from "../_shared/adReach.ts";
 import { razorpayApiBase } from "../_shared/razorpay.ts";
@@ -83,9 +84,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "bad_json" }, 400);
   }
   const asked = payload.spec;
-  if (!asked || !Array.isArray(asked.placementIds) || asked.placementIds.length === 0 || !Array.isArray(asked.items) || asked.items.length === 0) {
+  // The seal or the certificate on their own need no listing (SH-093).
+  if (!asked || !Array.isArray(asked.placementIds) || asked.placementIds.length === 0
+      || (!isVerificationOnly(asked) && (!Array.isArray(asked.items) || asked.items.length === 0))) {
     return json({ error: "bad_spec" }, 400);
   }
+
+  // Registered seller, own live listings (SH-095, SH-096), before any money moves.
+  const checked = await checkAdOrder(url, serviceKey, vendorId, asked);
+  if (!checked.ok) return json({ error: checked.error, message: checked.message }, 200);
 
   // What the vendor's plan lets this ad reach, before any money moves (subscriptions P5):
   // refused with a reason the vendor can act on. The stored intent carries the targeting

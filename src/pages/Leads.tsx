@@ -22,14 +22,41 @@ const TAP_T = { duration: 0.13, ease: E };
 const page = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } } };
 const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } } };
 
+// Loading, error and empty are distinct (SH-079): a failed read used to say there were no requirements or quotes.
+function ListState({ kind, what, onRetry, retrying }: { kind: "loading" | "error"; what: string; onRetry?: () => void; retrying?: boolean }) {
+  if (kind === "loading") {
+    return (
+      <div className="space-y-3" aria-busy="true" aria-label={`Loading ${what}`}>
+        {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-gray-100" />)}
+      </div>
+    );
+  }
+  return (
+    <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+      <p className="text-sm font-bold text-amber-900">Your {what} couldn't be loaded</p>
+      <p className="mx-auto mt-1 max-w-sm text-xs text-amber-800">Nothing has changed. Check your connection and try again.</p>
+      {onRetry && (
+        <button onClick={onRetry} disabled={retrying} className="mt-3 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-amber-900 ring-1 ring-amber-300 disabled:opacity-60">
+          {retrying ? "Trying again…" : "Try again"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const Leads = () => {
   const reduced = useReducedMotion();
   const { user, loading } = useAuth();
   // /leads?rfq=<id>: Seller Home's lead taps open that lead here (SH-019).
   const [params] = useSearchParams();
   const focusRfqId = params.get("rfq");
-  const { data: rfqs = [], isLoading } = useOpenRfqs(user?.id);
-  const { data: direct = [] } = useDirectQuoteRequests(user?.id);
+  const openQ = useOpenRfqs(user?.id);
+  const directQ = useDirectQuoteRequests(user?.id);
+  const rfqs = openQ.data ?? [];
+  const direct = directQ.data ?? [];
+  const isLoading = Boolean(user) && (openQ.isPending || directQ.isPending);
+  const loadError = openQ.error ?? directQ.error;
+  const retry = () => { void openQ.refetch(); void directQ.refetch(); };
   // Direct requests count as leads: without this the page would claim there is
   // nothing to quote on while the Direct panel above it is showing requests.
   const hasLeads = rfqs.length > 0 || direct.length > 0;
@@ -87,10 +114,14 @@ const Leads = () => {
                   </Link>
                 </div>
               )}
+              {isLoading && <ListState kind="loading" what="requirements" />}
+              {!isLoading && loadError && (
+                <ListState kind="error" what="requirements" onRetry={retry} retrying={openQ.isFetching || directQ.isFetching} />
+              )}
               <DirectQuoteRequests focusRfqId={focusRfqId} />
               <OpenRfqLeads focusRfqId={focusRfqId} />
 
-              {!isLoading && !hasLeads && (
+              {!isLoading && !loadError && !hasLeads && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-vendor/10">
                     <Inbox className="h-6 w-6 text-brand-vendor" />

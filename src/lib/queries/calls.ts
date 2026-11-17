@@ -468,27 +468,38 @@ function dayGroup(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-interface RawCall { id: string; vendor_id: string; direction: string; product_context: string | null; created_at: string }
+interface RawCall { id: string; vendor_id: string; buyer_id: string; direction: string; product_context: string | null; created_at: string }
 
-async function fetchCalls(userId: string): Promise<{ group: string; calls: CallRecord[] }[]> {
+/**
+ * The Calls tab (SH-106, 2026-11-17). A buyer sees the calls they placed; a seller sees the calls buyers placed to them,
+ * as incoming (a buyer's outgoing call is the vendor's inbound one; claude.md "Missed calls cannot be measured"). It
+ * used to filter buyer_id = me for both, so a seller saw only calls they had made as a buyer. The last 200, newest first.
+ */
+async function fetchCalls(userId: string, side: "buyer" | "vendor"): Promise<{ group: string; calls: CallRecord[] }[]> {
   const { data, error } = await supabase
     .from("calls")
-    .select("id, vendor_id, direction, product_context, created_at")
-    .eq("buyer_id", userId)
-    .order("created_at", { ascending: false });
+    .select("id, vendor_id, buyer_id, direction, product_context, created_at")
+    .eq(side === "vendor" ? "vendor_id" : "buyer_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error) throw error;
   const rows = (data ?? []) as RawCall[];
+  const otherOf = (r: RawCall) => (side === "vendor" ? r.buyer_id : r.vendor_id);
 
-  const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
+  const otherIds = Array.from(new Set(rows.map(otherOf)));
   const meta = new Map<string, { name: string; avatar: string | null }>();
-  if (vendorIds.length) {
+  for (let i = 0; i < otherIds.length; i += 100) {
+    const ids = otherIds.slice(i, i + 100);
     const [{ data: vendors }, { data: profiles }] = await Promise.all([
-      supabase.from("vendor_profiles").select("id, brand_name").in("id", vendorIds),
-      supabase.from("profiles").select("id, avatar_url").in("id", vendorIds),
+      side === "buyer" ? supabase.from("vendor_profiles").select("id, brand_name").in("id", ids) : Promise.resolve({ data: [] as { id: string; brand_name: string | null }[] }),
+      supabase.from("profiles").select("id, full_name, avatar_url").in("id", ids),
     ]);
     const vmap = new Map((vendors ?? []).map((x) => [x.id, x.brand_name]));
-    const amap = new Map((profiles ?? []).map((x) => [x.id, x.avatar_url]));
-    for (const id of vendorIds) meta.set(id, { name: vmap.get(id) ?? "Vendor", avatar: amap.get(id) ?? null });
+    const pmap = new Map((profiles ?? []).map((x) => [x.id, x]));
+    for (const id of ids) {
+      const name = side === "buyer" ? vmap.get(id) ?? "Vendor" : pmap.get(id)?.full_name ?? "Buyer";
+      meta.set(id, { name: name || (side === "buyer" ? "Vendor" : "Buyer"), avatar: pmap.get(id)?.avatar_url ?? null });
+    }
   }
 
   // Rows are already newest-first; group while preserving that order.
@@ -498,13 +509,15 @@ async function fetchCalls(userId: string): Promise<{ group: string; calls: CallR
     const created = new Date(r.created_at);
     const g = dayGroup(created);
     if (!byGroup.has(g)) { byGroup.set(g, []); order.push(g); }
-    const m = meta.get(r.vendor_id);
+    const other = otherOf(r);
+    const m = meta.get(other);
     byGroup.get(g)!.push({
       id: r.id,
-      vendorId: r.vendor_id,
-      name: m?.name ?? "Vendor",
+      // The other person on the call (for a seller, the buyer): what the row opens and calls back.
+      vendorId: other,
+      name: m?.name ?? (side === "vendor" ? "Buyer" : "Vendor"),
       avatar: m?.avatar ?? null,
-      direction: (r.direction as CallRecord["direction"]) ?? "outgoing",
+      direction: side === "vendor" ? "incoming" : ((r.direction as CallRecord["direction"]) ?? "outgoing"),
       time: created.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
       group: g,
       rfqProduct: r.product_context ?? "Enquiry",
@@ -513,11 +526,11 @@ async function fetchCalls(userId: string): Promise<{ group: string; calls: CallR
   return order.map((g) => ({ group: g, calls: byGroup.get(g)! }));
 }
 
-export function useCalls() {
+export function useCalls(side: "buyer" | "vendor" = "buyer") {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["calls", user?.id],
-    queryFn: () => fetchCalls(user!.id),
+    queryKey: ["calls", user?.id, side],
+    queryFn: () => fetchCalls(user!.id, side),
     enabled: Boolean(user?.id),
   });
 }

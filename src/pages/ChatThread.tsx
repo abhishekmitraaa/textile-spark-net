@@ -9,7 +9,7 @@ import {
   useChatThread, submitReport, useAttachmentUrls, fetchContactNumber, formatBytes, formatSeconds,
   type ThreadMessage,
 } from "@/lib/queries/chat";
-import { useCallVendor } from "@/lib/queries/calls";
+import { useCallVendor, useCallBuyer } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useVoiceRecorder, MAX_SECONDS } from "@/hooks/useVoiceRecorder";
@@ -53,6 +53,9 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const { user } = useAuth();
   const conv = vendorId ? getOrCreateConversation(vendorId) : null;
   const callVendor = useCallVendor();
+  // A seller in a chat is talking to a buyer: the buyer's number comes through call_buyer_contact (SH-103). The
+  // seller's Call used call_vendor_contact, which refuses a buyer ("This account isn't a seller on Cosora").
+  const callBuyer = useCallBuyer();
 
   // The thread is shared by both sides. Every "back" target has to point at the
   // seller's own inbox (/chat), not the buyer's.
@@ -71,7 +74,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   // insert; everything below is the honest UI for it.
   const {
     messages, otherName, otherAvatar, sendText, sendAttachment, shareContact, conversationId, underReview, refreshStatus,
-    memberState, updateState, block, blocked, setBlocked, markRead, hasOlder, loadingOlder, loadOlder,
+    memberState, updateState, block, blocked, setBlocked, markRead, hasOlder, loadingOlder, loadOlder, invalid,
   } = useChatThread(vendorId);
   const locked = underReview || blocked;
   const [draft, setDraft] = useState("");
@@ -136,7 +139,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const shownName = otherName ?? "User";
   const initials = useMemo(() => shownName.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [shownName]);
 
-  if (!conv) {
+  if (!conv || invalid) {
     return (
       <div className={cn("bg-white grid place-items-center px-6 text-center", fills ? "h-full" : "min-h-screen")}>
         <div>
@@ -254,7 +257,8 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const deleteChat = async () => {
     if (await updateState({ clear: true })) {
       toast.success("Chat deleted", { description: "It's gone from your Messages. New messages will bring it back." });
-      navigate(inboxHref);
+      // Replace the deleted thread's entry (SH-102): Back used to reopen it and recreate its row.
+      navigate(inboxHref, { replace: true });
     }
   };
 
@@ -280,7 +284,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
               not be able to take it off-platform, so the affordance goes away
               entirely rather than sitting there dead. */}
           {!locked && (
-            <button onClick={() => vendorId && callVendor(vendorId)} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
+            <button onClick={() => vendorId && (isSeller ? callBuyer(vendorId) : callVendor(vendorId))} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
           )}
           <div className="relative shrink-0">
             <button onClick={() => setMenuOpen((o) => !o)} aria-label="More" className="p-1.5 rounded-full hover:bg-gray-100"><MoreVertical className="w-5 h-5 text-gray-600" /></button>
@@ -665,7 +669,14 @@ const ChatThread = () => {
   const { role } = useUserRole();
   const isSeller = role === "seller";
 
-  const view = <ChatThreadView vendorId={vendorId} onBack={() => navigate(isSeller ? "/chat" : "/chats")} />;
+  // Back goes back (SH-102): the arrow used to push the inbox, whose own Back then returned to this thread, round and
+  // round. Opened from a link with no history in the app, it goes to the inbox in place of this entry.
+  const onBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate(isSeller ? "/chat" : "/chats", { replace: true });
+  };
+  const view = <ChatThreadView vendorId={vendorId} onBack={onBack} />;
   return isSeller ? <DashboardLayout variant="full-screen">{view}</DashboardLayout> : view;
 };
 

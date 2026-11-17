@@ -33,6 +33,10 @@ const load = async (entry, name) => {
 const contact = await load("src/lib/contactDetails.ts", "contact");
 const social = await load("src/lib/socialLinks.ts", "social");
 const upload = await load("src/lib/uploadForm.ts", "upload");
+const slots = await load("src/lib/adSlots.ts", "slots");
+const clientPricing = await load("src/lib/adPricing.ts", "clientPricing");
+const edgePricing = await load("supabase/functions/_shared/adPricing.ts", "edgePricing");
+const edgeReach = await load("supabase/functions/_shared/adReach.ts", "edgeReach");
 
 let failures = 0;
 const check = (label, ok, detail = "") => {
@@ -94,5 +98,25 @@ check("SH-060: a kept draft reads back", eq(upload.parseUploadDraft(JSON.stringi
 check("SH-060: junk is no draft", upload.parseUploadDraft("{") === null && upload.parseUploadDraft('{"v":2}') === null);
 check("SH-060: an empty form isn't kept", !upload.draftHasAnswers({ ...draft, selectedCategory: null, formValues: {}, productName: "" }));
 
-console.log(failures ? `\n${failures} failure(s)` : "\nall batch-1 rules hold");
+// ── Batch 2: advertising ──
+const sellable = [...slots.sellableAdTypes()].sort();
+check("SH-094: the browser and the server sell the same ad types", eq(sellable, [...edgePricing.SELLABLE_AD_TYPES].sort()),
+  `browser ${sellable} / server ${[...edgePricing.SELLABLE_AD_TYPES].sort()}`);
+check("SH-094: nothing unplaced or deferred is sold",
+  !["websiteBanner", "mobileBanner", "webMobileCombo", "fbInsta", "googleProduct", "socialCombo", "directBroadcast"].some((t) => sellable.includes(t)));
+check("SH-093: both copies give the seal 30 days and the certificate a year",
+  eq(clientPricing.VERIFICATION_DAYS, edgePricing.VERIFICATION_DAYS) && edgePricing.VERIFICATION_DAYS.trustedSeal === 30 && edgePricing.VERIFICATION_DAYS.verifiedCertificate === 365);
+const vs = edgePricing.verificationSpec({ placementIds: ["trustedSeal", "trustedSeal"], days: 999, items: [{ productId: "x", title: "t", imageUrl: null }], targetStates: ["GJ"] });
+check("SH-093: a seal order is held to its form (one seal, 30 days, no listing, no targeting)",
+  eq(vs.placementIds, ["trustedSeal"]) && vs.days === 30 && vs.items.length === 0 && vs.targetStates === undefined);
+check("SH-093: seal + certificate together run a year",
+  edgePricing.verificationSpec({ placementIds: ["trustedSeal", "verifiedCertificate"], days: 1, items: [] }).days === 365);
+check("SH-093: an ad with a seal isn't verification-only", !edgePricing.isVerificationOnly({ placementIds: ["openListing", "trustedSeal"] }));
+check("SH-093: a seal order is priced once (44), the certificate 199",
+  edgePricing.computeOrderRupees(vs) === 44
+  && edgePricing.computeOrderRupees(edgePricing.verificationSpec({ placementIds: ["verifiedCertificate"], days: 1, items: [] })) === 199);
+const reach = await edgeReach.adReach("http://unused.invalid", "k", "v", { placementIds: ["verifiedCertificate"], days: 7, items: [] }, true);
+check("SH-093: any plan may buy it (the reach rule isn't asked)", reach.ok === true && reach.spec.days === 365);
+
+console.log(failures ? `\n${failures} failure(s)` : "\nall batch-1 and batch-2 rules hold");
 process.exit(failures ? 1 : 0);

@@ -202,65 +202,26 @@ const EMPTY_RESPONSIVENESS: VendorResponsiveness = {
   threads: [], awaitingReply: 0, measured: 0, within24hPct: null, avgHours: null, medianHours: null,
 };
 
+// One row per thread, computed in the database (SH-080, 2026-11-17): it used to read every message of every chat in one
+// request (cut at 1,000 rows, so the times were wrong for a busy seller), with every conversation id in one GET URL.
 async function fetchVendorResponsiveness(vendorId: string): Promise<VendorResponsiveness> {
-  const { data: convRows, error } = await supabase
-    .from("conversations")
-    .select("id, user_a, user_b")
-    .or(`user_a.eq.${vendorId},user_b.eq.${vendorId}`);
+  void vendorId; // the function reads the caller from the session
+  const { data, error } = await supabase.rpc("vendor_response_threads");
   if (error) throw error;
-  const convs = (convRows ?? []) as { id: string; user_a: string; user_b: string }[];
-  if (convs.length === 0) return EMPTY_RESPONSIVENESS;
-
-  // One round trip for every message across the vendor's threads, ordered
-  // oldest-first so the first buyer message and first reply fall out of a
-  // single pass. RLS already restricts `messages` to the vendor's own threads;
-  // the explicit `in` keeps the query honest rather than relying on the policy.
-  const { data: msgRows, error: msgErr } = await supabase
-    .from("messages")
-    .select("conversation_id, sender_id, created_at")
-    .in("conversation_id", convs.map((c) => c.id))
-    .order("created_at", { ascending: true });
-  if (msgErr) throw msgErr;
-  const msgs = (msgRows ?? []) as { conversation_id: string; sender_id: string; created_at: string }[];
-
-  const byConv = new Map<string, typeof msgs>();
-  for (const m of msgs) {
-    const list = byConv.get(m.conversation_id);
-    if (list) list.push(m);
-    else byConv.set(m.conversation_id, [m]);
-  }
+  const rows = (data ?? []) as { conversation_id: string; buyer_id: string; first_buyer_at: string; first_reply_at: string | null; awaiting: boolean }[];
+  if (rows.length === 0) return EMPTY_RESPONSIVENESS;
 
   const now = Date.now();
-  const threads: ThreadResponse[] = [];
-
-  for (const c of convs) {
-    const list = byConv.get(c.id) ?? [];
-    if (list.length === 0) continue; // a thread nobody has written in yet
-    const buyerId = c.user_a === vendorId ? c.user_b : c.user_a;
-
-    const firstBuyer = list.find((m) => m.sender_id !== vendorId);
-    if (!firstBuyer) continue; // vendor-initiated thread; no buyer wait to measure
-
-    const firstReply = list.find(
-      (m) => m.sender_id === vendorId && new Date(m.created_at).getTime() > new Date(firstBuyer.created_at).getTime(),
-    );
-
-    // "Awaiting" is about the thread's tail, not its head: the buyer is waiting
-    // whenever the newest message in the thread is theirs.
-    const last = list[list.length - 1];
-    const awaiting = last.sender_id !== vendorId;
-
-    threads.push({
-      conversationId: c.id,
-      buyerId,
-      firstBuyerMessageAt: firstBuyer.created_at,
-      firstReplyAt: firstReply?.created_at ?? null,
-      delayHours: firstReply
-        ? (new Date(firstReply.created_at).getTime() - new Date(firstBuyer.created_at).getTime()) / 3_600_000
-        : null,
-      awaiting,
-    });
-  }
+  const threads: ThreadResponse[] = rows.map((r) => ({
+    conversationId: r.conversation_id,
+    buyerId: r.buyer_id,
+    firstBuyerMessageAt: r.first_buyer_at,
+    firstReplyAt: r.first_reply_at,
+    delayHours: r.first_reply_at
+      ? (new Date(r.first_reply_at).getTime() - new Date(r.first_buyer_at).getTime()) / 3_600_000
+      : null,
+    awaiting: r.awaiting,
+  }));
 
   const answered = threads.filter((t) => t.delayHours != null);
   const overdue = threads.filter(
@@ -340,6 +301,8 @@ async function fetchLeadFunnel(vendorId: string): Promise<{
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase.from("rfqs").select("id, vendor_id, created_at")
       .eq("status", "active").neq("buyer_id", vendorId).or(`vendor_id.is.null,vendor_id.eq.${vendorId}`)
+      // Past its deadline a requirement takes no quotes (SH-078): 128 of 249 counted locally were expired.
+      .gt("expires_at", new Date().toISOString())
       .gte("created_at", since).order("created_at").order("id").range(from, from + 999);
     if (error) throw error;
     rfqRows.push(...((data ?? []) as typeof rfqRows));

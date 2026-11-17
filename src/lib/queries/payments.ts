@@ -74,7 +74,8 @@ export async function createRazorpayOrder(spec: AdSpec, discountCode?: string): 
   if (data.error === "discount") return { configured: true, discountReason: data.reason ?? "unavailable" };
   // The plan doesn't let the ad reach what was chosen: nothing was created or charged (P5).
   if (data.error === "ad_reach") throw new Error(adReachRefusal(data.reason));
-  if (data.error) throw new Error(String(data.detail || data.error));
+  // Refusals with words for the seller (not registered, a listing that isn't live, SH-095/096) say them.
+  if (data.error) throw new Error(String(data.message || data.detail || data.error));
   if (!data.configured) return { configured: false };
   return {
     configured: true, orderId: data.orderId, keyId: data.keyId, amount: data.amount, currency: data.currency,
@@ -239,7 +240,7 @@ export async function publishFreeAdOrder(orderId: string): Promise<AdPublishAnsw
 // and applies a code through the same reservation a live order would.
 export async function publishDemoAds(
   spec: AdSpec, discountCode?: string,
-): Promise<{ ok: boolean; count?: number; error?: string; reason?: string }> {
+): Promise<{ ok: boolean; count?: number; error?: string; reason?: string; message?: string }> {
   const { data, error } = await supabase.functions.invoke("razorpay-verify-payment", {
     body: { demo: true, spec, discountCode },
   });

@@ -156,14 +156,18 @@ export type ConversationStatus = "active" | "under_review";
 
 interface ConversationRow { id: string; status: ConversationStatus }
 
+const CHAT_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Insert if missing, never rewrite (SH-105): ON CONFLICT DO NOTHING, then read the row. An update on every call made a
+// new row version and a realtime event to both people for nothing.
 async function upsertConversation(me: string, otherId: string): Promise<ConversationRow | null> {
   const [a, b] = [me, otherId].sort();
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("conversations")
-    .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
-    .select("id, status")
-    .single();
-  if (error || !data) return null;
+    .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b", ignoreDuplicates: true });
+  if (error) return null;
+  const { data } = await supabase.from("conversations").select("id, status").eq("user_a", a).eq("user_b", b).maybeSingle();
+  if (!data) return null;
   return { id: data.id, status: (data.status as ConversationStatus) ?? "active" };
 }
 
@@ -258,8 +262,14 @@ export function useChatThread(otherId: string | undefined) {
     createdAt: m.created_at,
   }), [me]);
 
+  // Opening a chat reads; it never writes (SH-105, 2026-11-17). The conversation used to be upserted on every open
+  // (ON CONFLICT DO UPDATE): a new row version each time, a realtime event to both people, and on a first open an empty
+  // conversation in the other person's list (79 of 82 local conversations had no message). Now it is created by the
+  // first message (ensureThread below). An id that isn't an account (not a uuid, the caller's own, or no such
+  // profile) is `invalid` (SH-104): the thread used to look normal while Send did nothing.
+  const [invalid, setInvalid] = useState(false);
   useEffect(() => {
-    if (!me || !otherId || me === otherId) { setReady(false); return; }
+    if (!me || !otherId) { setReady(false); return; }
     // Switching threads must not carry the previous one's lock over: default to
     // active and let the load below report the truth.
     convIdRef.current = null;
@@ -269,33 +279,54 @@ export function useChatThread(otherId: string | undefined) {
     setBlock(NO_BLOCK);
     setMessages([]);
     setHasOlder(false);
+    setOtherName(null);
+    setOtherAvatar(null);
+    setReady(false);
     clearedAtRef.current = null;
+    if (otherId === me || !CHAT_UUID_RE.test(otherId)) { setInvalid(true); setReady(true); return; }
+    setInvalid(false);
     let cancelled = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {
-      const row = await upsertConversation(me, otherId);
-      if (!row || cancelled) { if (!cancelled) setReady(true); return; }
-      convIdRef.current = row.id;
-      setConversationId(row.id);
-      applyStatus(row.status);
-      const conv = { id: row.id };
-
-      // Display name for the other party (vendor brand → profile name → fallback), my own view of
-      // the chat (star, archive, deleted-for-me) and whether either of us blocked the other.
-      const [{ data: vp }, { data: pr }, { data: ms }, { data: bs }] = await Promise.all([
+      const [a, b] = [me, otherId].sort();
+      // Display name for the other party (vendor brand → profile name → fallback), the conversation if there is one,
+      // and whether either of us blocked the other.
+      const [{ data: row }, { data: vp }, { data: pr, error: prErr }, { data: bs }] = await Promise.all([
+        supabase.from("conversations").select("id, status").eq("user_a", a).eq("user_b", b).maybeSingle(),
         supabase.from("vendor_profiles").select("brand_name").eq("id", otherId).maybeSingle(),
-        supabase.from("profiles").select("full_name, avatar_url").eq("id", otherId).maybeSingle(),
-        supabase.from("conversation_member_state").select("starred_at, archived_at, cleared_at").eq("conversation_id", conv.id).maybeSingle(),
+        supabase.from("profiles").select("id, full_name, avatar_url").eq("id", otherId).maybeSingle(),
         supabase.rpc("chat_block_state", { p_other: otherId }),
       ]);
       if (cancelled) return;
+      // No such account: nothing to talk to. (A failed read isn't that: the thread shows and Send explains.)
+      if (!prErr && !pr) { setInvalid(true); setReady(true); return; }
       setOtherName(vp?.brand_name ?? pr?.full_name ?? null);
       setOtherAvatar(pr?.avatar_url ?? null);
+      setBlock(toBlockState(bs));
+      if (row) {
+        convIdRef.current = row.id;
+        applyStatus((row.status as ConversationStatus) ?? "active");
+        setConversationId(row.id); // the effect below loads it
+      } else {
+        setReady(true); // no conversation yet: an empty thread until the first message
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [me, otherId, applyStatus]);
+
+  // An existing (or just created) conversation: my view of it, the live channel, then the newest page.
+  useEffect(() => {
+    if (!me || !conversationId) return;
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const conv = { id: conversationId };
+
+    (async () => {
+      const { data: ms } = await supabase.from("conversation_member_state")
+        .select("starred_at, archived_at, cleared_at").eq("conversation_id", conv.id).maybeSingle();
+      if (cancelled) return;
       const clearedAt = ms?.cleared_at ?? null;
       setMemberState({ starred: Boolean(ms?.starred_at), archived: Boolean(ms?.archived_at), clearedAt });
-      setBlock(toBlockState(bs));
-
       clearedAtRef.current = clearedAt;
 
       // Join the live channel first, then read the newest page (2026-10-19). The history used to be read before
@@ -312,18 +343,11 @@ export function useChatThread(otherId: string | undefined) {
             // Arrived while the chat is open and on screen: it's read. In a background tab it stays
             // unread until the person comes back (the visibility listener below).
             if (m.sender_id !== me && document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
-            // Backstop, kept deliberately. The conversations UPDATE below is the
-            // primary signal, but the message that just arrived may be the very
-            // thing that locked the thread — the case a user actually notices —
-            // and measured end-to-end that push can lag the composer staying
-            // live. One indexed PK read, and only while still unlocked.
+            // Backstop: the message that just arrived may be the very thing that locked the thread.
             if (statusRef.current === "active") void refreshStatus();
           }
         )
-        // The moderation lock, pushed. `conversations` joined the realtime
-        // publication in 20260801154739; before that this had to be inferred by
-        // re-reading the row whenever a message arrived, which could never see
-        // an admin RESUMING a thread — no message accompanies that.
+        // The moderation lock, pushed (conversations joined the realtime publication in 20260801154739).
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "conversations", filter: `id=eq.${conv.id}` },
@@ -389,7 +413,7 @@ export function useChatThread(otherId: string | undefined) {
       document.removeEventListener("visibilitychange", onVisible);
       if (channel) supabase.removeChannel(channel);
     };
-  }, [me, otherId, mapMsg, applyStatus, refreshStatus, qc]);
+  }, [me, conversationId, mapMsg, applyStatus, refreshStatus, qc]);
 
   /**
    * The page of messages before the oldest one shown (2026-10-19), for when the person scrolls up. Ordered by
@@ -451,6 +475,26 @@ export function useChatThread(otherId: string | undefined) {
     }
   }, [otherId, refreshStatus]);
 
+  /** The conversation, created by the first thing sent (SH-105). Null when it couldn't be (the reason is shown). */
+  const ensureThread = useCallback(async (): Promise<string | null> => {
+    if (convIdRef.current) return convIdRef.current;
+    if (!me || !otherId || invalid) return null;
+    const [a, b] = [me, otherId].sort();
+    const { error } = await supabase.from("conversations")
+      .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b", ignoreDuplicates: true });
+    if (error) { reportSendError(error); return null; }
+    const { data, error: readErr } = await supabase.from("conversations").select("id, status").eq("user_a", a).eq("user_b", b).maybeSingle();
+    if (readErr || !data) {
+      toast.error("Message not sent", { description: readErr ? errorMessage(readErr) : "This chat couldn't be started. Try again." });
+      return null;
+    }
+    convIdRef.current = data.id;
+    applyStatus((data.status as ConversationStatus) ?? "active");
+    setConversationId(data.id);
+    void qc.invalidateQueries({ queryKey: ["conversations", me] });
+    return data.id;
+  }, [me, otherId, invalid, reportSendError, applyStatus, qc]);
+
   /**
    * Insert a message. Resolves true only when the row was actually written, so
    * the caller can keep the draft on failure. Nothing is added to local state
@@ -459,23 +503,26 @@ export function useChatThread(otherId: string | undefined) {
    */
   const sendText = useCallback(async (text: string, kind = "text"): Promise<boolean> => {
     const body = text.trim();
-    if (!body || !me || !convIdRef.current) return false;
+    if (!body || !me) return false;
+    const convId = await ensureThread();
+    if (!convId) return false;
 
     const { error } = await supabase
       .from("messages")
-      .insert({ conversation_id: convIdRef.current, sender_id: me, body, kind });
+      .insert({ conversation_id: convId, sender_id: me, body, kind });
     if (!error) return true;
     reportSendError(error);
     return false;
-  }, [me, reportSendError]);
+  }, [me, reportSendError, ensureThread]);
 
   /**
    * Upload a photo, a PDF or a voice note and send it. Photos are shrunk first (they're opened on
    * mobile data). Resolves true only when the message was written.
    */
   const sendAttachment = useCallback(async (file: File, kind: AttachmentKind, seconds?: number): Promise<boolean> => {
-    const convId = convIdRef.current;
-    if (!me || !convId) return false;
+    if (!me) return false;
+    const convId = await ensureThread();
+    if (!convId) return false;
 
     let blob: Blob = file;
     let ext: string | undefined;
@@ -528,12 +575,13 @@ export function useChatThread(otherId: string | undefined) {
     if (!error) return true;
     reportSendError(error);
     return false;
-  }, [me, otherId, refreshStatus, reportSendError]);
+  }, [me, otherId, refreshStatus, reportSendError, ensureThread]);
 
   /** Send my contact card. The number stays on the server; the other person taps to reveal it. */
   const shareContact = useCallback(async (): Promise<boolean> => {
-    const convId = convIdRef.current;
-    if (!me || !convId) return false;
+    if (!me) return false;
+    const convId = await ensureThread();
+    if (!convId) return false;
     const { error } = await supabase.rpc("share_chat_contact", { p_conversation_id: convId });
     if (!error) return true;
     if (error.code === "P0002") {
@@ -542,7 +590,7 @@ export function useChatThread(otherId: string | undefined) {
       reportSendError(error);
     }
     return false;
-  }, [me, reportSendError]);
+  }, [me, reportSendError, ensureThread]);
 
   /** Star, archive or delete-for-me. Resolves true when saved. */
   const updateState = useCallback(async (patch: { starred?: boolean; archived?: boolean; clear?: boolean }): Promise<boolean> => {
@@ -599,10 +647,12 @@ export function useChatThread(otherId: string | undefined) {
     otherName,
     otherAvatar,
     ready,
+    /** The id names no account this person can chat with (SH-104). */
+    invalid,
     sendText,
     sendAttachment,
     shareContact,
-    canChat: Boolean(me && otherId),
+    canChat: Boolean(me && otherId && !invalid),
     conversationId,
     status,
     underReview: status === "under_review",

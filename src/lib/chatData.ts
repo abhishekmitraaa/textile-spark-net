@@ -128,8 +128,7 @@ export const prettifyVendorName = (id: string) =>
 // Chat is reachable from every product/vendor surface, so any id must open a
 // usable thread. Return the seeded conversation, or synthesize a fresh one.
 export const getOrCreateConversation = (id: string): Conversation => {
-  const found = getConversation(id);
-  if (found) return found;
+  // Never a seeded conversation (SH-104): an id is a real account or nothing; the thread checks which.
   const name = prettifyVendorName(id);
   return {
     // Nothing invented (Seller Home audit SH-100): no rating, place, request or first message. The thread reads the

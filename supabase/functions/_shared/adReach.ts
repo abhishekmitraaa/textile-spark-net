@@ -17,7 +17,7 @@
 // Where the ad_state_targeting switch is off for the vendor, the answer carries no states
 // and keeps the older city list, clamped to the plan's count as before.
 
-import type { AdSpec } from "./adPricing.ts";
+import { isVerificationOnly, verificationSpec, type AdSpec } from "./adPricing.ts";
 
 export interface ReachDecision {
   /** The spec may be used as returned. False with `blocked`: publish nothing. */
@@ -43,6 +43,11 @@ interface RawReach {
 export async function adReach(
   url: string, key: string, vendorId: string, spec: AdSpec, strict = false,
 ): Promise<ReachDecision> {
+  // The seal and the certificate on their own are for every plan, Free included (SH-093): no ad reach applies, and
+  // the order is held to its fixed form (no listings, no targeting, the server's length).
+  if (isVerificationOnly(spec)) {
+    return { ok: true, blocked: false, spec: verificationSpec(spec), requested: 0, allowed: 0 };
+  }
   const states = Array.isArray(spec.targetStates) ? spec.targetStates : [];
   const countries = Array.isArray(spec.targetCountries) ? spec.targetCountries : [];
   const cities = Array.isArray(spec.targetCities) ? spec.targetCities : [];

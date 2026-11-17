@@ -181,6 +181,16 @@ export function adSlotBlock<T>(slot: AdSlotId, items: readonly T[], index: numbe
   return items.slice(index * r.block, (index + 1) * r.block);
 }
 
+/**
+ * Ad types a seller can buy today (SH-094, 2026-11-17): a slot buyers actually see (not deferred), the badge, or the
+ * printed certificate. Everything else is "coming soon": the builder doesn't offer it and razorpay-create-order refuses
+ * it (supabase/functions/_shared/adPricing.ts SELLABLE_AD_TYPES; scripts/seller-medium-fixes-check.mjs compares them).
+ */
+export function sellableAdTypes(): AdType[] {
+  const live = Object.values(AD_SLOTS).filter((s) => !(s as AdSlot).deferred).flatMap((s) => s.types as readonly AdType[]);
+  return Array.from(new Set<AdType>([...live, ...BADGE_AD_TYPES, ...FULFILMENT_AD_TYPES])).sort();
+}
+
 /** Ad types that have at least one real buyer-side slot. */
 export const PLACED_AD_TYPES: readonly AdType[] =
   Array.from(new Set(Object.values(AD_SLOTS).flatMap((s) => s.types as readonly AdType[]))).sort();

@@ -20,7 +20,7 @@
 // or  { ok: false, reason, appliesTo? }   (reasons: _shared/discounts.ts)
 // Whole rupees. The vendor is the JWT's subject.
 
-import type { AdSpec } from "../_shared/adPricing.ts";
+import { isVerificationOnly, verificationSpec, type AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, checkDiscount, normaliseCode, subscriptionAmounts } from "../_shared/discounts.ts";
 import { quotePlanChange } from "../_shared/planChange.ts";
 import { verifiedUserId } from "../_shared/auth.ts";
@@ -94,10 +94,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   if (body.kind === "ad") {
-    const spec = body.spec;
-    if (!spec || !Array.isArray(spec.placementIds) || spec.placementIds.length === 0 || !Array.isArray(spec.items) || spec.items.length === 0) {
+    const asked = body.spec;
+    // The seal or certificate on their own need no listing (SH-093), and are priced in their fixed form.
+    const verification = isVerificationOnly(asked);
+    if (!asked || !Array.isArray(asked.placementIds) || asked.placementIds.length === 0
+        || (!verification && (!Array.isArray(asked.items) || asked.items.length === 0))) {
       return json({ error: "bad_spec" }, 400);
     }
+    const spec = verification ? verificationSpec(asked) : asked;
     const lines = adAmounts(spec);
     if (lines.gross <= 0) return json({ error: "zero_amount" }, 400);
 

@@ -62,6 +62,47 @@ export const PER_MESSAGE_TYPES = new Set(["directBroadcast"]);
  */
 export const VENDOR_LEVEL_TYPES = new Set(["trustedSeal", "verifiedCertificate"]);
 
+/**
+ * Ad types a seller can buy today (Seller Home audit SH-094, 2026-11-17): a slot buyers see, the badge, or the printed
+ * certificate. The rest (website and mobile banners, the off-platform Facebook/Instagram and Google types and their
+ * bundles, direct messages) render nowhere yet, so they are refused before payment. The browser's copy is
+ * sellableAdTypes() in src/lib/adSlots.ts; scripts/seller-medium-fixes-check.mjs holds them equal.
+ */
+export const SELLABLE_AD_TYPES = new Set([
+  "brandAd", "featuredProduct", "openListing", "searchListing", "storePromotion", "trustedSeal", "verifiedCertificate",
+  "wholesalerPick",
+]);
+
+// ── Getting verified on its own (Seller Home audit SH-093, Mitra 2026-11-17: "Sell them to Free sellers") ──
+// The Trusted Seal and the Verified Certificate are bought on their own, by any registered seller on any plan,
+// Free included: they are about the seller, not an ad, so the plan's advertising reach doesn't apply. A purchase of
+// only these needs no listing, and its length is set here, never by the browser: the seal 30 days; the certificate,
+// printed and posted, a year (it carries the badge for that year too). Approval still grants the badge.
+export const VERIFICATION_DAYS: Record<string, number> = { trustedSeal: 30, verifiedCertificate: 365 };
+export const VERIFICATION_LABEL: Record<string, string> = { trustedSeal: "Trusted Seal", verifiedCertificate: "Verified Certificate" };
+
+/** True when an order buys only the seal and/or the certificate (and nothing else, nothing unknown). */
+export function isVerificationOnly(spec: { placementIds?: readonly string[] | null } | null | undefined): boolean {
+  const ids = spec?.placementIds ?? [];
+  return ids.length > 0 && ids.every((id) => VENDOR_LEVEL_TYPES.has(id));
+}
+
+/** A verification-only order as it is stored and published: no listings, no targeting, the server's length. */
+export function verificationSpec<T extends { placementIds: string[] }>(spec: T): T & { days: number; items: []; campaignLabel: string } {
+  const ids = [...new Set(spec.placementIds.filter((id) => VENDOR_LEVEL_TYPES.has(id)))];
+  return {
+    ...spec,
+    placementIds: ids,
+    days: Math.max(...ids.map((id) => VERIFICATION_DAYS[id] ?? 30)),
+    items: [],
+    campaignLabel: ids.map((id) => VERIFICATION_LABEL[id] ?? id).join(" + "),
+    targetCategories: undefined,
+    targetCities: undefined,
+    targetStates: undefined,
+    targetCountries: undefined,
+  };
+}
+
 /** How many billing units one placement costs across a campaign of `days`. */
 export function unitsFor(id: string, days: number): number {
   if (PER_MESSAGE_TYPES.has(id)) return 1;

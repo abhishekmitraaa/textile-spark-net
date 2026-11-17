@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVendorDashboard, profileScoreSignals } from "@/lib/queries/vendorDashboard";
 import { useMyProducts } from "@/lib/queries/products";
@@ -330,7 +330,7 @@ function BuyerGeographyCard({ vendorId, days, rangeLabel }: { vendorId: string |
 const Analytics = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { data: dash } = useVendorDashboard(user?.id);
   const { data: myProducts = [] } = useMyProducts(user?.id);
   const { data: reviewData } = useVendorReviews(user?.id);
@@ -454,6 +454,19 @@ const Analytics = () => {
     .sort((a, b) => b[sortBy] - a[sortBy])
     .slice(0, 5)
     .map((p, i) => ({ ...p, rank: i + 1 }));
+
+  // Signed out, nothing here is anyone's (SH-079): the page used to render every card empty.
+  if (!authLoading && !user) {
+    return (
+      <DashboardLayout>
+        <div className="mx-auto max-w-md rounded-2xl border border-border bg-card p-8 text-center" data-testid="analytics-signed-out">
+          <h1 className="text-lg font-bold text-foreground">Analytics</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in with your seller account to see how your listings are doing.</p>
+          <Link to="/login" className="mt-4 inline-block text-sm font-semibold text-brand-vendor hover:underline">Sign in</Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

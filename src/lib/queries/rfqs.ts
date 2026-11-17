@@ -634,9 +634,11 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
   // Real buyer names, batched over the distinct buyers behind those RFQs — same
   // shape as fetchConversations in chat.ts. One query, not one per row.
   const buyerIds = Array.from(new Set(Array.from(rfqMap.values()).map((r) => r.buyer_id).filter(Boolean)));
+  // In groups of 100 (a long id list in a GET URL fails), and a failed read is an error, not "Buyer" (SH-080).
   const buyerNames = new Map<string, string>();
-  if (buyerIds.length) {
-    const { data } = await supabase.from("profiles").select("id, full_name").in("id", buyerIds);
+  for (let i = 0; i < buyerIds.length; i += 100) {
+    const { data, error: nameErr } = await supabase.from("profiles").select("id, full_name").in("id", buyerIds.slice(i, i + 100));
+    if (nameErr) throw nameErr;
     for (const pr of data ?? []) if (pr.full_name) buyerNames.set(pr.id, pr.full_name);
   }
 

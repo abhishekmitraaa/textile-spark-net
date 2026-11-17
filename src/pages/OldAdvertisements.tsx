@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,21 +27,22 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 const listContainer = { show: { transition: { staggerChildren: 0.055 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
-type EffStatus = "Active" | "In review" | "Paused" | "Ended";
-type FilterTab = "All" | "Active" | "In review" | "Paused" | "Ended";
-const TABS: FilterTab[] = ["All", "Active", "In review", "Paused", "Ended"];
+type EffStatus = "Active" | "Scheduled" | "In review" | "Needs attention" | "Paused" | "Ended";
+type FilterTab = "All" | EffStatus;
+const TABS: FilterTab[] = ["All", "Active", "Scheduled", "In review", "Needs attention", "Paused", "Ended"];
 
 /**
- * Derived from runStateOf so this page and the campaigns list cannot disagree
- * about what a status means. "In review" is a new bucket and a necessary one:
- * before the state model, a paid-but-unreviewed campaign had no status of its
- * own, and anything that wasn't active/paused fell through to "Ended" — so a
- * campaign the vendor had just paid for appeared in their history as finished.
+ * Derived from runStateOf, with the whole campaign, so this page and the campaigns list cannot disagree about what a
+ * status means (SH-097, 2026-11-17). Rejected, suspended, changes-requested and Cosora-paused campaigns used to be filed
+ * as "In review" with a Play button that always failed, and an approved campaign waiting for its start date looked
+ * the same. Now: Needs attention (with Cosora's reason), Scheduled, and a button only where the seller can act.
  */
 function effStatus(a: AdRow): EffStatus {
-  const rs = runStateOf({ status: a.status, startsAt: a.startsAt, endsAt: a.endsAt });
+  const rs = runStateOf(a);
   if (rs.tone === "live") return "Active";
-  if (rs.tone === "waiting" || rs.tone === "attention") return "In review";
+  if (rs.label === "Scheduled") return "Scheduled";
+  if (a.status === "pending_review") return "In review";
+  if (rs.tone === "attention") return "Needs attention";
   if (rs.action === "resume") return "Paused";
   return "Ended";
 }
@@ -57,7 +58,9 @@ function fmtDateRange(a: AdRow): string {
 function StatusBadge({ status }: { status: EffStatus }) {
   const styles: Record<EffStatus, string> = {
     Active: "bg-green-100 text-green-700",
+    Scheduled: "bg-blue-100 text-blue-700",
     "In review": "bg-blue-100 text-blue-700",
+    "Needs attention": "bg-red-100 text-red-700",
     Paused: "bg-amber-100 text-amber-700",
     Ended: "bg-gray-100 text-gray-500",
   };
@@ -65,6 +68,7 @@ function StatusBadge({ status }: { status: EffStatus }) {
 }
 
 function CampaignCard({ ad, status, onToggle }: { ad: AdRow; status: EffStatus; onToggle: (a: AdRow) => void }) {
+  const run = runStateOf(ad);
   const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : "0.0";
   return (
     <motion.div variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
@@ -79,13 +83,15 @@ function CampaignCard({ ad, status, onToggle }: { ad: AdRow; status: EffStatus; 
               <p className="text-[10px] text-gray-400 leading-none truncate">{fmtDateRange(ad)}</p>
             </div>
           </div>
-          {status !== "Ended" && (
+          {/* Only what the seller can do: pause a live or scheduled campaign, resume one they paused. */}
+          {(run.action === "pause" || run.action === "resume") && (
             <button
               onClick={() => onToggle(ad)}
               className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors active:scale-95"
-              title={status === "Active" ? "Pause" : "Resume"}
+              title={run.action === "pause" ? "Pause" : "Resume"}
+              aria-label={run.action === "pause" ? "Pause" : "Resume"}
             >
-              {status === "Active" ? <Pause className="w-3.5 h-3.5 text-gray-600 fill-gray-600" /> : <Play className="w-3.5 h-3.5 text-gray-600 fill-gray-600" />}
+              {run.action === "pause" ? <Pause className="w-3.5 h-3.5 text-gray-600 fill-gray-600" /> : <Play className="w-3.5 h-3.5 text-gray-600 fill-gray-600" />}
             </button>
           )}
         </div>
@@ -93,6 +99,10 @@ function CampaignCard({ ad, status, onToggle }: { ad: AdRow; status: EffStatus; 
         <div>
           <h3 className="text-sm font-bold text-gray-900 leading-snug truncate">{ad.title}</h3>
           {ad.placement && <p className="text-xs text-gray-500 mt-0.5">Placement: {ad.placement.split(",").join(", ")}</p>}
+          {status !== "Active" && <p className="mt-1.5 text-xs leading-relaxed text-gray-600" data-testid="campaign-reason">{run.reason}</p>}
+          {run.action === "edit_and_resubmit" && (
+            <Link to="/advertisements" className="mt-1.5 inline-block text-xs font-semibold text-brand-vendor hover:underline">Edit and resubmit</Link>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-x-4 gap-y-3">
@@ -138,7 +148,9 @@ export default function OldAdvertisements() {
   const counts: Record<FilterTab, number> = {
     All: withStatus.length,
     Active: withStatus.filter((x) => x.status === "Active").length,
+    Scheduled: withStatus.filter((x) => x.status === "Scheduled").length,
     "In review": withStatus.filter((x) => x.status === "In review").length,
+    "Needs attention": withStatus.filter((x) => x.status === "Needs attention").length,
     Paused: withStatus.filter((x) => x.status === "Paused").length,
     Ended: withStatus.filter((x) => x.status === "Ended").length,
   };
@@ -146,7 +158,8 @@ export default function OldAdvertisements() {
 
   const onToggle = async (a: AdRow) => {
     try {
-      await setCampaignRunning(a.id, a.status !== "active");
+      // Resume only what the seller paused; anything else the button offers is a pause.
+      await setCampaignRunning(a.id, runStateOf(a).action === "resume");
       qc.invalidateQueries({ queryKey: ["advertisements"] });
     } catch (e) {
       // Surfaces the real reason, including "this campaign was paused by Cosora

@@ -41,8 +41,10 @@ import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publi
 import { quoteAdDiscount, discountRefusal, DISCOUNT_CHECKOUT_TIMEOUT_S, type AdQuote } from "@/lib/queries/discounts";
 import { DiscountCodeField } from "@/components/vendor/DiscountCodeField";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
+import { useSellerRegistration, canPublish, type SellerRegistration } from "@/lib/queries/sellerRegistration";
 import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
-import { computeOrderRupees, priceLines } from "@/lib/adPricing";
+import { computeOrderRupees, priceLines, VERIFICATION_DAYS } from "@/lib/adPricing";
+import { sellableAdTypes } from "@/lib/adSlots";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -96,14 +98,22 @@ const AD_TYPES: AdType[] = [
 
 // Ad types that grant a time-bound trust seal (mirrors the edge function).
 const SEAL_AD_TYPES = new Set(["trustedSeal", "verifiedCertificate"]);
+// What the campaign builder offers (SH-093, SH-094): ad types buyers actually see. The seal and the certificate are
+// bought on their own in "Get verified"; types with no live slot yet aren't sold.
+const SELLABLE = new Set<string>(sellableAdTypes());
+const BUILDER_AD_TYPES = AD_TYPES.filter((a) => SELLABLE.has(a.id) && !SEAL_AD_TYPES.has(a.id));
 // A campaign goal pre-selects the placement types that actually serve it — this
 // is what makes the goal picker do something real (see toggleGoal).
-const GOAL_PLACEMENTS: Record<string, string[]> = {
-  visitProfile: ["storePromotion", "brandAd"],
-  visitWebsite: ["websiteBanner", "googleProduct"],
-  messageYou: ["directBroadcast"],
-  mixOfActions: ["featuredProduct", "searchListing"],
-};
+// Only types that are sold (SH-094): "Visit your website" and "Message you" picked website banners, Google Shopping and
+// direct messages, which no buyer sees yet, so those goals aren't offered until they are.
+const GOAL_PLACEMENTS: Record<string, string[]> = Object.fromEntries(
+  Object.entries({
+    visitProfile: ["storePromotion", "brandAd"],
+    visitWebsite: ["websiteBanner", "googleProduct"],
+    messageYou: ["directBroadcast"],
+    mixOfActions: ["featuredProduct", "searchListing"],
+  }).map(([goal, ids]) => [goal, ids.filter((id) => SELLABLE.has(id))]),
+);
 
 // Every line is something a vendor can check on Cosora (2026-11-14). It used to say every buyer is vetted, that
 // ads reach millions and that thousands of suppliers had joined: none of it was measured.
@@ -474,7 +484,7 @@ function AdCreationSteps({
     }
   };
 
-  const displayed = showMoreAdTypes ? AD_TYPES : AD_TYPES.slice(0, 5);
+  const displayed = showMoreAdTypes ? BUILDER_AD_TYPES : BUILDER_AD_TYPES.slice(0, 5);
 
   const DURATIONS = [{ value: "3", label: "3" }, { value: "7", label: "7" }, { value: "14", label: "14" }, { value: "30", label: "30" }];
   const CITIES = ["mumbai", "delhi", "allIndia", "south", "chennai", "kolkata", "west", "export", "pune", "ahmedabad"];
@@ -486,7 +496,7 @@ function AdCreationSteps({
     { value: "visitWebsite",  title: "Visit your website",  desc: "Best for online sales and bookings"     },
     { value: "messageYou",    title: "Message you",         desc: "Best for building direct trust"         },
     { value: "mixOfActions",  title: "A mix of actions",    desc: "Best for multiple goals"                },
-  ];
+  ].filter((g) => (GOAL_PLACEMENTS[g.value] ?? []).length > 0);
 
   return (
     <section id="adCreationSteps" className="bg-white rounded-xl p-4 md:p-6 border border-gray-200 lg:p-8 xl:scroll-mt-24">
@@ -613,7 +623,7 @@ function AdCreationSteps({
             <button
               onClick={() => setShowMoreAdTypes(!showMoreAdTypes)}
               className="w-full py-3 rounded-xl font-bold text-sm text-[#FF6B6B] bg-[#fff5f5] hover:bg-[#fff0f0] transition-all border border-[#FF6B6B]/20 lg:mx-auto lg:block lg:w-auto lg:px-12">
-              {showMoreAdTypes ? "Show Less" : `More (${AD_TYPES.length - 5} more options)`}
+              {showMoreAdTypes ? "Show Less" : `More (${BUILDER_AD_TYPES.length - 5} more options)`}
             </button>
           </div>
         </div>
@@ -633,7 +643,7 @@ function AdCreationSteps({
               </h5>
               {products.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-6 text-center">
-                  <p className="text-sm text-gray-500 mb-3">You have no products yet. Upload a product to advertise it.</p>
+                  <p className="text-sm text-gray-500 mb-3">You have no live listings yet. Ads run on listings Cosora has approved.</p>
                   <Link to="/upload" className="inline-flex items-center gap-1.5 rounded-full bg-[#f75f71] px-4 py-2 text-xs font-bold text-white hover:bg-[#ff2160] transition-colors">
                     <Plus className="w-4 h-4" /> Add a product
                   </Link>
@@ -911,7 +921,7 @@ function PaymentModal({
             <div className="rounded-2xl bg-[#fff5f5] border border-[#FF6B6B]/20 p-4 mb-4 text-center">
               <p className="text-xs text-gray-500">Amount payable</p>
               <p className="text-3xl font-extrabold text-gray-900 mt-0.5">₹{amount.toLocaleString("en-IN")}</p>
-              <p className="text-[11px] text-gray-500 mt-1">{productCount} product{productCount > 1 ? "s" : ""} · {days} days</p>
+              <p className="text-[11px] text-gray-500 mt-1">{productCount > 0 ? `${productCount} product${productCount > 1 ? "s" : ""} · ` : ""}{days} days</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -1056,6 +1066,9 @@ function CostSummary({
       <div className="bg-white rounded-xl p-6 border border-amber-200 mt-6 text-center min-[1400px]:mt-0 min-[1400px]:text-left">
         <p className="text-base font-bold text-gray-900 mb-1">Advertising is a paid feature</p>
         <p className="text-sm text-gray-500 mb-4">Your current (Free) plan can't run ad campaigns. Upgrade to a paid plan to promote your products.</p>
+        <p className="text-sm text-gray-500 mb-4">
+          You can still <a href="#get-verified" className="font-semibold text-[#ff2160] hover:underline">get the Trusted Seal or the Verified Certificate</a> on the Free plan.
+        </p>
         <Link to="/subscription" className="inline-flex items-center gap-1.5 rounded-2xl bg-[#ff2160] px-6 py-3 text-sm font-bold text-white hover:bg-[#ff2160]/80 transition-colors">
           View plans <ChevronRight className="w-4 h-4" />
         </Link>
@@ -1111,7 +1124,7 @@ function CostSummary({
     }
     // The plan doesn't let the ad reach what was chosen (subscriptions P5).
     if (!res.ok && res.error === "ad_reach") throw new Error(adReachRefusal(res.reason));
-    if (!res.ok) throw new Error(res.error || "Could not publish ads");
+    if (!res.ok) throw new Error(res.message || res.error || "Could not publish ads");
     onCreated();
     setQuote(null);
     toast.success("Your ads are waiting for Cosora's review", {
@@ -1521,6 +1534,151 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
+// ── Get verified (SH-093, Mitra 2026-11-17: "Sell them to Free sellers") ──
+// The Trusted Seal and the Verified Certificate, bought on their own by any registered seller on any plan. The server
+// fixes what is bought (_shared/adPricing.ts verificationSpec: the seal 30 days, the certificate a year, no listing);
+// payment is never approval: the badge appears when Cosora approves it, and the certificate is printed and posted.
+const VERIFY_OPTIONS = [
+  { id: "trustedSeal" as const, title: "Trusted Seal", Icon: Shield,
+    body: "A trusted-seller badge on your store and on every one of your product cards.",
+    term: `${VERIFICATION_DAYS.trustedSeal} days from approval` },
+  { id: "verifiedCertificate" as const, title: "Cosora Verified Certificate", Icon: BadgeCheck,
+    body: "A printed certificate posted to your business address, and the badge on your store and product cards.",
+    term: "1 year of the badge from approval" },
+];
+
+function GetVerified({ vendorId, planGrantsSeal, planName, registered, onCreated }: {
+  vendorId?: string; planGrantsSeal: boolean; planName: string;
+  registered: SellerRegistration | undefined; onCreated: () => void;
+}) {
+  const [chosen, setChosen] = useState<"trustedSeal" | "verifiedCertificate" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [quote, setQuote] = useState<AdQuote | null>(null);
+  const [quoteNote, setQuoteNote] = useState<string | null>(null);
+  const [bought, setBought] = useState<string | null>(null);
+  const spec = (id: string): AdSpec => ({ placementIds: [id], days: VERIFICATION_DAYS[id] ?? 30, items: [], campaignLabel: id });
+  const price = chosen ? computeOrderRupees([chosen], VERIFICATION_DAYS[chosen] ?? 30, 0) : 0;
+  const payable = quote ? quote.total : price;
+  // The server refuses an unregistered seller too (_shared/adOrderChecks.ts, SH-096); this says so before they pick.
+  const notRegistered = registered ? !canPublish(registered) : false;
+
+  const choose = (id: "trustedSeal" | "verifiedCertificate") => {
+    setChosen(id); setQuote(null); setQuoteNote(null); setBought(null);
+  };
+  const done = (title: string, description: string) => {
+    onCreated(); setQuote(null); setBought(chosen); setChosen(null);
+    toast.success(title, { description, duration: 20_000 });
+  };
+  const applyCode = async (code: string): Promise<string | null> => {
+    if (!chosen) return null;
+    setQuoteNote(null);
+    const res = await quoteAdDiscount(spec(chosen), code);
+    if (!res.quote) return res.message;
+    setQuote(res.quote);
+    return null;
+  };
+  const publishDemo = async () => {
+    if (!chosen) return;
+    const res = await publishDemoAds(spec(chosen), quote?.code);
+    if (!res.ok && res.error === "discount") { setPayOpen(false); setQuote(null); setQuoteNote(discountRefusal(res.reason)); return; }
+    if (!res.ok) throw new Error(res.message || res.error || "Couldn't complete the purchase");
+    done("Sent for Cosora's review", "Your badge appears once Cosora approves it. Your days start then.");
+  };
+  const buy = async () => {
+    if (!vendorId || !chosen) { toast.error("Sign in as a seller first"); return; }
+    setBusy(true);
+    try {
+      const order = await createRazorpayOrder(spec(chosen), quote?.code);
+      if (order.discountReason) { setQuote(null); setQuoteNote(discountRefusal(order.discountReason)); return; }
+      if (!order.configured) { setPayOpen(true); return; }
+      if (order.free) {
+        const published = await publishFreeAdOrder(order.orderId!);
+        if (published.ok) done("Sent for Cosora's review", "Your badge appears once Cosora approves it.");
+        else toast.error("We couldn't set it up", { description: "Nothing was charged. Please try again." });
+        return;
+      }
+      const res = await openRazorpayCheckout({
+        keyId: order.keyId!, orderId: order.orderId!, amount: order.amount,
+        name: "Cosora", description: chosen === "trustedSeal" ? "Trusted Seal" : "Cosora Verified Certificate",
+        timeout: quote ? DISCOUNT_CHECKOUT_TIMEOUT_S : undefined,
+      });
+      const verified = await verifyRazorpayPayment({
+        orderId: res.razorpay_order_id, paymentId: res.razorpay_payment_id, signature: res.razorpay_signature,
+      });
+      const m = paidAdOutcome(verified, res.razorpay_payment_id, 1);
+      if (verified.ok) done(m.title, "Your badge appears once Cosora approves it. It's listed under Your Campaigns.");
+      else (m.kind === "success" ? toast.success : toast.error)(m.title, { description: m.description, duration: m.long ? 60_000 : undefined });
+    } catch (e) {
+      if (e instanceof Error && e.message === "dismissed") toast.info("Payment cancelled");
+      else toast.error("Checkout failed", { description: errorMessage(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section id="get-verified" className="scroll-mt-24 rounded-xl border border-gray-200 bg-white p-4 md:p-6 lg:p-8" data-testid="get-verified">
+      <h3 className="text-lg font-bold text-gray-900 md:text-xl lg:text-2xl">Get verified</h3>
+      <p className="mt-1 text-sm text-gray-600">
+        On any plan, Free included. Bought on its own: no campaign or listing needed. Cosora reviews it first.
+      </p>
+      {notRegistered && (
+        <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Finish your seller registration first. Once Cosora approves it, you can get verified.
+        </p>
+      )}
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {VERIFY_OPTIONS.map((o) => {
+          const included = o.id === "trustedSeal" && planGrantsSeal;
+          const on = chosen === o.id;
+          return (
+            <button key={o.id} type="button" disabled={included || Boolean(notRegistered)} aria-pressed={on}
+              onClick={() => choose(o.id)} data-testid={`verify-${o.id}`}
+              className={cn("flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-colors disabled:cursor-not-allowed",
+                on ? "border-[#FF6B6B] bg-[#fff5f5]" : "border-gray-100 hover:border-gray-200",
+                (included || notRegistered) && "opacity-70")}>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fff5f5]">
+                <o.Icon className="h-5 w-5 text-[#f75f71]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-bold text-gray-900">{o.title}</span>
+                  {included
+                    ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Included in {planName}</span>
+                    : <span className="text-base font-bold tabular-nums text-gray-900">₹{computeOrderRupees([o.id], VERIFICATION_DAYS[o.id], 0)}</span>}
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-gray-500">{o.body}</span>
+                <span className="mt-1.5 block text-xs font-semibold text-gray-700">{included ? "Already on your profile while your plan runs" : o.term}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {bought && !chosen && (
+        <p className="mt-4 text-sm text-gray-600" role="status">Bought. It's listed under Your Campaigns while Cosora reviews it.</p>
+      )}
+      {chosen && (
+        <div className="mt-5 space-y-3 md:max-w-md">
+          <DiscountCodeField
+            applied={quote ? { code: quote.code, discount: quote.discount } : null}
+            onApply={applyCode}
+            onRemove={() => { setQuote(null); setQuoteNote(null); }}
+            disabled={busy}
+          />
+          {quoteNote && <p className="text-xs text-destructive" role="alert">{quoteNote}</p>}
+          <button onClick={buy} disabled={busy} data-testid="verify-buy"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ff2160] py-3.5 text-base font-bold text-white transition-all hover:bg-[#ff2160]/80 disabled:opacity-60">
+            {busy ? "Processing…" : payable > 0 ? <>Pay · ₹{payable.toLocaleString("en-IN")}<ChevronRight className="h-5 w-5" /></> : <>Get it for free<ChevronRight className="h-5 w-5" /></>}
+          </button>
+        </div>
+      )}
+      <PaymentModal open={payOpen} onClose={() => setPayOpen(false)} amount={payable}
+        days={chosen ? VERIFICATION_DAYS[chosen] : 30} productCount={0} onPaid={publishDemo} />
+    </section>
+  );
+}
+
 const Advertisements = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
@@ -1544,6 +1702,16 @@ const Advertisements = () => {
   const planGrantsSeal = Boolean(vplan?.limits.has_verified_badge);
   const planName = vplan?.plan.name ?? "your";
   const refreshAds = () => qc.invalidateQueries({ queryKey: ["advertisements"] });
+  // A paid order clears the builder (SH-091): Pay used to come back with the same selection, and a second tap bought
+  // the campaign again (create-order makes a new order every time).
+  const afterPurchase = () => {
+    refreshAds();
+    setSelectedProducts([]);
+    setSelectedGoals([]);
+  };
+  // Only live listings can be advertised (SH-095): ads serve live listings only, and the server refuses the rest.
+  const liveProducts = myProducts.filter((p) => p.status === "active");
+  const sellerRegistered = useSellerRegistration(user?.id).data;
   // Goes through pause_ad_campaign_by_vendor / resume_ad_campaign, not a bare
   // UPDATE: an RLS-denied UPDATE matches zero rows and reports success, so the
   // vendor would be told the campaign paused while it kept running. The RPCs
@@ -1609,7 +1777,7 @@ const Advertisements = () => {
                 summary rail once there is room for both. */}
             <motion.div variants={section} className="space-y-6 min-[1400px]:space-y-0 min-[1400px]:grid min-[1400px]:grid-cols-[minmax(0,1fr)_300px] min-[1400px]:gap-6 min-[1400px]:items-start">
               <AdCreationSteps
-                products={myProducts}
+                products={liveProducts}
                 selectedAdTypes={selectedAdTypes} setSelectedAdTypes={setSelectedAdTypes}
                 selectedProducts={selectedProducts} setSelectedProducts={setSelectedProducts}
                 selectedDuration={selectedDuration} setSelectedDuration={setSelectedDuration}
@@ -1624,19 +1792,28 @@ const Advertisements = () => {
               />
               <div className="min-[1400px]:sticky min-[1400px]:top-24">
                 <CostSummary
-                  products={myProducts}
+                  products={liveProducts}
                   selectedAdTypes={selectedAdTypes}
                   selectedProducts={selectedProducts}
                   selectedDuration={selectedDuration}
                   selectedCategories={selectedCategories}
                   selectedCities={selectedCities}
                   vendorId={user?.id}
-                  onCreated={refreshAds}
+                  onCreated={afterPurchase}
                   canAds={canAds}
                   stateTargeting={stateTargeting}
                   selectedCountries={selectedCountries}
                 />
               </div>
+            </motion.div>
+            <motion.div variants={section}>
+              <GetVerified
+                vendorId={user?.id}
+                planGrantsSeal={planGrantsSeal}
+                planName={planName}
+                registered={sellerRegistered}
+                onCreated={refreshAds}
+              />
             </motion.div>
             <motion.div variants={section}>
               <HowAdvertisingWorks />

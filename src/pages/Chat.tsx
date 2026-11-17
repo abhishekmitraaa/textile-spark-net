@@ -4,10 +4,10 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import BuyerTopBar from "@/components/buyer/BuyerTopBar";
-import { CONVERSATIONS, callGroupsInOrder, type CallRecord } from "@/lib/chatData";
+import { type CallRecord } from "@/lib/chatData";
 import { useConversations, type ChatSummary } from "@/lib/queries/chat";
 import { useChatUnread } from "@/lib/queries/chatUnread";
-import { useCalls, useCallVendor } from "@/lib/queries/calls";
+import { useCalls, useCallVendor, useCallBuyer } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useIsDesktop } from "@/hooks/use-mobile";
@@ -17,13 +17,6 @@ import {
   Star, Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Static seed rows shaped into the summary the hub renders (signed-out fallback).
-const FALLBACK_CONVOS: ChatSummary[] = CONVERSATIONS.map((c) => ({
-  id: c.id, name: c.name, avatar: c.avatar, online: c.online,
-  lastMessage: c.lastMessage, timestamp: c.timestamp, unread: c.unread, rfqProduct: c.rfqProduct,
-  starred: false, archived: false,
-}));
 
 // Which chats the list shows (2026-10-18): archived ones only under Archived.
 type ChatView = "all" | "starred" | "archived";
@@ -83,20 +76,22 @@ const Chat = () => {
     else navigate(`/chats/${id}`);
   };
 
-  // Real conversations + calls when signed in; seeded lists only as signed-out fallback.
-  const { user } = useAuth();
+  // Real conversations and calls only (SH-101): signed out, the page asks to sign in. It used to show three seeded
+  // conversations with invented unread counts and hot-linked pictures.
+  const { user, loading: authLoading } = useAuth();
   const { data: dbConvos } = useConversations();
-  const { data: dbCalls } = useCalls();
+  const { data: dbCalls } = useCalls(isSeller ? "vendor" : "buyer");
   const callVendor = useCallVendor();
+  const callBuyer = useCallBuyer();
   // Each chat's unread count, live (it was always 0 for real chats).
   const unread = useChatUnread();
   const convos: ChatSummary[] = useMemo(
-    () => (user ? (dbConvos ?? []).map((c) => ({ ...c, unread: unread.byOther[c.id] ?? 0 })) : FALLBACK_CONVOS),
+    () => (user ? (dbConvos ?? []).map((c) => ({ ...c, unread: unread.byOther[c.id] ?? 0 })) : []),
     [user, dbConvos, unread.byOther],
   );
 
   const onlineCount = convos.filter((c) => c.online).length;
-  const groups = useMemo(() => (user ? (dbCalls ?? []) : callGroupsInOrder()), [user, dbCalls]);
+  const groups = useMemo(() => (user ? (dbCalls ?? []) : []), [user, dbCalls]);
 
   const viewCounts = useMemo(() => ({
     all: convos.filter((c) => !c.archived).length,
@@ -270,7 +265,7 @@ const Chat = () => {
                       <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5", buyerSplit && "divide-y-0 space-y-0.5")}>
                         {g.calls.map((c) => (
                           <motion.div key={c.id} variants={listItem}>
-                            <CallRow call={c} onOpen={() => openThread(c.vendorId)} onCall={() => callVendor(c.vendorId, c.rfqProduct)} onQuote={goQuotes} />
+                            <CallRow call={c} onOpen={() => openThread(c.vendorId)} onCall={() => (isSeller ? callBuyer(c.vendorId) : callVendor(c.vendorId, c.rfqProduct))} onQuote={goQuotes} />
                           </motion.div>
                         ))}
                       </motion.div>
@@ -306,6 +301,21 @@ const Chat = () => {
       {!isSeller && <MobileBottomNav />}
     </div>
   );
+
+  // Signed out there are no chats to show (SH-101): say so, with the way in.
+  if (!authLoading && !user) {
+    const signIn = (
+      <div className="grid min-h-[60vh] place-items-center px-6 text-center" data-testid="chat-signed-out">
+        <div>
+          <MessageCircle className="mx-auto h-10 w-10 text-gray-300" />
+          <p className="mt-3 text-base font-bold text-gray-900">Sign in to see your messages</p>
+          <p className="mt-1 text-sm text-gray-500">Your chats with buyers and sellers appear here once you're signed in.</p>
+          <button onClick={() => navigate("/login")} className="mt-4 rounded-full bg-brand-vendor px-5 py-2 text-sm font-bold text-white">Sign in</button>
+        </div>
+      </div>
+    );
+    return isSeller ? <DashboardLayout>{signIn}</DashboardLayout> : <>{signIn}<MobileBottomNav /></>;
+  }
 
   // Sellers get the vendor dashboard chrome. Buyers get a minimal desktop
   // frame instead: BuyerTopBar is the buyer app's standard header (its logo is
