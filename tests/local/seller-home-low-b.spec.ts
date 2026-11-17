@@ -3,7 +3,7 @@
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { BUYER_URL, contextWithSession, freshAccount, sql, stack, watchErrors } from "./stack";
+import { BUYER_URL, contextWithSession, freshAccount, service, sql, stack, watchErrors } from "./stack";
 
 const tag = Date.now().toString(36);
 const made: string[] = [];
@@ -192,4 +192,32 @@ test("Quotes prints a price with its paise", async ({ browser }) => {
   await expect(p.getByText("₹99.50").first()).toBeVisible({ timeout: 30_000 });
   await expect(p.getByText("₹ 99.5")).toHaveCount(0);
   await p.context().close();
+});
+
+// ── 2026-10-13 review item 3: reference images are private, and the seller sees them through a signed link ──
+test("a direct request's reference image is private and shows for the seller it went to", async ({ browser }) => {
+  const s = await account("lbref");
+  const b = await account("lbrefb", false);
+  const product = firstId(sql(`insert into public.products (vendor_id, name, status, price_value, moq)
+      values ('${s.id}', 'LB ${tag} ref listing', 'live', 100, '10') returning id`));
+  const buyerDb = clientFor(b.session);
+  const path = `${b.id}/rfq/${crypto.randomUUID()}/0.jpg`;
+  expect((await buyerDb.storage.from("rfq-attachments").upload(path, Buffer.from([0xff, 0xd8, 0xff, 0xd9]), { contentType: "image/jpeg" })).error).toBeNull();
+  sql(`insert into public.rfqs (buyer_id, vendor_id, product_id, title, product_name, quantity, status, expires_at,
+         customization_requested, customization_notes, customization_images)
+       values ('${b.id}', '${s.id}', '${product}', 'Quote request: LB ${tag}', 'LB ${tag} ref listing', 50, 'active',
+         now() + interval '7 days', true, 'Our logo on the chest', array['${path}'])`);
+  // Nobody else can read it: the public URL is refused, and another seller can't sign it.
+  const other = await account("lbrefo");
+  expect((await clientFor(other.session).storage.from("rfq-attachments").createSignedUrl(path, 60)).error).not.toBeNull();
+  const pub = await fetch(`${stack().API}/storage/v1/object/public/rfq-attachments/${path}`);
+  expect(pub.ok).toBe(false);
+
+  const p = await open(browser, s.session, "/quotes");
+  const img = p.getByRole("img", { name: "Reference 1" }).first();
+  await expect(img).toBeVisible({ timeout: 30_000 });
+  expect(await img.getAttribute("src")).toContain("/object/sign/rfq-attachments/");
+  await p.context().close();
+  sql(`delete from public.rfqs where buyer_id = '${b.id}'`);
+  await service().storage.from("rfq-attachments").remove([path]);
 });

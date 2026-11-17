@@ -135,6 +135,9 @@ begin
     return;
   end if;
 
+  -- Counted under a lock per reporter (claude.md: a limit that counts rows is checked under a lock), so two reports
+  -- of different chats at once can't both pass at 9 (commit security review, 2026-11-18).
+  perform pg_advisory_xact_lock(hashtextextended('cosora.submit_report:' || v_me::text, 0));
   if (select count(*) from admin.conversation_reviews r
        where r.reported_by = v_me
          and r.created_at > now() - interval '24 hours') >= 10 then
@@ -216,7 +219,9 @@ begin
     if found then continue; end if;
 
     if v_count >= 5000 then
-      -- Full: the new report takes over the row seen least and longest ago.
+      -- Full: the new report takes over a row seen only once, the longest ago. A row seen twice or more (real traffic
+      -- keeps hitting it) is never taken, so a flood of made-up reports, which the anon key can send, only recycles
+      -- its own once-seen rows (commit security review, 2026-11-18). With none left to take, the report is dropped.
       update public.csp_violations v
          set directive = v_directive, blocked = v_blocked,
              document_path = v_path, source = v_source,
@@ -225,7 +230,8 @@ begin
              hits = 1, first_seen = now(), last_seen = now()
        where v.id = (
                select o.id from public.csp_violations o
-                order by o.hits asc, o.last_seen asc
+                where o.hits < 2
+                order by o.last_seen asc
                 limit 1
                 for update skip locked
              );
@@ -248,6 +254,8 @@ $fn$;
 -- Finding the row to recycle must not scan 5,000 rows on every new report.
 create index if not exists csp_violations_least_seen_idx
   on public.csp_violations (hits, last_seen);
+create index if not exists csp_violations_once_seen_idx
+  on public.csp_violations (last_seen) where hits < 2;
 
 revoke execute on function public.csp_report_ingest(jsonb) from public;
 grant execute on function public.csp_report_ingest(jsonb) to anon, authenticated;

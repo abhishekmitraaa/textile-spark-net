@@ -1,4 +1,5 @@
 import { brand } from "@/lib/brand";
+import { RfqReferenceImages } from "@/components/RfqReferenceImages";
 import { quotePrice, quoteMoq } from "@/lib/quotePrice";
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
@@ -124,19 +125,7 @@ export default function DirectQuoteRequests({ focusRfqId = null }: { focusRfqId?
                   <dt className="w-20 shrink-0 text-gray-500">Custom</dt>
                   <dd className="min-w-0 text-gray-900">
                     {r.customizationNotes ? <span data-no-translate className="font-semibold">{r.customizationNotes}</span> : <span className="font-semibold">Requested</span>}
-                    {r.customizationImages.length > 0 && (
-                      <span className="mt-1.5 flex flex-wrap gap-1.5">
-                        {r.customizationImages.map((src, i) => (
-                          <a key={src} href={src} target="_blank" rel="noreferrer">
-                            <img
-                              src={src}
-                              alt={`Reference ${i + 1}`}
-                              className="h-12 w-12 rounded-md border border-gray-200 object-cover"
-                            />
-                          </a>
-                        ))}
-                      </span>
-                    )}
+                    <RfqReferenceImages stored={r.customizationImages} />
                   </dd>
                 </div>
               )}

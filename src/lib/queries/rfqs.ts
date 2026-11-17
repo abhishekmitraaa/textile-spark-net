@@ -135,7 +135,7 @@ function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor, product
       colors: r.colors ?? [],
       customizationRequested: r.customization_requested ?? false,
       customizationNotes: r.customization_notes ?? null,
-      customizationImages: (r.customization_images ?? []).filter((u) => ownStorageUrl(u)),
+      customizationImages: (r.customization_images ?? []).filter(isReferenceImage),
     },
   };
 }
@@ -340,6 +340,60 @@ export async function uploadRfqImages(buyerId: string, files: File[]): Promise<s
 /** The most pictures a requirement takes (the forms say "up to 5"). */
 export const RFQ_MAX_IMAGES = 5;
 
+/**
+ * Reference images on a request sent to one seller live in a private bucket (2026-10-13 review item 3; migration
+ * 20261118130000): a tech pack or an unreleased design is what a buyer attaches there. They are shrunk like
+ * requirement photos and uploaded under the buyer's own folder, and the request stores each object's PATH. The buyer,
+ * the seller it went to and Cosora staff read them through short-lived signed links (rfqAttachmentUrls); nobody else
+ * can, signed in or not. They used to go to the public product-images bucket, readable by anyone with the URL.
+ */
+export const RFQ_ATTACHMENTS_BUCKET = "rfq-attachments";
+async function uploadReferenceImages(buyerId: string, files: File[]): Promise<string[]> {
+  const batchId = crypto.randomUUID();
+  const prepared = await Promise.all(files.slice(0, RFQ_MAX_IMAGES).map((f) => shrinkImage(f)));
+  const paths: string[] = [];
+  try {
+    for (let i = 0; i < prepared.length; i++) {
+      const { blob, ext } = prepared[i];
+      const path = `${buyerId}/rfq/${batchId}/${i}.${ext}`;
+      const { error } = await supabase.storage.from(RFQ_ATTACHMENTS_BUCKET).upload(path, blob, { contentType: blob.type || undefined });
+      if (error) throw error;
+      paths.push(path);
+    }
+  } catch (e) {
+    if (paths.length) await supabase.storage.from(RFQ_ATTACHMENTS_BUCKET).remove(paths);
+    throw e;
+  }
+  return paths;
+}
+
+/** A stored reference image: a path in the private bucket, or (requests before 2026-11-18) a Cosora Storage URL. */
+const ATTACHMENT_PATH = /^[0-9a-f-]{36}\/rfq\/[0-9a-f-]{36}\/\d+\.(jpg|jpeg|png|webp)$/i;
+export const isReferenceImage = (v: string | null | undefined): v is string =>
+  typeof v === "string" && (ATTACHMENT_PATH.test(v) || Boolean(ownStorageUrl(v)));
+
+/** Links a signed-in reader can open, good for an hour. Old public URLs pass through. */
+export async function rfqAttachmentUrls(stored: string[]): Promise<string[]> {
+  const paths = stored.filter((p) => ATTACHMENT_PATH.test(p));
+  const signed = new Map<string, string>();
+  if (paths.length) {
+    const { data, error } = await supabase.storage.from(RFQ_ATTACHMENTS_BUCKET).createSignedUrls(paths, 3600);
+    if (error) throw error;
+    for (const s of data ?? []) if (s.path && s.signedUrl) signed.set(s.path, s.signedUrl);
+  }
+  return stored.map((p) => (ATTACHMENT_PATH.test(p) ? signed.get(p) ?? "" : ownStorageUrl(p) ?? "")).filter(Boolean);
+}
+
+export function useRfqAttachmentUrls(stored: string[]) {
+  return useQuery({
+    queryKey: ["rfq-attachment-urls", stored],
+    queryFn: () => rfqAttachmentUrls(stored),
+    enabled: stored.length > 0,
+    // Shorter than the links live, so a card left open never shows a dead one.
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
 function summarise(input: NewTargetedRfq, total: number): string {
   const parts = [`Quote request for ${input.productName}`, `Quantity: ${total}`];
   if (input.sizesBreakdown.length) {
@@ -370,7 +424,7 @@ export async function createTargetedQuoteRequest(buyerId: string, input: NewTarg
 
   let imageUrls: string[] = [];
   if (input.customizationRequested && input.customizationFiles.length) {
-    imageUrls = await uploadRfqImages(buyerId, input.customizationFiles);
+    imageUrls = await uploadReferenceImages(buyerId, input.customizationFiles);
   }
 
   // A targeted request is "quote me THIS listing", so the listing's own category
@@ -745,7 +799,7 @@ async function fetchDirectQuoteRequests(vendorId: string): Promise<DirectQuoteRe
     budgetMax: Number(r.budget_max ?? 0),
     customizationRequested: r.customization_requested ?? false,
     customizationNotes: r.customization_notes ?? null,
-    customizationImages: (r.customization_images ?? []).filter((u) => ownStorageUrl(u)),
+    customizationImages: (r.customization_images ?? []).filter(isReferenceImage),
     date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
     alreadyQuoted: quoted.has(r.id),
   }));

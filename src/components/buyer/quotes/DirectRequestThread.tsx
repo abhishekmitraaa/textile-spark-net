@@ -1,4 +1,5 @@
 import { brand } from "@/lib/brand";
+import { RfqReferenceImages } from "@/components/RfqReferenceImages";
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion, useReducedMotion } from "framer-motion";
@@ -160,19 +161,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
           {detail?.customizationRequested && (
             <DetailRow label="Custom">
               <span className="font-semibold">{detail.customizationNotes || "Requested"}</span>
-              {detail.customizationImages.length > 0 && (
-                <span className="mt-1.5 flex flex-wrap gap-1.5">
-                  {detail.customizationImages.map((src, i) => (
-                    <a key={src} href={src} target="_blank" rel="noreferrer">
-                      <img
-                        src={src}
-                        alt={`Reference ${i + 1}`}
-                        className="w-12 h-12 rounded-md border border-gray-200 object-cover"
-                      />
-                    </a>
-                  ))}
-                </span>
-              )}
+              <RfqReferenceImages stored={detail.customizationImages} />
             </DetailRow>
           )}
         </dl>
