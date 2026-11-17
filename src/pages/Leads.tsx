@@ -23,17 +23,17 @@ const page = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChi
 const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } } };
 
 // Loading, error and empty are distinct (SH-079): a failed read used to say there were no requirements or quotes.
-function ListState({ kind, what, onRetry, retrying }: { kind: "loading" | "error"; what: string; onRetry?: () => void; retrying?: boolean }) {
+function ListState({ kind, title, onRetry, retrying }: { kind: "loading" | "error"; title?: string; onRetry?: () => void; retrying?: boolean }) {
   if (kind === "loading") {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label={`Loading ${what}`}>
+      <div className="space-y-3" aria-busy="true">
         {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-gray-100" />)}
       </div>
     );
   }
   return (
     <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
-      <p className="text-sm font-bold text-amber-900">Your {what} couldn't be loaded</p>
+      <p className="text-sm font-bold text-amber-900">{title}</p>
       <p className="mx-auto mt-1 max-w-sm text-xs text-amber-800">Nothing has changed. Check your connection and try again.</p>
       {onRetry && (
         <button onClick={onRetry} disabled={retrying} className="mt-3 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-amber-900 ring-1 ring-amber-300 disabled:opacity-60">
@@ -54,7 +54,9 @@ const Leads = () => {
   const directQ = useDirectQuoteRequests(user?.id);
   const rfqs = openQ.data ?? [];
   const direct = directQ.data ?? [];
-  const isLoading = Boolean(user) && (openQ.isPending || directQ.isPending);
+  // The open list decides "loading" (as before): a lead linked from Seller Home scrolls into view when it lands, and a
+  // placeholder held for the direct requests would then vanish above it and push it off screen.
+  const isLoading = Boolean(user) && openQ.isPending;
   const loadError = openQ.error ?? directQ.error;
   const retry = () => { void openQ.refetch(); void directQ.refetch(); };
   // Direct requests count as leads: without this the page would claim there is
@@ -114,9 +116,9 @@ const Leads = () => {
                   </Link>
                 </div>
               )}
-              {isLoading && <ListState kind="loading" what="requirements" />}
+              {isLoading && <ListState kind="loading" />}
               {!isLoading && loadError && (
-                <ListState kind="error" what="requirements" onRetry={retry} retrying={openQ.isFetching || directQ.isFetching} />
+                <ListState kind="error" title="Your requirements couldn't be loaded" onRetry={retry} retrying={openQ.isFetching || directQ.isFetching} />
               )}
               <DirectQuoteRequests focusRfqId={focusRfqId} />
               <OpenRfqLeads focusRfqId={focusRfqId} />

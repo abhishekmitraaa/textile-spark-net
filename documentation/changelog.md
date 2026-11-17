@@ -1,5 +1,10 @@
-- 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300`; **not live**: production
-  migrations and the merge each need Mitra's yes; `100300` goes only after the app is live)
+- 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300` and `110000`; four payment
+  functions; released together, Mitra: "release both batch together")
+  **Seller Home audit, Medium items batch 2 (16): SH-078–080, 091, 093–098, 101–106.** Get verified on any plan (SH-093,
+  Mitra: "Sell them to Free sellers"), only ad types buyers see are sold, own live listings only, registration checked
+  before payment, old campaigns by their real state, a running-campaign index; Leads/Quotes/Analytics states and reply
+  times computed in the database; Messages: sign-in inbox, Back that doesn't loop, the seller calls the buyer, invalid
+  ids, no empty conversations on open, the seller's Calls tab. Record: `documentation/seller-home-medium-fixes-plan-2026-11-17.md`.
   **Seller Home audit, Medium items batch 1 (20 of 36): SH-034, 035, 041–046, 054–062, 072, 073, 077** (and the Low
   SH-063, which the new required-field checks needed).
   - Why: Mitra, 2026-11-17, "plan a fix for all the bugs which were in medium priority and then fix them ... do it in the

@@ -57,12 +57,13 @@ short list of things someone has to *decide*.
 
 ## Seller Home audit (2026-11-15) — what is still open
 
-Every High item and sections A–C (SH-001 to SH-033) were fixed and are live since 2026-11-17 (buyer `a96cbd3`, admin
-`f3db33a`). Still open from the audit: the Medium and Low items of sections D–L (SH-034 to SH-109, less the High ones),
-listed with context in `documentation/seller-home-audit-2026-11-15.md`; the two below were on this list before.
+Every High item, sections A–C (SH-001 to SH-033) and every Medium item of D–L (2026-11-17,
+`documentation/seller-home-medium-fixes-plan-2026-11-17.md`) are fixed. Still open: the Low items of D–L (SH-037–040,
+047–053, 063–067, 069–070, 074, 081–085, 099, 107–109; SH-063 was fixed with the Medium batch), in
+`documentation/seller-home-audit-2026-11-15.md`, and these:
+- The local spec `audit-second` "a chat opens on its newest 40 messages and loads older ones" fails at "Load earlier
+  messages" (the button is re-rendered before it can be tapped), on main as well as the Medium branch (2026-11-17).
 
-- **Uploads waiting for review count as missing (SH-046).** A premises photo under review shows "Missing", with no
-  "waiting for review" state; the "Complete product details" tile really means "get a listing approved".
 - `/business-profile-score`'s back arrow (`navigate(-1)`) leaves the app when the page was opened from a link
   (SH-052, seen).
 

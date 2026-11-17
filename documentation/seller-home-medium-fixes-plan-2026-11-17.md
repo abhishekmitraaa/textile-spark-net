@@ -51,13 +51,42 @@ profile-score-ranking). Three older specs were updated for the new behaviour (re
 types). Not exercised in a browser: a failed photo upload's clean-up (SH-058), the plan-limit message (SH-059) and a
 catalogue's file removal on delete (SH-072); each is a few lines read with the rest.
 
-Release order: `100000`, `100100`, `100200` → the app → check the live bundle reads `vendor_engagement_events` → `100300`.
+Release order (both batches together, Mitra 2026-11-17): migrations `100000`, `100100`, `100200`, `110000` → the four
+payment functions → the app → check the live bundle reads `vendor_engagement_events` → `100300`.
 
-## Batch 2 (16)
+## Batch 2 (16) — done (2026-11-17)
 
-SH-078, SH-079, SH-080 (Leads/Quotes/Analytics), SH-091, SH-093, SH-094, SH-095, SH-096, SH-097, SH-098 (Advertising),
-SH-101, SH-102, SH-103, SH-104, SH-105, SH-106 (Messages). Planned once batch 1 is done; SH-093 (seal and certificate
-can't be bought) needs Mitra's decision.
+Decision (Mitra, 2026-11-17): **SH-093 "Sell them to Free sellers … build this completely"**, and **release both batches
+together**. My calls: the seal lasts 30 days and the certificate a year from approval (the certificate carries the badge
+for that year), at the prices already shown (₹44, ₹199); paid plans keep the seal included and can now buy the
+certificate.
+
+| Item | Fix |
+|---|---|
+| SH-078 | The Analytics funnel counts only requirements still before their deadline. |
+| SH-079 | Leads, Quotes and Analytics: loading, error (Try again) and signed out are their own states. |
+| SH-080 | Reply times come from `vendor_response_threads()` (one row per thread); buyer names in groups of 100, errors surfaced. |
+| SH-091 | A paid order clears the builder, so a second tap can't buy it again. |
+| SH-093 | "Get verified" on /advertisements: the Trusted Seal or the Verified Certificate bought on its own by any registered seller, Free included, with discount codes. The server fixes the order (`verificationSpec`: no listing, no targeting, 30 days / a year) and skips the ad-reach rule for it; payment is never approval. The seal and certificate left the campaign builder. |
+| SH-094 | Only ad types buyers see are sold (`sellableAdTypes()` / `SELLABLE_AD_TYPES`): website and mobile banners, Facebook/Instagram, Google Shopping, their bundles and direct messages aren't offered, their goals are hidden, and the server refuses them. |
+| SH-095 | The builder lists live listings only; the server checks every listing is the seller's own and live before payment, and `ad_order_fulfil()` refuses another seller's listing. |
+| SH-096 | `seller_registered()` is checked before any ad or verification payment (`_shared/adOrderChecks.ts`). |
+| SH-097 | `/old-advertisements` files campaigns by `runStateOf()`: Scheduled, In review, Needs attention (with Cosora's reason), Paused, Ended; a button only where the seller can act. |
+| SH-098 | `advertisements_running_idx` and a status/date pre-filter in `active_ads()` (same rows). Spreading impression counting needs a new scheduled job, which is Mitra's call: in ToDo.md. |
+| SH-101 | Signed out, Messages asks to sign in (no seeded chats). |
+| SH-102 | The thread's Back goes back; Delete chat replaces the thread's history entry. |
+| SH-103 | A seller's Call reaches the buyer (`call_buyer_contact`). |
+| SH-104 | A thread id that isn't an account (not a uuid, your own, unknown) says "This conversation no longer exists". |
+| SH-105 | Opening a chat writes nothing; the first message creates the conversation (insert-if-missing, never rewritten). |
+| SH-106 | A seller's Calls tab lists buyers' calls to them, as incoming. |
+
+Migration `20261117110000`; payment functions `razorpay-create-order`, `razorpay-verify-payment`, `razorpay-webhook`,
+`discount-quote` (shared: `adPricing.ts`, `adReach.ts`, `adOrderChecks.ts`). Checks: `scripts/seller-medium-fixes-check.mjs`
+(both batches), `scripts/seller-home/medium_b.sql`, `tests/local/seller-home-medium-b.spec.ts` (8/8, the seal and
+certificate bought through the real paid path against a mock Razorpay), and the related specs (chat-unread,
+block-everywhere, chat-composer-keyboard, seller-home-high, seller-home-fixes, rfq-leads, admin-pages, first-fixes,
+low-fixes, subscriptions-p5, todo-open, views). Not caused here and left open: `audit-second` "loads older messages"
+fails the same way on main (todo.md).
 
 ## Release
 

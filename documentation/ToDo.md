@@ -51,6 +51,13 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5); migration `20261113100000`.
 - Status: Open
 
+### Count ad impressions in batches — added 2026-11-17
+- Task: decide whether to add a scheduled job that rolls up ad impressions (Mitra's call: new jobs are).
+- Context: Seller Home audit SH-098. `ad_impression()` adds 1 to the same newest campaigns' `impressions` on every
+  view, so busy pages contend on a few rows. The serving half (scanning every campaign) is fixed (2026-11-17,
+  `advertisements_running_idx`); spreading the counter needs a tally table and a job that folds it in every minute.
+- Status: Open
+
 ### CA: GST on plans and ads sold to sellers outside India — added 2026-11-13
 - Task: the CA confirms how a plan or ad bought by a seller outside India is taxed and invoiced.
 - Context: Mitra (D9): overseas sellers buy plans and ads, billed IGST. As built, the invoice has no Indian place of

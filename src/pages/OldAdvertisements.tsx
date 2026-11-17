@@ -71,7 +71,7 @@ function CampaignCard({ ad, status, onToggle }: { ad: AdRow; status: EffStatus; 
   const run = runStateOf(ad);
   const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : "0.0";
   return (
-    <motion.div variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+    <motion.div variants={listItem} data-testid="campaign-card" className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
       <div className="p-4 flex flex-col gap-3.5 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">

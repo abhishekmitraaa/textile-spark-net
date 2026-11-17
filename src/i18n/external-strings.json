@@ -570,6 +570,13 @@
   "Keep the state or region under 80 characters.",
   "Enter a 6-digit PIN code.",
   "Enter a valid postal code.",
-  "Keep each address line under 200 characters."
+  "Keep each address line under 200 characters.",
+  "Finish your seller registration first. Once Cosora approves it, you can buy ads and get verified.",
+  "Ads run only on your own live listings. Remove any that are in review, paused or not yours.",
+  "Some of these ad types aren't shown to buyers yet, so they can't be bought. Remove them and try again.",
+  "Couldn't check your registration. Try again in a moment.",
+  "Couldn't check your listings. Try again in a moment.",
+  "Pick each listing to promote once.",
+  "Pick listings from your products."
  ]
 }

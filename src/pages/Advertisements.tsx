@@ -921,7 +921,9 @@ function PaymentModal({
             <div className="rounded-2xl bg-[#fff5f5] border border-[#FF6B6B]/20 p-4 mb-4 text-center">
               <p className="text-xs text-gray-500">Amount payable</p>
               <p className="text-3xl font-extrabold text-gray-900 mt-0.5">₹{amount.toLocaleString("en-IN")}</p>
-              <p className="text-[11px] text-gray-500 mt-1">{productCount > 0 ? `${productCount} product${productCount > 1 ? "s" : ""} · ` : ""}{days} days</p>
+              {productCount > 0
+                ? <p className="text-[11px] text-gray-500 mt-1">{productCount} product{productCount > 1 ? "s" : ""} · {days} days</p>
+                : <p className="text-[11px] text-gray-500 mt-1">{days} days</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -1066,9 +1068,8 @@ function CostSummary({
       <div className="bg-white rounded-xl p-6 border border-amber-200 mt-6 text-center min-[1400px]:mt-0 min-[1400px]:text-left">
         <p className="text-base font-bold text-gray-900 mb-1">Advertising is a paid feature</p>
         <p className="text-sm text-gray-500 mb-4">Your current (Free) plan can't run ad campaigns. Upgrade to a paid plan to promote your products.</p>
-        <p className="text-sm text-gray-500 mb-4">
-          You can still <a href="#get-verified" className="font-semibold text-[#ff2160] hover:underline">get the Trusted Seal or the Verified Certificate</a> on the Free plan.
-        </p>
+        <p className="text-sm text-gray-500 mb-2">You can still get the Trusted Seal or the Verified Certificate on the Free plan.</p>
+        <a href="#get-verified" className="mb-4 inline-block text-sm font-semibold text-[#ff2160] hover:underline">Get verified</a>
         <Link to="/subscription" className="inline-flex items-center gap-1.5 rounded-2xl bg-[#ff2160] px-6 py-3 text-sm font-bold text-white hover:bg-[#ff2160]/80 transition-colors">
           View plans <ChevronRight className="w-4 h-4" />
         </Link>
@@ -1669,7 +1670,7 @@ function GetVerified({ vendorId, planGrantsSeal, planName, registered, onCreated
           {quoteNote && <p className="text-xs text-destructive" role="alert">{quoteNote}</p>}
           <button onClick={buy} disabled={busy} data-testid="verify-buy"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ff2160] py-3.5 text-base font-bold text-white transition-all hover:bg-[#ff2160]/80 disabled:opacity-60">
-            {busy ? "Processing…" : payable > 0 ? <>Pay · ₹{payable.toLocaleString("en-IN")}<ChevronRight className="h-5 w-5" /></> : <>Get it for free<ChevronRight className="h-5 w-5" /></>}
+            {busy ? "Processing…" : payable > 0 ? <>{`Pay · ₹${payable.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" /></> : <>Get it for free<ChevronRight className="h-5 w-5" /></>}
           </button>
         </div>
       )}

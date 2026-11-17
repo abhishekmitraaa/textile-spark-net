@@ -382,17 +382,17 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
 // ─────────────────────────────────────────────────────────────
 
 // Loading, error and empty are distinct (SH-079): a failed read used to say there were no requirements or quotes.
-function ListState({ kind, what, onRetry, retrying }: { kind: "loading" | "error"; what: string; onRetry?: () => void; retrying?: boolean }) {
+function ListState({ kind, title, onRetry, retrying }: { kind: "loading" | "error"; title?: string; onRetry?: () => void; retrying?: boolean }) {
   if (kind === "loading") {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label={`Loading ${what}`}>
+      <div className="space-y-3" aria-busy="true">
         {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-gray-100" />)}
       </div>
     );
   }
   return (
     <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
-      <p className="text-sm font-bold text-amber-900">Your {what} couldn't be loaded</p>
+      <p className="text-sm font-bold text-amber-900">{title}</p>
       <p className="mx-auto mt-1 max-w-sm text-xs text-amber-800">Nothing has changed. Check your connection and try again.</p>
       {onRetry && (
         <button onClick={onRetry} disabled={retrying} className="mt-3 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-amber-900 ring-1 ring-amber-300 disabled:opacity-60">
@@ -499,8 +499,8 @@ const Quotes = () => {
             {/* Search, sort, and the submitted-quote cards */}
             <motion.div variants={section} className="min-w-0 min-[1400px]:col-start-1 min-[1400px]:row-start-3">
               {quotesState === "ready" && <SubmittedQuotesList quotes={myQuotes} onSwitchToRequests={backToRequests} />}
-              {quotesState === "loading" && <ListState kind="loading" what="quotes" />}
-              {quotesState === "error" && <ListState kind="error" what="quotes" onRetry={() => void quotesQ.refetch()} retrying={quotesQ.isFetching} />}
+              {quotesState === "loading" && <ListState kind="loading" />}
+              {quotesState === "error" && <ListState kind="error" title="Your quotes couldn't be loaded" onRetry={() => void quotesQ.refetch()} retrying={quotesQ.isFetching} />}
             </motion.div>
           </div>
         </motion.div>

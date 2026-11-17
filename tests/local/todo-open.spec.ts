@@ -26,19 +26,23 @@ test("a rejected campaign gives its reason in words, not the code", async ({ bro
   }
 });
 
-test("the six ad types billed per day say /day", async ({ browser }) => {
+test("the ad types billed per day say /day", async ({ browser }) => {
   const ctx = await signedInContext(browser, "vendor", { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   await page.goto(`${BUYER_URL}/advertisements`);
   await page.getByRole("button", { name: /^More \(\d+ more options\)$/ }).click();
   // A card's accessible name starts with its title; Playwright's string name match is a substring match.
   const card = (name: string) => page.getByRole("button").filter({ has: page.getByRole("heading", { name, exact: true }) });
-  for (const name of ["Wholesaler Pick Ad", "Brand Ad", "Web & Mobile Combo", "Facebook & Instagram Ad", "Google Product Ad", "Social Media Combo"]) {
+  for (const name of ["Wholesaler Pick Ad", "Brand Ad"]) {
     await expect(card(name), name).toContainText("/day");
     await expect(card(name), name).not.toContainText("one-time");
   }
-  // The two that are charged once still say so.
-  await expect(card("Cosora Verified Certificate")).toContainText("one-time");
+  // Since 2026-11-17 (SH-094) types no buyer sees aren't sold, and the certificate is bought on its own in Get verified
+  // (SH-093), where its term is a year.
+  for (const name of ["Web & Mobile Combo", "Facebook & Instagram Ad", "Google Product Ad", "Social Media Combo"]) {
+    await expect(card(name), name).toHaveCount(0);
+  }
+  await expect(page.getByTestId("verify-verifiedCertificate")).toContainText("1 year of the badge from approval");
   await ctx.close();
 });
 

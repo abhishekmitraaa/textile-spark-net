@@ -1304,6 +1304,17 @@ undocumented. Deep technical rationale for each lives in
 - **A listing's photos and PDFs follow its review** (2026-11-17, SH-056–057; `20261117100100`): a seller's PDF change sends a
   live listing back to review like a photo change; only super admins and product moderators may change them as staff,
   and that goes in the Admin Log.
+- **The Trusted Seal and the Verified Certificate are bought on their own, on any plan** (Mitra, 2026-11-17, "Sell them to
+  Free sellers"; SH-093). "Get verified" on /advertisements; a registered seller, Free included. The server fixes such an
+  order (`verificationSpec()` in `_shared/adPricing.ts`, mirrored in `src/lib/adPricing.ts`): no listing, no targeting,
+  `VERIFICATION_DAYS` (seal 30, certificate 365, the certificate carrying the badge), and `adReach()` doesn't apply the
+  plan's ad reach to it. Approval still grants the badge; a plan that includes the seal shows "Included".
+- **Only ad types a buyer can see are sold** (2026-11-17, SH-094): `sellableAdTypes()` (src/lib/adSlots.ts: a slot that
+  isn't deferred, the badge, the certificate) and `SELLABLE_AD_TYPES` on the server, held equal by
+  `scripts/seller-medium-fixes-check.mjs`. A new slot makes its types sellable in both. Every ad order passes
+  `checkAdOrder()` (`_shared/adOrderChecks.ts`) before money moves: registered seller, sellable types, own live listings.
+- **Opening a chat writes nothing** (2026-11-17, SH-105): `useChatThread()` reads the conversation; the first message
+  creates it (insert if missing, never rewritten). An id that isn't an account is `invalid`.
 - **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,
   the profile score's inputs, the review states (registration, agreement, documents, listings, premises photos), the
   top 3 live products, the newest 3 leads (direct requests first) and the newest 3 chats (none archived, cleared or
