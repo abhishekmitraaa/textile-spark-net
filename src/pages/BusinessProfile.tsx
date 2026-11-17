@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import StateSelect from "@/components/StateSelect";
 import { EditSheet, editFieldClass as fieldClass } from "@/components/vendor/EditSheet";
+import { aboutCounts, aboutLength, ABOUT_MIN_CHARS } from "@/lib/queries/vendorDashboard";
 import { stateByCode, stateCodeFor } from "@/data/indiaStates";
 import { contactChanges, checkContactChanges, type ContactForm } from "@/lib/contactDetails";
 import { BusinessTypeSheet, CapacitySheet, ServedStatesSheet } from "@/components/vendor/BusinessReachSheets";
@@ -120,40 +121,20 @@ const employeeOptions = [
 // ─────────────────────────────────────────────────────────────
 
 function NumberOfEmployeesModal({ isOpen, onClose, selected, onSelect }: { isOpen: boolean; onClose: () => void; selected: string; onSelect: (v: string) => void }) {
-  if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
-          <h3 className="text-base font-bold text-gray-900">Number of Employees</h3>
-        </div>
-        <div className="overflow-y-auto flex-1">
-          <div className="mx-4 mt-4 mb-2 flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
-            <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0" />
-            <p className="text-xs text-blue-700">Please select the number of employees at your company</p>
-          </div>
-          <div className="divide-y divide-gray-100 px-4 pb-4">
-            {employeeOptions.map(opt => (
-              <button key={opt} onClick={() => { onSelect(opt); onClose(); }}
-                className="flex items-center justify-between w-full py-4 text-left">
-                <span className="text-sm text-gray-800">{opt}</span>
-                <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected === opt ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
-                  {selected === opt && <span className="w-2 h-2 rounded-full bg-white" />}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="px-4 pb-4">
-            <button onClick={onClose} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">Save</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <RangePickerModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Number of Employees"
+      hint="Please select the number of employees at your company"
+      options={employeeOptions}
+      selected={selected}
+      onSelect={onSelect}
+    />
   );
 }
 
-/** Single-choice range picker. Same chrome as NumberOfEmployeesModal above. */
+/** Single-choice range picker, in the shared EditSheet dialog (SH-053). A pick saves and closes. */
 function RangePickerModal({
   isOpen, onClose, title, hint, options, selected, onSelect,
 }: {
@@ -162,34 +143,24 @@ function RangePickerModal({
 }) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
-          <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        </div>
-        <div className="overflow-y-auto flex-1">
-          <div className="mx-4 mt-4 mb-2 flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
-            <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0" />
-            <p className="text-xs text-blue-700">{hint}</p>
-          </div>
-          <div className="divide-y divide-gray-100 px-4 pb-4">
-            {options.map(opt => (
-              <button key={opt} onClick={() => { onSelect(opt); onClose(); }}
-                className="flex items-center justify-between w-full py-4 text-left">
-                <span className="text-sm text-gray-800">{opt}</span>
-                <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected === opt ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
-                  {selected === opt && <span className="w-2 h-2 rounded-full bg-white" />}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div className="px-4 pb-4">
-            <button onClick={onClose} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">Save</button>
-          </div>
-        </div>
+    <EditSheet title={title} onClose={onClose}>
+      <div className="mb-2 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
+        <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0" />
+        <p className="text-xs text-blue-700">{hint}</p>
       </div>
-    </div>
+      <div role="radiogroup" aria-label={title} className="divide-y divide-gray-100">
+        {options.map(opt => (
+          <button key={opt} type="button" role="radio" aria-checked={selected === opt}
+            onClick={() => { onSelect(opt); onClose(); }}
+            className="flex items-center justify-between w-full py-4 text-left">
+            <span className="text-sm text-gray-800">{opt}</span>
+            <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected === opt ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
+              {selected === opt && <span className="w-2 h-2 rounded-full bg-white" />}
+            </span>
+          </button>
+        ))}
+      </div>
+    </EditSheet>
   );
 }
 
@@ -231,6 +202,11 @@ function EditAboutModal({ isOpen, onClose, initial, onSave }: { isOpen: boolean;
       }
     >
       <p className="text-sm text-gray-600 mb-3">Tell buyers what your business does, what you manufacture, and who you supply.</p>
+      <p className={`mb-2 text-xs ${aboutCounts(text) ? "text-green-700" : "text-gray-500"}`} data-testid="about-count">
+        {aboutCounts(text)
+          ? "Counts toward your profile score."
+          : `${aboutLength(text)} of ${ABOUT_MIN_CHARS} characters to count toward your profile score.`}
+      </p>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -611,7 +587,8 @@ const BusinessProfile = () => {
       "year-established": () => setShowYearModal(true),
       turnover: () => setShowTurnoverModal(true),
     };
-    const SECTION_TARGETS = ["about-us", "contact-details", "office-pictures", "detailed-information"];
+    // "capacity" is the Capacity bands (vendor_profiles.capacity), the field the score reads (SH-049), not Monthly Capacity.
+    const SECTION_TARGETS = ["about-us", "contact-details", "office-pictures", "detailed-information", "capacity"];
     const target = searchParams.get("focus");
     if (!target || focusHandledRef.current) return;
     focusHandledRef.current = true;
@@ -624,7 +601,7 @@ const BusinessProfile = () => {
 
     // "Total Employees" / "Year of Establishment" / "Business Category" live
     // inside the collapsible, so make sure it is open before scrolling.
-    if (target === "detailed-information") setDetailsOpen(true);
+    if (target === "detailed-information" || target === "capacity") setDetailsOpen(true);
 
     // Wait a frame so the section has laid out (and expanded) before measuring.
     const raf = requestAnimationFrame(() => {
@@ -1155,7 +1132,7 @@ const BusinessProfile = () => {
                   to ["Medium"], so it recorded nothing and every profile
                   silently claimed to be a medium-scale manufacturer. An unset
                   capacity is EMPTY, not Medium. */}
-              <div>
+              <div id="capacity" className={`rounded-xl transition-colors duration-500 ${highlight === "capacity" ? "ring-2 ring-blue-200" : ""}`}>
                 <p className="text-sm font-bold text-gray-900 mb-0.5">Capacity</p>
                 <p className="text-xs text-gray-400 mb-3">
                   Buyers see this on your storefront. Pick every band you can produce at.
@@ -1832,7 +1809,11 @@ const BusinessProfile = () => {
         isOpen={showAboutModal}
         onClose={() => setShowAboutModal(false)}
         initial={store?.about ?? ""}
-        onSave={async (about) => { await persist({ about }, "About Us updated"); }}
+        onSave={async (about) => {
+          await persist({ about }, aboutCounts(about)
+            ? "About Us updated"
+            : `About Us saved. It counts toward your profile score from ${ABOUT_MIN_CHARS} characters.`);
+        }}
       />
 
       <BusinessTypeSheet

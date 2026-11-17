@@ -377,8 +377,9 @@ test("MP4 P4.3 — the score written at onboarding equals the score the app disp
 
   // What saveVendorOnboarding stored, read BEFORE any dashboard load can
   // recompute and overwrite it.
-  const { data: atSubmit } = await db.from("vendor_profiles").select("profile_score").eq("id", VENDOR_ID).maybeSingle();
-  const stored = atSubmit!.profile_score as number;
+  // The column isn't browser-readable since SH-051; my_profile_score() returns the caller's own.
+  const { data: atSubmit } = await db.rpc("my_profile_score");
+  const stored = atSubmit as number;
 
   const ctx = await contextAs(browser);
   const page = await ctx.newPage();
@@ -388,8 +389,8 @@ test("MP4 P4.3 — the score written at onboarding equals the score the app disp
   const displayed = Number((await page.getByText(/^\d+%$/).first().innerText()).replace("%", ""));
 
   // And what the dashboard's own recompute left behind afterwards.
-  const { data: afterLoad } = await db.from("vendor_profiles").select("profile_score").eq("id", VENDOR_ID).maybeSingle();
-  const recomputed = afterLoad!.profile_score as number;
+  const { data: afterLoad } = await db.rpc("my_profile_score");
+  const recomputed = afterLoad as number;
 
   console.log(`\n[MP4 P4.3] stored at submit=${stored}  displayed=${displayed}  after dashboard recompute=${recomputed}\n`);
 

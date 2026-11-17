@@ -12,18 +12,21 @@
  */
 export const VENDOR_PUBLIC_COLUMNS =
   "id, brand_name, about, city, state, country, business_type, is_verified, followers_count, rating_avg, " +
-  "reviews_count, created_at, website, logo_url, banner_url, owner_name, gstin, cin, profile_score, " +
+  "reviews_count, created_at, website, logo_url, banner_url, owner_name, gstin, cin, " +
   "onboarding_complete, plan_id, plan_expires_at, ad_verified_until, notifications, regional, category, " +
   "office_photos, year_established, employee_count, social, recommended_product_ids, annual_turnover, capacity, " +
   "has_phone, has_whatsapp";
 
 export async function readOwnVendorRow(db, vendorId) {
-  const [{ data, error }, { data: priv, error: privError }] = await Promise.all([
+  // profile_score isn't browser-readable since SH-051 (20261117130100): my_profile_score() returns the caller's own.
+  const [{ data, error }, { data: priv, error: privError }, { data: score, error: scoreError }] = await Promise.all([
     db.from("vendor_profiles").select(VENDOR_PUBLIC_COLUMNS).eq("id", vendorId).maybeSingle(),
     db.rpc("my_vendor_private"),
+    db.rpc("my_profile_score"),
   ]);
   if (error) throw error;
   if (privError) throw privError;
+  if (scoreError) throw scoreError;
   if (!data) return null;
-  return { ...data, ...(priv?.[0] ?? {}) };
+  return { ...data, ...(priv?.[0] ?? {}), profile_score: score };
 }

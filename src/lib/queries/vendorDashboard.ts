@@ -92,7 +92,18 @@ export interface ProfileScoreInput {
   quotesSent: number;
 }
 
-const filled = (v: string | null | undefined): boolean => typeof v === "string" && v.trim().length > 0;
+// Trimmed and counted exactly as vendor_profile_score_of() does (SH-048): btrim(…, E' \t\r\n') takes off spaces, tabs
+// and line ends only (a no-break space stays and counts), and char_length counts code points (an emoji is one, not two).
+// JS's trim() and .length did neither, so the page and the stored score could disagree on odd input.
+export function sqlTrim(v: string): string {
+  return v.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
+}
+const charLength = (v: string): number => Array.from(v).length;
+const filled = (v: string | null | undefined): boolean => typeof v === "string" && sqlTrim(v) !== "";
+/** About Us counts toward the score from this many characters (SQL: char_length > 10). Shown in the editor (SH-050). */
+export const ABOUT_MIN_CHARS = 11;
+export const aboutCounts = (about: string | null | undefined): boolean => charLength(sqlTrim(about ?? "")) >= ABOUT_MIN_CHARS;
+export const aboutLength = (about: string | null | undefined): number => charLength(sqlTrim(about ?? ""));
 
 // "At least one platform has at least one non-empty URL." Defensive about the
 // shape because `social` is jsonb and nothing at the DB level constrains it.
@@ -122,7 +133,7 @@ export function profileScoreSignals(input: ProfileScoreInput): ProfileScoreSigna
   return [
     { key: "contactDetails",  label: "Add a contact phone number",            points: w.contactDetails,  met: filled(input.phone),                       href: "/business-profile" },
     // A one-word "hi" is not an About Us; require something with a bit of substance.
-    { key: "aboutUs",         label: "Write an About Us section",             points: w.aboutUs,         met: (input.about ?? "").trim().length > 10,    href: "/business-profile" },
+    { key: "aboutUs",         label: "Write an About Us section",             points: w.aboutUs,         met: aboutCounts(input.about),                  href: "/business-profile?focus=about-us" },
     { key: "liveProduct",     label: "Get your first product live",           points: w.liveProduct,     met: input.productsLive >= 1,                   href: "/products" },
     { key: "category",        label: "Pick the categories you sell in",       points: w.category,        met: (input.category ?? []).length > 0,         href: "/business-profile" },
     { key: "officePhotos",    label: "Upload 5 photos of your premises",      points: w.officePhotos,    met: (input.officePhotos ?? []).length >= 5,    href: "/business-profile" },
@@ -135,7 +146,7 @@ export function profileScoreSignals(input: ProfileScoreInput): ProfileScoreSigna
     { key: "yearEstablished", label: "Add the year you were established",     points: w.yearEstablished, met: input.yearEstablished != null,             href: "/business-profile" },
     { key: "employeeCount",   label: "Add your team size",                    points: w.employeeCount,   met: filled(input.employeeCount),               href: "/business-profile?focus=employees" },
     { key: "annualTurnover",  label: "Add your annual turnover",             points: w.annualTurnover,  met: filled(input.annualTurnover),              href: "/business-profile?focus=turnover" },
-    { key: "capacity",        label: "State your production capacity",       points: w.capacity,        met: (input.capacity ?? []).length > 0,         href: "/business-profile?focus=detailed-information" },
+    { key: "capacity",        label: "State your production capacity",       points: w.capacity,        met: (input.capacity ?? []).length > 0,         href: "/business-profile?focus=capacity" },
   ];
 }
 

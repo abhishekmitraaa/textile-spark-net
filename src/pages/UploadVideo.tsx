@@ -1,6 +1,8 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useStepBack } from "@/hooks/useStepBack";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -275,7 +277,6 @@ function VideoCloseupCard({
 // ─────────────────────────────────────────────────────────────
 
 const UploadVideo = () => {
-  const navigate = useNavigate();
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -500,6 +501,9 @@ const UploadVideo = () => {
     }
   };
 
+  // Asks first (SH-070): a tap on the bin used to delete the video at once.
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const back = useStepBack("/seller-home");
   const handleDelete = async (id: string) => {
     try {
       await deleteProductVideo(id);
@@ -519,7 +523,7 @@ const UploadVideo = () => {
           <motion.button
             whileTap={TAP}
             transition={TAP_T}
-            onClick={() => navigate(-1)}
+            onClick={back}
             className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
@@ -538,7 +542,7 @@ const UploadVideo = () => {
             <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold">Video Closeups get 5× more reach</p>
+            <p className="text-sm font-bold">Show your product in motion</p>
             <p className="text-xs text-white/75 mt-0.5">
               Buyers discover products through short videos before enquiring. Tag a product and let the video closeup drive the lead.
             </p>
@@ -844,7 +848,7 @@ const UploadVideo = () => {
             </h2>
             <motion.div variants={listContainer} className="space-y-3">
               {closeups.map((closeup) => (
-                <VideoCloseupCard key={closeup.id} closeup={closeup} onDelete={handleDelete} />
+                <VideoCloseupCard key={closeup.id} closeup={closeup} onDelete={setPendingDelete} />
               ))}
             </motion.div>
           </motion.div>
@@ -863,6 +867,14 @@ const UploadVideo = () => {
           </motion.div>
         )}
       </motion.div>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this video closeup?"
+        body="It comes off your store and the buyer feed, and the file is deleted. This can't be undone."
+        confirmLabel="Delete"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => { const id = pendingDelete; setPendingDelete(null); if (id) void handleDelete(id); }}
+      />
     </DashboardLayout>
   );
 };

@@ -98,8 +98,9 @@ with no need to dictate format, context, or reference each time.
      returns null for signed-out callers: that note is wrong). Coalesce the check, revoke anon.
   2. `hero_slides` read policy checks the end date only, so a slide scheduled for later shows before its
      `starts_at`. Add `starts_at <= now()`.
-  3. `notifications` UPDATE policy lets a user change any column of their own rows; allow `read_at` (or the read flag)
-     only, e.g. a column grant or a function.
+  3. ~~`notifications` UPDATE any column~~: closed. `trg_notifications_update_columns` already allowed only `read`; it
+     was live with no migration file, and is recorded (whole row less `read`) in `20261117130000` (Seller Home audit
+     SH-040, 2026-11-17).
   4. `profiles.avatar_url` and review `photos` accept any URL (a tracking pixel loads for every viewer). Accept only
      Cosora storage URLs (as `rfqs.image` does via `lib/storageUrl.ts` and a guard).
   5. `image-search` and `embed-query` edge functions return the upstream (OpenAI) error text to the browser. Return a

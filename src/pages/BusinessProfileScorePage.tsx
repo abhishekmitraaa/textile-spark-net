@@ -1,4 +1,5 @@
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useStepBack } from "@/hooks/useStepBack";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList, Check, IndianRupee, Factory } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -52,7 +53,8 @@ const scoreItems = [
   { key: "yearEstablished", label: "Add Year of Establishment", href: "/business-profile?focus=year-established", Icon: Calendar },
   { key: "employeeCount",   label: "Add Number of Employees", href: "/business-profile?focus=employees", Icon: Users },
   { key: "annualTurnover",  label: "Add Annual Turnover", href: "/business-profile?focus=turnover", Icon: IndianRupee },
-  { key: "capacity",        label: "State Production Capacity", href: "/business-profile?focus=detailed-information", Icon: Factory },
+  // The Capacity bands, the field the score reads (SH-049), not Detailed information's Monthly Capacity.
+  { key: "capacity",        label: "State Production Capacity", href: "/business-profile?focus=capacity", Icon: Factory },
 ] as const satisfies ReadonlyArray<{ key: keyof typeof PROFILE_SCORE_WEIGHTS; label: string; href: string; Icon: LucideIcon }>;
 
 /**
@@ -138,7 +140,8 @@ const ScoreTile = ({
 );
 
 const BusinessProfileScorePage = () => {
-  const navigate = useNavigate();
+  // Opened from a link or a new tab, Back goes to Seller Home instead of leaving the app (SH-052).
+  const back = useStepBack("/seller-home");
   const reduced = useReducedMotion();
   const { score, checks, isLoading, isError, hasVendorRow, waiting, retry } = useProfileScoreState();
   // Without the seller's own rows nothing is known: no tile says "Missing" and no count is shown (SH-045).
@@ -175,7 +178,8 @@ const BusinessProfileScorePage = () => {
           <motion.button
             whileTap={TAP}
             transition={TAP_T}
-            onClick={() => navigate(-1)}
+            onClick={back}
+            aria-label="Back"
             className="rounded-full p-1.5 transition-colors hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5 text-foreground" />

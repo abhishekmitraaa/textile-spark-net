@@ -176,7 +176,7 @@ const STORE_COLS =
   "id, brand_name, owner_name, about, business_type, primary_type, category, capabilities, capacity, served_states, " +
   "city, state, state_code, country, website, social, logo_url, banner_url, office_photos, year_established, " +
   "employee_count, annual_turnover, gstin, cin, has_phone, has_whatsapp, is_verified, plan_id, plan_expires_at, " +
-  "ad_verified_until, followers_count, rating_avg, reviews_count, profile_score, onboarding_complete, notifications, " +
+  "ad_verified_until, followers_count, rating_avg, reviews_count, onboarding_complete, notifications, " +
   "regional, created_at";
 
 async function sellerRecords(userId: string): Promise<Record<string, unknown> | null> {

@@ -1,5 +1,5 @@
 import { errorMessage } from "@/lib/errorMessage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyProducts, useProductCap, deleteProduct, duplicateProduct, type VendorProductRow } from "@/lib/queries/products";
+import { priceText } from "@/lib/currency";
 import { LiveListingsDialog } from "@/components/vendor/LiveListingsDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -202,7 +203,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
             {product.name}
           </p>
           <div className="flex items-center gap-1 mt-1">
-            <span className="text-sm font-bold text-gray-900">₹ {product.price}</span>
+            <span className="text-sm font-bold text-gray-900">{priceText("₹", Number(product.price))}</span>
             <span className="text-xs text-gray-400">/ {product.unit}</span>
           </div>
           <div className="flex items-center gap-3 mt-1.5">
@@ -269,7 +270,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
 
         {/* Price */}
         <div className="min-w-0">
-          <p className="text-[15px] font-bold text-gray-900 truncate">₹ {product.price}</p>
+          <p className="text-[15px] font-bold text-gray-900 truncate">{priceText("₹", Number(product.price))}</p>
           <p className="text-[11px] text-gray-400">per {product.unit}</p>
         </div>
 
@@ -350,6 +351,9 @@ function StatePanel({ icon: Icon, title, body, children }: {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
+/** The filter value for listings with no category. Not a category name a listing can carry. */
+const UNCATEGORISED = "__none__";
+
 const Products = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
@@ -388,10 +392,17 @@ const Products = () => {
       : [...counted].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || b.views - a.views).map((p) => p.id))
     : counted.map((p) => p.id);
 
+  // The seller's own categories (SH-065): the filter listed three fixed names and was never applied.
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(products.map((p) => p.categoryName?.trim() || UNCATEGORISED))).sort((a, b) =>
+      a === UNCATEGORISED ? 1 : b === UNCATEGORISED ? -1 : a.localeCompare(b)),
+    [products],
+  );
   const filtered = products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || p.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchCategory = categoryFilter === "all" || (p.categoryName?.trim() || UNCATEGORISED) === categoryFilter;
+    return matchSearch && matchStatus && matchCategory;
   });
 
   const filtersActive = Boolean(search) || statusFilter !== "all" || categoryFilter !== "all";
@@ -567,9 +578,9 @@ const Products = () => {
                   className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-brand-vendor pr-7 lg:text-sm lg:py-2.5"
                 >
                   <option value="all">All Categories</option>
-                  <option value="apparel">Apparel</option>
-                  <option value="fabrics">Fabrics</option>
-                  <option value="accessories">Accessories</option>
+                  {categoryOptions.map((c) => (
+                    <option key={c} value={c}>{c === UNCATEGORISED ? "No category" : c}</option>
+                  ))}
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               </div>

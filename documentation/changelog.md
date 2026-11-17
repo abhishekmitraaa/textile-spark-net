@@ -1,3 +1,18 @@
+- 2026-11-17 (branch `seller-home/low-fixes`, stacked on `ads/manual-types`; migrations `20261117130000`, `130100`;
+  built and tested locally, **not released**)
+  **Seller Home audit, Low items batch 1 (20): SH-037–040, 047–053, 064–067, 069, 070, 074, 081, 082.**
+  - Why: Mitra, 2026-11-17, "plan a fix for all the bugs which were in low priority and then fix them ... do it in the
+    batch of 20". Decision: SH-082 "View only". Plan and record `documentation/seller-home-low-fixes-plan-2026-11-17.md`.
+  - Database: the notifications column guard recorded in a migration (whole row less `read`); a listing's status
+    change rescores its seller whatever the UPDATE named; the 3-PDF limit counted under a lock; quote price and MOQ
+    above 0 (`not valid`); `my_profile_score()`, then (after the app) `profile_score` revoked from browsers.
+  - App: the bell counts every unread notice and the page pages ("Show older"); signed out, Notifications says so;
+    every notice text translated by template, buyer text kept as written; the score trims and counts like SQL, the
+    capacity item opens the Capacity bands, About Us says how long it must be; sheets are dialogs; Products keeps paise,
+    one unit word and a working category filter; Duplicate copies the whole listing and its photo files; no invented
+    figures on Upload Video and Upload Catalogue; deletes ask first; Back stays in the app; quote prices checked; "View
+    quote" opens the quote and its request.
+  - Checks: `tests/local/seller-home-low.spec.ts` (7), related local specs 67/67.
 - 2026-11-17 (branch `ads/manual-types`, admin branch `ads/manual-types`; migration `20261117120000`; built and tested
   locally, **not released**)
   **Ad types done by hand.** Facebook & Instagram, Google Product, Social Media Combo and Direct Broadcast are sold again.

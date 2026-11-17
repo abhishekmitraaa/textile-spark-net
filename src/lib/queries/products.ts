@@ -635,6 +635,17 @@ function completeness(p: RawMyProduct): number {
   return s;
 }
 
+/** A listing's selling unit as one word, singular and lower-case: "pieces" and a blank are both "piece" (SH-064). */
+const UNIT_SINGULAR: Record<string, string> = {
+  pieces: "piece", pcs: "piece", pc: "piece", sets: "set", metres: "metre", meters: "metre", meter: "metre",
+  kgs: "kg", dozens: "dozen", yards: "yard", rolls: "roll", pairs: "pair",
+};
+export function sellingUnit(unit: string | null | undefined): string {
+  const u = (unit ?? "").trim().toLowerCase();
+  if (!u) return "piece";
+  return UNIT_SINGULAR[u] ?? u;
+}
+
 async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
   const { data, error } = await supabase
     .from("products")
@@ -648,10 +659,10 @@ async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
     return {
       id: p.id,
       name: p.name,
-      price: p.price_value != null ? String(Math.round(Number(p.price_value))) : "0",
-      // Real selling unit now that products.unit exists — this was hardcoded
-      // to "Piece" for every listing because the column did not.
-      unit: p.unit || "Piece",
+      // Paise kept (SH-064): "₹450.75", never rounded to "₹451".
+      price: p.price_value != null ? String(Number(p.price_value)) : "0",
+      // One word for one unit (SH-064): "per piece", whether the row says "pieces", "Piece" or nothing.
+      unit: sellingUnit(p.unit),
       image: img,
       status: toUiStatus(p.status),
       rejectionReason: p.status === "rejected" ? p.rejection_reason : null,
@@ -722,17 +733,68 @@ export async function deleteProduct(id: string): Promise<void> {
   for (const r of results) if (r?.error) console.warn("[deleteProduct] files left in storage:", r.error.message);
 }
 
+/**
+ * Everything the seller wrote on a listing, for "Duplicate" (Seller Home audit SH-066: it copied 12 columns, so the copy
+ * lost its photos, sizes, unit, customisation and every answer kept in `attributes`). Not copied: who owns it, its
+ * status and review fields, counters, search text and embeddings (Cosora's), and the PDFs (each listing's own, under
+ * the 3-PDF limit).
+ */
+const DUPLICATE_COLUMNS = "name, description, price_value, currency, compare_at_price, moq, unit, fabric, gsm, fit_type, " +
+  "gender, colour, location, category_id, category_name, sizes, waist_sizes, lengths, customization_available, pattern, " +
+  "occasion, neck_type, sleeve_type, collar_type, country_of_origin, attributes";
+
+/**
+ * A draft copy of one of the seller's listings, photos included. Each photo in the seller's own folder is copied to
+ * the new listing's folder (`<seller>/<new listing>/…`), so deleting either listing never removes the other's
+ * pictures; a link elsewhere (a CSV import's) is kept as it is. Anything copied is removed again if a later step fails.
+ */
 export async function duplicateProduct(vendorId: string, sourceId: string): Promise<void> {
-  const { data: src, error: readErr } = await supabase
-    .from("products")
-    .select("name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, category_id")
-    .eq("id", sourceId)
-    .single();
+  const [{ data: src, error: readErr }, { data: imgs, error: imgErr }] = await Promise.all([
+    supabase.from("products").select(DUPLICATE_COLUMNS).eq("id", sourceId).single(),
+    supabase.from("product_images").select("url, position").eq("product_id", sourceId).order("position"),
+  ]);
   if (readErr) throw readErr;
-  const { error } = await supabase
-    .from("products")
-    .insert({ ...src, vendor_id: vendorId, name: `${src.name} (Copy)`, status: "draft" });
-  if (error) throw error;
+  if (imgErr) throw imgErr;
+  const row = src as unknown as Record<string, unknown> & { name: string };
+  const newId = crypto.randomUUID();
+  const bucket = supabase.storage.from("product-images");
+  const base = bucket.getPublicUrl("").data.publicUrl;
+  const copied: string[] = [];
+  const cleanUp = async () => {
+    if (copied.length) {
+      const { error } = await bucket.remove(copied);
+      if (error) console.warn("[duplicateProduct] copied photos left in storage:", error.message);
+    }
+  };
+  const urls: { url: string; position: number }[] = [];
+  try {
+    for (const img of (imgs ?? []) as { url: string; position: number }[]) {
+      if (!img.url.startsWith(`${base}${vendorId}/`)) { urls.push(img); continue; }
+      const from = decodeURIComponent(img.url.slice(base.length));
+      const ext = from.split(".").pop() || "jpg";
+      const to = `${vendorId}/${newId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await bucket.copy(from, to);
+      if (error) throw error;
+      copied.push(to);
+      urls.push({ url: bucket.getPublicUrl(to).data.publicUrl, position: img.position });
+    }
+    const { error } = await supabase
+      .from("products")
+      .insert({ ...row, id: newId, vendor_id: vendorId, name: `${row.name} (Copy)`, status: "draft" } as never);
+    if (error) throw error;
+  } catch (e) {
+    await cleanUp();
+    throw e;
+  }
+  if (urls.length) {
+    const { error } = await supabase.from("product_images")
+      .insert(urls.map((u) => ({ product_id: newId, url: u.url, position: u.position })));
+    if (error) {
+      await supabase.from("products").delete().eq("id", newId);
+      await cleanUp();
+      throw error;
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

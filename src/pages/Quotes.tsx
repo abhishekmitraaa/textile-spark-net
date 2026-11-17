@@ -7,6 +7,7 @@ import DirectQuoteRequests from "@/components/vendor/DirectQuoteRequests";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMySubmittedQuotes } from "@/lib/queries/rfqs";
 import type { MySubmittedQuote } from "@/lib/queries/rfqs";
+import { QuoteDetailDialog } from "@/components/vendor/QuoteDetailDialog";
 import { useCallBuyer } from "@/lib/queries/calls";
 import {
   useVendorOrderValue, useVendorResponsiveness, formatInrCompact, formatDelay,
@@ -173,6 +174,8 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
     navigate(`/chats/${buyerId}`);
   };
 
+  // "View quote" opens the quote and its request, read-only (SH-082, Mitra: "View only").
+  const [viewing, setViewing] = useState<MySubmittedQuote | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recent");
   const [sortOpen, setSortOpen] = useState(false);
@@ -335,9 +338,9 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                 )}
                 {q.status === "accepted" && q.image && (
                   <div className="grid grid-cols-2 gap-2 lg:flex lg:gap-2">
-                    <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
+                    <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setViewing(q)}
                       className="py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 lg:px-5">
-                      <Star className="w-3.5 h-3.5" /> View RFQ
+                      <FileText className="w-3.5 h-3.5" /> View quote
                     </motion.button>
                     <motion.button whileTap={TAP} transition={TAP_T} onClick={() => callBuyer(q.buyerId)}
                       className="py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5 lg:px-5">
@@ -352,10 +355,17 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                   </motion.button>
                 )}
                 {q.status === "awaiting" && (
-                  <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
+                  <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setViewing(q)}
                     className="w-full py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 lg:w-auto lg:px-5">
-                    View RFQ <ChevronRight className="w-4 h-4" />
+                    View quote <ChevronRight className="w-4 h-4" />
                   </motion.button>
+                )}
+                {/* Every other card can open its quote too (SH-082). */}
+                {(q.status === "in_negotiation" || q.status === "not_selected" || (q.status === "accepted" && !q.image)) && (
+                  <button type="button" onClick={() => setViewing(q)}
+                    className="mt-2 block text-xs font-semibold text-gray-600 underline-offset-2 hover:underline lg:text-sm">
+                    View quote
+                  </button>
                 )}
               </div>
             </motion.div>
@@ -373,6 +383,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
           </div>
         )}
       </motion.div>
+      <QuoteDetailDialog quote={viewing} onClose={() => setViewing(null)} />
     </div>
   );
 }

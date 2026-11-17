@@ -1326,6 +1326,20 @@ undocumented. Deep technical rationale for each lives in
   **Direct Broadcast is bought by the message** (Mitra, 2026-11-17): ₹15 × messages (10–10,000) × listings, never × days;
   `clampMessages()` / `withMessages()` in both pricing copies, and the count paid for is `ad_orders.spec.messages`
   (stored by `razorpay-create-order`, read by `admin.ad_broadcast_messages()`).
+- **On-screen Back is `useStepBack(fallback)`, never `navigate(-1)`** (2026-11-17, SH-052, SH-070, SH-074): opened from
+  a link or a new tab there is no in-app history, and `navigate(-1)` left the site.
+- **Deleting something the seller made asks first** (`<ConfirmDialog>`, 2026-11-17, SH-070, SH-074).
+- **Every edit sheet is a dialog** (`EditSheet`, a Radix dialog since 2026-11-17, SH-053): role, focus trap, Escape, a
+  labelled Close. A new sheet uses it, not a fixed `div`.
+- **A seller's stored profile score isn't browser-readable** (2026-11-17, SH-051; `20261117130100`). The seller's pages
+  compute it from `seller_home_summary()`; `my_profile_score()` returns the caller's own; ranking reads it in definer
+  functions. Never select `profile_score` from `vendor_profiles` in either app.
+- **A quote's price is above 0, its MOQ a whole number above 0** (2026-11-17, SH-081): `quotePrice()` / `quoteMoq()`
+  (`src/lib/quotePrice.ts`) in every quote form, and `quotes_price_positive` / `quotes_moq_positive` in the database.
+- **Notice titles the database writes are translated by template** (2026-11-17, SH-039): every `notify()` title and
+  body is in `external-strings.json` → `notifications`, with `{0}` where SQL joins text. Text a buyer wrote inside a
+  title ("New requirement: …", "Follow-up due: …") renders in `data-no-translate` (`NoticeTitle`). A new `notify()`
+  text adds its entry in the same change.
 - **Opening a chat writes nothing** (2026-11-17, SH-105): `useChatThread()` reads the conversation; the first message
   creates it (insert if missing, never rewritten). An id that isn't an account is `invalid`.
 - **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,

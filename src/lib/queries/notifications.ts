@@ -51,10 +51,10 @@ export interface NotificationRow {
   created_at: string;
 }
 
-/** Newest first, capped: the page groups by day and nobody scrolls past this. */
-const LIMIT = 100;
+/** Newest first, a page at a time: the page shows this many and "Show older" adds as many again (SH-037). */
+export const NOTIFICATION_PAGE = 100;
 
-async function fetchNotifications(userId: string): Promise<NotificationRow[]> {
+async function fetchNotifications(userId: string, limit: number): Promise<NotificationRow[]> {
   // No `.eq("profile_id", userId)` needed — notifications_select is
   // `profile_id = auth.uid()`, so RLS is the filter. Kept implicit rather than
   // duplicated: a filter that disagrees with the policy is a bug waiting to
@@ -63,22 +63,23 @@ async function fetchNotifications(userId: string): Promise<NotificationRow[]> {
     .from("notifications")
     .select("id, kind, title, body, conversation_id, read, created_at")
     .order("created_at", { ascending: false })
-    .limit(LIMIT);
+    .order("id", { ascending: false })
+    .limit(limit);
   if (error) throw error;
   return (data ?? []) as NotificationRow[];
 }
 
 export const notificationUnreadKey = (userId: string | undefined) => ["notification_unread", userId] as const;
 
-export function useNotifications({ enabled = true }: { enabled?: boolean } = {}) {
+export function useNotifications({ enabled = true, limit = NOTIFICATION_PAGE }: { enabled?: boolean; limit?: number } = {}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const userId = user?.id;
   const live = useHubLive();
 
   const query = useQuery({
-    queryKey: ["notifications", userId],
-    queryFn: () => fetchNotifications(userId!),
+    queryKey: ["notifications", userId, limit],
+    queryFn: () => fetchNotifications(userId!, limit),
     enabled: Boolean(userId) && enabled,
     // A suspension notice arriving a minute ago has to be visible now. Same
     // reasoning as useContactGate's staleTime: moderation state must not be
@@ -137,6 +138,7 @@ export function useNotifications({ enabled = true }: { enabled?: boolean } = {})
           // mark-read UPDATE and a dismiss DELETE all land here, and re-reading
           // one indexed query is cheaper than three correct merge paths.
           void qc.invalidateQueries({ queryKey: ["notifications", userId] });
+          void qc.invalidateQueries({ queryKey: notificationUnreadKey(userId) });
         },
       )
       .subscribe();
@@ -166,9 +168,9 @@ export function useUnreadCount(): number {
   const userId = user?.id;
   const qc = useQueryClient();
   const live = useHubLive();
-  // Switch off: the count rides on the page's list, as before. Switch on: a count of its own (every unread one, not
-  // the newest 100; notifications_unread_idx), cached for a minute and refreshed by hub events only (SH-031, SH-037).
-  const { data } = useNotifications({ enabled: !live });
+  // Always a count of its own: every unread one, not the newest 100 (notifications_unread_idx; SH-037). With the hub
+  // off, useNotifications() below only keeps the table subscription that refreshes it; with the hub on, hub events do.
+  useNotifications({ enabled: !live, limit: 1 });
   const count = useQuery({
     queryKey: notificationUnreadKey(userId),
     queryFn: async () => {
@@ -180,14 +182,13 @@ export function useUnreadCount(): number {
       if (error) throw error;
       return n ?? 0;
     },
-    enabled: Boolean(userId) && live,
-    staleTime: 60_000,
+    enabled: Boolean(userId),
+    staleTime: live ? 60_000 : 0,
   });
   useHubEvent("notifications", () => {
     if (userId) void qc.invalidateQueries({ queryKey: notificationUnreadKey(userId) });
   });
-  if (live) return count.data ?? 0;
-  return (data ?? []).reduce((n, row) => (row.read ? n : n + 1), 0);
+  return count.data ?? 0;
 }
 
 /**

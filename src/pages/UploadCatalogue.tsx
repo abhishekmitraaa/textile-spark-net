@@ -1,6 +1,8 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useStepBack } from "@/hooks/useStepBack";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -11,7 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft, FileText, Upload, X, CheckCircle2,
-  Eye, Trash2, Download, Clock,
+  Trash2, Clock,
   AlertCircle, BookOpen, Plus,
 } from "lucide-react";
 
@@ -43,11 +45,8 @@ interface CatalogueFile {
   id: string;
   name: string;
   size: string;
-  pages: number;
   uploadedAt: string;
   status: "live" | "under_review" | "rejected";
-  downloads: number;
-  views: number;
   rejectionReason: string | null;
 }
 
@@ -134,21 +133,11 @@ function CatalogueCard({
 
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
             <span>{catalogue.size}</span>
-            {catalogue.pages > 0 && (<><span>·</span><span>{catalogue.pages} pages</span></>)}
             <span>·</span>
             <span>Uploaded {catalogue.uploadedAt}</span>
           </div>
 
-          {catalogue.status === "live" && (
-            <div className="flex items-center gap-4 mt-2 text-xs">
-              <span className="flex items-center gap-1 text-gray-500">
-                <Eye className="w-3 h-3" /> {catalogue.views} views
-              </span>
-              <span className="flex items-center gap-1 text-gray-500">
-                <Download className="w-3 h-3" /> {catalogue.downloads} downloads
-              </span>
-            </div>
-          )}
+          {/* No views or downloads line (SH-074): nothing counts them, and it showed a fixed "0 views · 0 downloads". */}
 
           {catalogue.status === "under_review" && (
             <p className="text-xs text-orange-500 mt-2 flex items-center gap-1">
@@ -205,11 +194,8 @@ const UploadCatalogue = () => {
     id: c.id,
     name: c.title,
     size: "PDF",
-    pages: c.pageCount ?? 0,
     uploadedAt: c.createdAt,
     status: c.status === "draft" ? "under_review" : c.status,
-    downloads: 0,
-    views: 0,
     rejectionReason: c.rejectionReason ?? null,
   }));
 
@@ -293,6 +279,9 @@ const UploadCatalogue = () => {
     }
   };
 
+  // Asks first (SH-074).
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const back = useStepBack("/seller-home");
   const handleDelete = async (id: string) => {
     try {
       await deleteCatalogue(id);
@@ -313,7 +302,7 @@ const UploadCatalogue = () => {
           <motion.button
             whileTap={TAP}
             transition={TAP_T}
-            onClick={() => navigate(-1)}
+            onClick={back}
             className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
@@ -337,7 +326,6 @@ const UploadCatalogue = () => {
             </p>
             <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
               Buyers browsing your profile can download your catalogue directly.
-              Vendors with catalogues get <span className="font-semibold text-brand-vendor">3× more inquiries</span> on average.
             </p>
           </div>
         </motion.div>
@@ -526,7 +514,7 @@ const UploadCatalogue = () => {
                 <CatalogueCard
                   key={cat.id}
                   catalogue={cat}
-                  onDelete={handleDelete}
+                  onDelete={setPendingDelete}
                 />
               ))}
             </motion.div>
@@ -546,6 +534,14 @@ const UploadCatalogue = () => {
           </motion.div>
         )}
       </motion.div>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this catalogue?"
+        body="Buyers can no longer download it, and the PDF is deleted. This can't be undone."
+        confirmLabel="Delete"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => { const id = pendingDelete; setPendingDelete(null); if (id) void handleDelete(id); }}
+      />
     </DashboardLayout>
   );
 };

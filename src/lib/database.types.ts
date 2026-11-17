@@ -6902,6 +6902,7 @@ export type Database = {
         Returns: Json
       }
       vendor_cap_plan: { Args: { p_vendor: string }; Returns: string }
+      my_profile_score: { Args: never; Returns: number }
       my_ad_manual_work: {
         Args: never
         Returns: { ad_id: string; done_at: string | null; messages: number | null }[]

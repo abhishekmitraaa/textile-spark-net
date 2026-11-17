@@ -1,4 +1,5 @@
 import { brand } from "@/lib/brand";
+import { quotePrice, quoteMoq } from "@/lib/quotePrice";
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -118,13 +119,16 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }
   if (!user || isLoading || rfqs.length === 0) return null;
 
   const submit = async (rfqId: string) => {
-    const price = parseFloat(form.price);
-    if (!price) { toast.error("Enter a price per unit"); return; }
+    // A price above 0 with at most two decimals, and a whole-number MOQ (SH-081).
+    const price = quotePrice(form.price);
+    if (price === null) { toast.error("Enter a price per unit above 0, like 450 or 450.75"); return; }
+    const moq = quoteMoq(form.moq);
+    if (moq === undefined) { toast.error("Enter the MOQ as a whole number, or leave it blank"); return; }
     setBusy(true);
     try {
       await submitQuote(user.id, {
         rfqId, pricePerUnit: price,
-        moq: form.moq ? parseInt(form.moq, 10) : null,
+        moq,
         leadTime: form.leadTime || null,
         comment: form.comment || null,
       });
@@ -217,7 +221,7 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }
               // on /leads, which reads as a form nobody designed.
               <div className="mt-3 space-y-2 lg:max-w-xl">
                 <div className="grid grid-cols-2 gap-2">
-                  <input className={input} inputMode="numeric" placeholder="Price / unit (₹)" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
+                  <input className={input} inputMode="decimal" placeholder="Price / unit (₹)" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
                   <input className={input} inputMode="numeric" placeholder="MOQ" value={form.moq} onChange={(e) => setForm((f) => ({ ...f, moq: e.target.value }))} />
                 </div>
                 <input className={input} placeholder="Lead time (e.g. 20 days)" value={form.leadTime} onChange={(e) => setForm((f) => ({ ...f, leadTime: e.target.value }))} />

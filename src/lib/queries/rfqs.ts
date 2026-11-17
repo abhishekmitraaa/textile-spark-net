@@ -598,6 +598,10 @@ export interface MySubmittedQuote {
   pcs: string; totalQuotes: number;
   status: "in_negotiation" | "accepted" | "awaiting" | "not_selected";
   buyerResponse?: string; buyerResponseDate?: string; image?: string; rankBadge?: string;
+  /** The seller's own message with the quote, shown in the quote dialog (SH-082). */
+  comment: string | null;
+  /** Whether the request is still open (my_quoted_rfqs), when known. */
+  requestStatus: "active" | "closed" | null;
 }
 
 function mapQuoteStatus(s: QuoteStatus): MySubmittedQuote["status"] {
@@ -661,6 +665,8 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
       pcs: rfq?.quantity != null ? `${rfq.quantity} pcs` : "—",
       totalQuotes: rfq?.quotes_total ?? 1,
       status: mapQuoteStatus(q.status),
+      comment: q.comment?.trim() || null,
+      requestStatus: rfq?.status ?? null,
       // A buyer-written URL: only this project's Storage is shown (lib/storageUrl.ts).
       image: ownStorageUrl(rfq?.image) ?? undefined,
     };

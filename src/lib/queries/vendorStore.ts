@@ -82,7 +82,6 @@ export interface VendorStoreData {
   followers: number;
   ratingAvg: number;
   reviewsCount: number;
-  profileScore: number;
   onboardingComplete: boolean;
   /** Business categories the vendor sells in (vendor_profiles.category, text[]). */
   category: string[];
@@ -118,7 +117,7 @@ export interface VendorStoreData {
 // once the private columns lose their table-wide grant (admin completion Phase 4b).
 const MY_STORE_COLUMNS = `id, brand_name, about, city, state, country, business_type, website, logo_url, banner_url,
   owner_name, gstin, cin, is_verified, plan_expires_at, ad_verified_until, followers_count, rating_avg, reviews_count,
-  profile_score, onboarding_complete, category, office_photos, year_established, employee_count, annual_turnover,
+  onboarding_complete, category, office_photos, year_established, employee_count, annual_turnover,
   capacity, social, recommended_product_ids, created_at, state_code, country_code, primary_type, capabilities, served_states`;
 
 /** The vendor's eight private fields. */
@@ -173,7 +172,6 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     followers: data.followers_count,
     ratingAvg: Number(data.rating_avg),
     reviewsCount: data.reviews_count,
-    profileScore: data.profile_score,
     onboardingComplete: data.onboarding_complete,
     category: data.category ?? [],
     officePhotos: data.office_photos ?? [],

@@ -58,14 +58,11 @@ short list of things someone has to *decide*.
 ## Seller Home audit (2026-11-15) — what is still open
 
 Every High item, sections A–C (SH-001 to SH-033) and every Medium item of D–L (2026-11-17,
-`documentation/seller-home-medium-fixes-plan-2026-11-17.md`) are fixed. Still open: the Low items of D–L (SH-037–040,
-047–053, 063–067, 069–070, 074, 081–085, 099, 107–109; SH-063 was fixed with the Medium batch), in
-`documentation/seller-home-audit-2026-11-15.md`, and these:
+`documentation/seller-home-medium-fixes-plan-2026-11-17.md`) are fixed, and the first 20 Low items are fixed on branch
+`seller-home/low-fixes` (`documentation/seller-home-low-fixes-plan-2026-11-17.md`). Still open: SH-083–085, 099, 107–109
+in `documentation/seller-home-audit-2026-11-15.md` (batch 2 of the same plan), and:
 - The local spec `audit-second` "a chat opens on its newest 40 messages and loads older ones" fails at "Load earlier
   messages" (the button is re-rendered before it can be tapped), on main as well as the Medium branch (2026-11-17).
-
-- `/business-profile-score`'s back arrow (`navigate(-1)`) leaves the app when the page was opened from a link
-  (SH-052, seen).
 
 ## Medium priority
 

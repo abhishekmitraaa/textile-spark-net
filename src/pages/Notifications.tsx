@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion, useReducedMotion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -36,6 +37,7 @@ import {
   type NotifGroup,
 } from "@/lib/notificationsStore";
 import {
+  NOTIFICATION_PAGE,
   useNotifications,
   markNotificationRead,
   markAllNotificationsRead,
@@ -117,6 +119,17 @@ function RequirementChips({ meta }: { meta: NonNullable<VendorNotification["requ
   );
 }
 
+/**
+ * A notice title, with the part a buyer wrote kept as written (SH-039): "New requirement: <their title>" and
+ * "Follow-up due: <their title>" translate the words Cosora wrote, never the buyer's.
+ */
+const USER_TEXT_PREFIXES = ["New requirement: ", "Follow-up due: "];
+function NoticeTitle({ title }: { title: string }) {
+  const prefix = USER_TEXT_PREFIXES.find((p) => title.startsWith(p));
+  if (!prefix) return <>{title}</>;
+  return <>{prefix.trimEnd()} <span data-no-translate>{title.slice(prefix.length)}</span></>;
+}
+
 function NotificationCard({
   n,
   onRead,
@@ -195,7 +208,7 @@ function NotificationCard({
                 n.read ? "font-semibold text-gray-800" : "font-bold text-gray-900",
               )}
             >
-              {n.title}
+              <NoticeTitle title={n.title} />
             </h3>
             <time className="mt-0.5 shrink-0 text-xs font-medium text-gray-400">
               {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
@@ -236,7 +249,13 @@ const Notifications = () => {
   const { role } = useUserRole();
   const Layout = role === "seller" ? DashboardLayout : BuyerShell;
   const qc = useQueryClient();
-  const { data: rows, isPending, error } = useNotifications();
+  // Signed out, the page says so instead of loading forever (SH-038).
+  const { user, loading: authLoading } = useAuth();
+  const signedOut = !authLoading && !user;
+  // A page at a time; "Show older" reaches every notice, so "Read all" never clears one the reader couldn't see (SH-037).
+  const [limit, setLimit] = useState(NOTIFICATION_PAGE);
+  const { data: rows, isPending, error, isFetching } = useNotifications({ limit });
+  const more = (rows?.length ?? 0) >= limit;
   const [tab, setTab] = useState<TabKey>("all");
 
   // Real rows first, then the dev-only samples beneath them. In a production
@@ -248,7 +267,10 @@ const Notifications = () => {
   );
   const unread = useMemo(() => all.filter((n) => !n.read).length, [all]);
 
-  const refresh = () => void qc.invalidateQueries({ queryKey: ["notifications"] });
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["notifications"] });
+    void qc.invalidateQueries({ queryKey: ["notification_unread"] });
+  };
 
   // Writes go to the database and the list re-reads. A sample row (dev only)
   // has no database row, so its write matches nothing and returns false — the
@@ -397,7 +419,12 @@ const Notifications = () => {
         {/* List. Loading, error and empty are three DISTINCT states: collapsing
             them is how a broken feed reads as an empty one, which is exactly the
             failure CLAUDE.md records for My Reviews. */}
-        {isPending ? (
+        {signedOut ? (
+          <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-8 text-center" data-testid="notifications-signed-out">
+            <p className="text-base font-bold text-gray-900">Sign in to see your notifications</p>
+            <Link to="/login" className="mt-3 inline-block text-sm font-semibold text-brand-vendor hover:underline">Sign in</Link>
+          </div>
+        ) : isPending ? (
           <div className="mt-5 space-y-2.5" aria-busy="true">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-24 animate-pulse rounded-2xl bg-gray-100" />
@@ -449,6 +476,12 @@ const Notifications = () => {
                 </motion.div>
               </motion.div>
             ))}
+            {more && (
+              <button type="button" onClick={() => setLimit((l) => l + NOTIFICATION_PAGE)} disabled={isFetching}
+                className="mx-auto block rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+                {isFetching ? "Loading…" : "Show older notifications"}
+              </button>
+            )}
           </div>
         )}
       </motion.div>
