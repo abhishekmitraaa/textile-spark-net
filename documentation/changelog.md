@@ -1,5 +1,5 @@
-- 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300` and `110000`; four payment
-  functions; released together, Mitra: "release both batch together")
+- 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300`, `110000`, `110100`; four payment
+  functions; **LIVE 2026-11-17**, both batches together, Mitra: "release both batch together")
   **Seller Home audit, Medium items batch 2 (16): SH-078–080, 091, 093–098, 101–106.** Get verified on any plan (SH-093,
   Mitra: "Sell them to Free sellers"), only ad types buyers see are sold, own live listings only, registration checked
   before payment, old campaigns by their real state, a running-campaign index; Leads/Quotes/Analytics states and reply

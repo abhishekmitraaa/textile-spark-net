@@ -1295,8 +1295,10 @@ undocumented. Deep technical rationale for each lives in
 - **Social links: each box takes its own platform, and buyers see them** (Mitra, 2026-11-17, SH-044). `src/lib/socialLinks.ts`
   (at most 3 per platform); the store shows them as "Find us online" behind the same contact gate as the website.
 - **Seller Analytics never names a visitor** (Mitra, 2026-11-17, "3-person floor"; SH-077). It reads
-  `vendor_engagement_events()`: a visitor key salted per answer, and a search term only once 3 different visitors used
-  it. Browser roles can't read `engagement_events.viewer_id`, `session_id` or `query_text` (`20261117100300`).
+  `vendor_engagement_events()`: a visitor key salted per answer, and a search term only once 3 different **signed-in**
+  visitors used it, never the seller or Cosora staff (`20261117110100`, after the push security review: a guest is a
+  session id a script can invent). Browser roles can't read `engagement_events.viewer_id`, `session_id` or
+  `query_text` (`20261117100300`).
 - **Upload's steps are history entries, and a new listing's typed answers are kept in the tab** (2026-11-17, SH-054–061).
   Each step's starred answers are required before Continue (`missingRequired`, `src/lib/uploadForm.ts`); photos are JPEG,
   PNG or WebP, shrunk to 1600 px and uploaded before the listing row (removed again on failure); a blank MOQ stays blank

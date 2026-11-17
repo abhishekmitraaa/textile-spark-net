@@ -54,6 +54,15 @@ catalogue's file removal on delete (SH-072); each is a few lines read with the r
 Release order (both batches together, Mitra 2026-11-17): migrations `100000`, `100100`, `100200`, `110000` → the four
 payment functions → the app → check the live bundle reads `vendor_engagement_events` → `100300`.
 
+**Released 2026-11-17.** Read-only pre-check on production first: `ad_order_fulfil` and `active_ads` matched the repo's
+last definitions (and my migration's bodies, less the additions), the photo/PDF policies and the engagement grants
+were what the migrations replace, none of the new objects existed. Migrations applied with `supabase db query --linked`
+(not in the migration ledger), every self-check passing; `rls-policy-check.sql` on production 156 policies, 0 findings;
+the four payment functions deployed; buyer main pushed `9f1e841..8d8f767`; the live bundle reads
+`vendor_engagement_events`, `vendor_response_threads`, "Get verified", "Find us online"; then `100300`. The push security
+review flagged that the search-term floor counted guest sessions (a script can invent them): `20261117110100` counts
+signed-in visitors only, not the seller or staff, applied before `100300` (securityflags.md, with the residual).
+
 ## Batch 2 (16) — done (2026-11-17)
 
 Decision (Mitra, 2026-11-17): **SH-093 "Sell them to Free sellers … build this completely"**, and **release both batches

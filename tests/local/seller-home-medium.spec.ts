@@ -166,10 +166,19 @@ test("seller Analytics: no account ids, and a term two people searched is hidden
   const who = await seller("md-eng");
   const buyer = await freshAccount("md-eng-buyer");
   made.push(buyer.id);
+  const b2 = await freshAccount("md-eng-b2");
+  const b3 = await freshAccount("md-eng-b3");
+  made.push(b2.id, b3.id);
+  // Three signed-in buyers searched "cotton knit"; "zz rare" by one buyer and three guest sessions. Only signed-in
+  // visitors count toward the floor (push security review, 2026-11-17), so "zz rare" stays hidden.
   sql(`insert into public.engagement_events (event_type, vendor_id, viewer_id, source) values ('product_view', '${who.id}', '${buyer.id}', 'direct');
+       insert into public.engagement_events (event_type, vendor_id, viewer_id, source, query_text)
+         select 'search_impression', '${who.id}', v, 'organic_search', 'cotton knit'
+         from unnest(array['${buyer.id}', '${b2.id}', '${b3.id}']::uuid[]) v;
+       insert into public.engagement_events (event_type, vendor_id, viewer_id, source, query_text)
+         values ('search_impression', '${who.id}', '${buyer.id}', 'organic_search', 'zz rare');
        insert into public.engagement_events (event_type, vendor_id, session_id, source, query_text)
-         select 'search_impression', '${who.id}', 'md-s-' || g, 'organic_search', case when g <= 3 then 'cotton knit' else 'zz rare' end
-         from generate_series(1, 5) g;`);
+         select 'search_impression', '${who.id}', 'md-s-' || g, 'organic_search', 'zz rare' from generate_series(1, 3) g;`);
   const page = await open(browser, who.session, "/analytics", true);
   const answer = await page.waitForResponse((r) => /rpc\/vendor_engagement_events/.test(r.url()));
   const body = await answer.text();
