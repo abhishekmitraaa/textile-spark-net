@@ -129,34 +129,67 @@ export interface NewCatalogue {
   cover?: File | null;
 }
 
-export async function createCatalogue(vendorId: string, c: NewCatalogue): Promise<void> {
-  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const fpath = `${vendorId}/${key}.pdf`;
-  const { error: fe } = await supabase.storage.from("catalogues").upload(fpath, c.file, { upsert: true, contentType: "application/pdf" });
-  if (fe) throw fe;
-  const file_url = supabase.storage.from("catalogues").getPublicUrl(fpath).data.publicUrl;
+// The catalogues bucket is public, so a file stays downloadable by its link for as long as it exists (SH-072). Every
+// file written here is removed again when its catalogue isn't saved, and a deleted catalogue takes its files with it.
+const removeCatalogueFiles = async (paths: string[]) => {
+  if (!paths.length) return;
+  const { error } = await supabase.storage.from("catalogues").remove(paths);
+  if (error) console.warn("[catalogues] files left in storage:", error.message);
+};
 
-  let cover_url: string | null = null;
-  if (c.cover) {
-    const ext = fileExt(c.cover.name, "jpg");
-    const cpath = `${vendorId}/${key}-cover.${ext}`;
-    const { error: ce } = await supabase.storage.from("catalogues").upload(cpath, c.cover, { upsert: true });
-    if (ce) throw ce;
-    cover_url = supabase.storage.from("catalogues").getPublicUrl(cpath).data.publicUrl;
-  }
-
-  const { error } = await supabase.from("catalogues").insert({
-    vendor_id: vendorId,
-    title: c.title,
-    description: c.description ?? null,
-    file_url,
-    cover_url,
-    status: "under_review",
-  });
-  if (error) throw error;
+/** The storage path of one of the seller's own catalogue files, from its public URL; null for anything else. */
+function ownCataloguePath(url: string | null | undefined, vendorId: string): string | null {
+  if (!url) return null;
+  const base = supabase.storage.from("catalogues").getPublicUrl("").data.publicUrl;
+  if (!url.startsWith(`${base}${vendorId}/`)) return null;
+  return decodeURIComponent(url.slice(base.length).split("?")[0]);
 }
 
+export async function createCatalogue(vendorId: string, c: NewCatalogue): Promise<void> {
+  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const written: string[] = [];
+  try {
+    const fpath = `${vendorId}/${key}.pdf`;
+    const { error: fe } = await supabase.storage.from("catalogues").upload(fpath, c.file, { contentType: "application/pdf" });
+    if (fe) throw fe;
+    written.push(fpath);
+    const file_url = supabase.storage.from("catalogues").getPublicUrl(fpath).data.publicUrl;
+
+    let cover_url: string | null = null;
+    if (c.cover) {
+      const ext = fileExt(c.cover.name, "jpg");
+      const cpath = `${vendorId}/${key}-cover.${ext}`;
+      const { error: ce } = await supabase.storage.from("catalogues").upload(cpath, c.cover);
+      if (ce) throw ce;
+      written.push(cpath);
+      cover_url = supabase.storage.from("catalogues").getPublicUrl(cpath).data.publicUrl;
+    }
+
+    const { error } = await supabase.from("catalogues").insert({
+      vendor_id: vendorId,
+      title: c.title,
+      description: c.description ?? null,
+      file_url,
+      cover_url,
+      status: "under_review",
+    });
+    if (error) throw error;
+  } catch (e) {
+    // Refused (the plan's limit, a closed account) or failed: nothing of it is left reachable.
+    await removeCatalogueFiles(written);
+    throw e;
+  }
+}
+
+/** Deletes one of the seller's catalogues and then its files; refuses when no row was deleted (SH-072). */
 export async function deleteCatalogue(id: string): Promise<void> {
-  const { error } = await supabase.from("catalogues").delete().eq("id", id);
+  const { data, error } = await supabase.from("catalogues").delete().eq("id", id)
+    .select("id, vendor_id, file_url, cover_url");
   if (error) throw error;
+  const row = (data ?? [])[0] as { vendor_id: string; file_url: string | null; cover_url: string | null } | undefined;
+  if (!row) throw new Error("That catalogue couldn't be deleted. Reload the page and try again.");
+  // The row is gone, so its files are no catalogue's now: remove the ones in the seller's own folder.
+  await removeCatalogueFiles(
+    [ownCataloguePath(row.file_url, row.vendor_id), ownCataloguePath(row.cover_url, row.vendor_id)].filter((x): x is string => Boolean(x)),
+  );
 }

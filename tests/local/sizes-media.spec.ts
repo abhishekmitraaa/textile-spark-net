@@ -77,10 +77,19 @@ test("a bra listing: band × cup sizes, its video and PDF stored, everything in 
   await page.getByRole("button", { name: "34C", exact: true }).click();
   await page.locator("#name").fill(name);
   await page.locator("#sku").fill(`SKU-${tag}`);
+  // Every starred answer is required before Continue (SH-054); dropdowns carry their field's id (SH-063).
+  for (const [id, option] of [["braType", "T-Shirt Bra"], ["fabric", "Lace"], ["leadTime", "7-15 days"], ["originCountry", "India"]] as const) {
+    if (await page.locator(`#${id}`).count()) {
+      await page.locator(`#${id}`).click();
+      await page.getByRole("option", { name: option, exact: true }).click();
+    }
+  }
+  if (await page.locator("#moq").count()) await page.locator("#moq").fill("50");
+  if (await page.locator("#location").count()) await page.locator("#location").fill("Tiruppur");
   await continueTo(page, 1);
 
   // ── Images step: a picture, a PDF (a fake one is refused), a video.
-  await page.locator('input[type="file"][accept="image/*"]').setInputFiles({ name: "bra.jpg", mimeType: "image/jpeg", buffer: Buffer.from(await (await fetch(`${BUYER_URL}/og-image.jpg`)).arrayBuffer()) });
+  await page.locator('input[type="file"][accept="image/jpeg,image/png,image/webp"]').setInputFiles({ name: "bra.jpg", mimeType: "image/jpeg", buffer: Buffer.from(await (await fetch(`${BUYER_URL}/og-image.jpg`)).arrayBuffer()) });
   await page.getByTestId("product-pdf-input").setInputFiles({ name: "fake.pdf", mimeType: "application/pdf", buffer: PNG_AS_PDF });
   await expect(page.getByText("fake.pdf isn't a real PDF.")).toBeVisible();
   await page.getByTestId("product-pdf-input").setInputFiles({ name: "Size and spec sheet.pdf", mimeType: "application/pdf", buffer: PDF });

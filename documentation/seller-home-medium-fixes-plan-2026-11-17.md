@@ -30,7 +30,7 @@ SH-092 with SH-090), so **36 remain: batch 1 = 20, batch 2 = 16**. Branch `selle
 | SH-054 | Upload: each step's required fields are checked before Continue. |
 | SH-055 | A blank MOQ is stored as NULL ("Not specified"), never "2". |
 | SH-056 | A PDF added to or removed from a live listing sends it back to review (database). |
-| SH-057 | Listing photo/PDF write policies name their staff roles (super admin, product moderator); a staff change to a live listing is reviewed again. |
+| SH-057 | Listing photo/PDF write policies name their staff roles (super admin, product moderator). They are the listing's reviewers, so their own change isn't sent back to them; it goes in the Admin Log (`trg_admin_audit` on both tables). |
 | SH-058 | Upload: photos are uploaded before the listing row is written, a failure removes what was uploaded, and only JPEG/PNG/WebP are offered. |
 | SH-059 | At the plan's limit Publish keeps the form (no jump to /subscription): the seller can save a draft or upgrade. |
 | SH-060 | Upload's steps are history entries (Back goes a step back); typed answers survive a refresh (photos must be picked again). |
@@ -38,7 +38,20 @@ SH-092 with SH-090), so **36 remain: batch 1 = 20, batch 2 = 16**. Branch `selle
 | SH-062 | `/products` shows an error with Try again, never "Your catalog is empty", when the read fails. |
 | SH-072 | Deleting a catalogue deletes its PDF too and checks a row went; a failed insert removes the uploaded file. |
 | SH-073 | Upload Catalogue at the plan's limit: the form is disabled with the reason and an Upgrade link. |
-| SH-077 | Sellers lose raw `viewer_id`, `session_id` and `query_text` on `engagement_events`; Analytics reads counts from a definer function (`vendor_engagement_summary`) with the 3-person floor on search terms. |
+| SH-077 | Analytics reads `vendor_engagement_events()` (migration `100200`): the seller's events with a per-answer visitor key instead of account or session ids, and search terms only once 3 different visitors used them ("Other searches" otherwise). Browser roles then lose `viewer_id`, `session_id` and `query_text` (`100300`, **after** the app is live: the old app reads them). |
+| SH-063 (Low) | Taken with SH-054: each Upload dropdown carries its field's id, so its label names it (screen readers, and the required-field checks' tests). |
+
+## Batch 1 — done (2026-11-17)
+
+Built on `seller-home/medium-fixes`. Checks: `node scripts/seller-medium-fixes-check.mjs` (36 rules),
+`node scripts/notification-kinds-check.mjs`, `npm run i18n:check`, `npm run rls:check` and `scripts/rls-policy-check.sql`
+on the local stack (0 findings), `npm run build`; local specs `seller-home-medium` (8/8) and the specs that touch these
+pages (ranking-f1, sizes-media, vendor-serious, seller-home-fixes, seller-home-high, listing-edits, catalogue-review,
+profile-score-ranking). Three older specs were updated for the new behaviour (required answers, the photo input's
+types). Not exercised in a browser: a failed photo upload's clean-up (SH-058), the plan-limit message (SH-059) and a
+catalogue's file removal on delete (SH-072); each is a few lines read with the rest.
+
+Release order: `100000`, `100100`, `100200` → the app → check the live bundle reads `vendor_engagement_events` → `100300`.
 
 ## Batch 2 (16)
 

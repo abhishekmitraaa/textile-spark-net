@@ -172,8 +172,9 @@ export interface EngagementRow {
   eventType: EngagementEventType;
   productId: string | null;
   adId: string | null;
-  viewerId: string | null;
-  sessionId: string | null;
+  /** One visitor within this answer, never an account id (vendor_engagement_events salts it per call, SH-077). */
+  visitorKey: string;
+  signedIn: boolean;
   source: EngagementSource | null;
   queryText: string | null;
   ctaName: string | null;
@@ -196,32 +197,30 @@ export interface EngagementWindow {
  */
 const ROW_CAP = 10_000;
 
+// Read through vendor_engagement_events() (SH-077, 2026-11-17): the seller's own events with nothing that names a
+// visitor. The table used to hand sellers each viewer's account id (joinable to a name) and every word they searched;
+// now a visitor is a per-answer key, and a search term comes back only once 3 different visitors used it.
 async function fetchEngagementWindow(vendorId: string, days: number): Promise<EngagementWindow> {
-  const { data, error } = await supabase
-    .from("engagement_events")
-    .select("event_type, product_id, ad_id, viewer_id, session_id, source, query_text, cta_name, created_at")
-    .eq("vendor_id", vendorId)
-    .gte("created_at", windowStart(days).toISOString())
-    .order("created_at", { ascending: false })
-    .limit(ROW_CAP);
+  void vendorId; // the function reads the caller from the session
+  const { data, error } = await supabase.rpc("vendor_engagement_events", { p_days: days });
 
   if (error) {
-    // PGRST205 = table absent from the schema cache, i.e. the migration has not
-    // been applied. Anything else is a genuine failure and must surface.
-    if (error.code === "PGRST205") return { installed: false, rows: [], truncated: false };
+    // PGRST202 = function absent from the schema cache, i.e. the migration has not been applied.
+    // Anything else is a genuine failure and must surface.
+    if (error.code === "PGRST202") return { installed: false, rows: [], truncated: false };
     throw error;
   }
 
   const rows = ((data ?? []) as {
-    event_type: string; product_id: string | null; ad_id: string | null; viewer_id: string | null;
-    session_id: string | null; source: string | null; query_text: string | null;
+    event_type: string; product_id: string | null; ad_id: string | null; visitor_key: string;
+    signed_in: boolean; source: string | null; query_text: string | null;
     cta_name: string | null; created_at: string;
   }[]).map((r) => ({
     eventType: r.event_type as EngagementEventType,
     productId: r.product_id,
     adId: r.ad_id,
-    viewerId: r.viewer_id,
-    sessionId: r.session_id,
+    visitorKey: r.visitor_key,
+    signedIn: r.signed_in,
     source: r.source as EngagementSource | null,
     queryText: r.query_text,
     ctaName: r.cta_name,
@@ -331,13 +330,9 @@ export function visitorCounts(win: EngagementWindow | undefined): VisitorCounts 
   const ids = new Set<string>();
   let signedOut = 0;
   for (const r of views) {
-    if (r.viewerId) ids.add(`u:${r.viewerId}`);
-    else {
-      signedOut += 1;
-      // A signed-out view with no session id cannot be deduped at all; count it
-      // as its own visitor rather than silently merging every such view into one.
-      ids.add(r.sessionId ? `s:${r.sessionId}` : `anon:${r.createdAt}`);
-    }
+    // The database keys a visitor by account, else session, else the event itself (never merged into one).
+    ids.add(r.visitorKey);
+    if (!r.signedIn) signedOut += 1;
   }
   return { totalViews: views.length, uniqueVisitors: ids.size, signedOutViews: signedOut };
 }
@@ -356,12 +351,14 @@ export interface QueryPerformanceRow {
  * rows are only this vendor's own impressions, so the sample cannot support a
  * statement about how the term performs across Cosora.
  */
+/** The row for searches whose words aren't shown: fewer than 3 different visitors used them (SH-077). */
+export const OTHER_SEARCHES = "Other searches";
+
 export function queryPerformance(win: EngagementWindow | undefined): QueryPerformanceRow[] {
   const agg = new Map<string, { impressions: number; clicks: number }>();
   for (const r of win?.rows ?? []) {
     if (r.eventType !== "search_impression" && r.eventType !== "search_click") continue;
-    const term = (r.queryText ?? "").trim().toLowerCase();
-    if (!term) continue;
+    const term = (r.queryText ?? "").trim().toLowerCase() || OTHER_SEARCHES;
     const cur = agg.get(term) ?? { impressions: 0, clicks: 0 };
     if (r.eventType === "search_impression") cur.impressions += 1;
     else cur.clicks += 1;
@@ -372,7 +369,8 @@ export function queryPerformance(win: EngagementWindow | undefined): QueryPerfor
     impressions: v.impressions,
     clicks: v.clicks,
     ctr: v.impressions > 0 ? Math.round((v.clicks / v.impressions) * 100) : null,
-  })).sort((a, b) => b.impressions - a.impressions || b.clicks - a.clicks);
+  })).sort((a, b) => Number(a.term === OTHER_SEARCHES) - Number(b.term === OTHER_SEARCHES)
+    || b.impressions - a.impressions || b.clicks - a.clicks);
 }
 
 export interface AdAttribution {

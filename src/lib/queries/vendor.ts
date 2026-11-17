@@ -131,7 +131,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     brandName: v.brand_name ?? "Vendor",
     brandLine: r.brand_line,
     price: r.price ?? "",
-    moq: r.moq ?? "2",
+    moq: r.moq?.trim() || "Not specified",
     rating: Number(r.rating),
     reviews: r.reviews ?? "",
     likes: r.likes_count,

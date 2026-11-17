@@ -7,6 +7,12 @@ import { expect, test, type Page } from "@playwright/test";
 import { productAttributes, requirementAttributes, attributeDetails } from "../../src/lib/formAttributes";
 import { ADMIN_URL, BUYER_URL, contextWithSession, freshAccount, signedInContext, sql } from "./stack";
 
+// A dropdown on the Details step (its trigger carries the field's id since SH-063).
+async function pick(page: Page, id: string, option: string) {
+  await page.locator(`#${id}`).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
 async function continueTo(page: Page, times: number) {
   for (let i = 0; i < times; i++) await page.getByRole("button", { name: /^Continue/ }).click();
 }
@@ -27,6 +33,12 @@ test.describe("F1: the product form keeps every answer", () => {
       await page.locator("#name").fill(name);
       await page.locator("#composition").fill("Cotton 95% Spandex 5%");
       await page.locator("#location").fill("Surat");
+      // Every starred answer is required before Continue (SH-054).
+      await pick(page, "knitType", "Single Jersey");
+      await page.locator("#gsm").fill("180");
+      await page.locator("#moq").fill("100");
+      await pick(page, "leadTime", "7-15 days");
+      await pick(page, "originCountry", "India");
       await continueTo(page, 2);
       await page.getByRole("button", { name: "Save as Draft" }).click();
       await expect(page).toHaveURL(/\/products$/, { timeout: 30_000 });

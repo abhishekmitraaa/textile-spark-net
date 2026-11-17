@@ -78,7 +78,7 @@ test("#1 adding a photo while editing keeps the listing's existing photos", asyn
   test.setTimeout(120_000);
   const { seller, pid, originals, urls } = await sellerWithListing("vs1");
   const { ctx, page } = await openImagesStep(browser, seller.session, pid);
-  await page.locator('input[type="file"][accept="image/*"]').setInputFiles({ name: "added.png", mimeType: "image/png", buffer: png("added-1") });
+  await page.locator('input[type="file"][accept="image/jpeg,image/png,image/webp"]').setInputFiles({ name: "added.png", mimeType: "image/png", buffer: png("added-1") });
   await expect(page.locator('img[alt="Image 3"]')).toBeVisible();
   await saveChanges(page);
 
@@ -97,7 +97,7 @@ test("#2 removing an existing photo in the edit form removes it and keeps the ne
   test.setTimeout(120_000);
   const { seller, pid, urls } = await sellerWithListing("vs2");
   const { ctx, page } = await openImagesStep(browser, seller.session, pid);
-  await page.locator('input[type="file"][accept="image/*"]').setInputFiles({ name: "added.png", mimeType: "image/png", buffer: png("added-2") });
+  await page.locator('input[type="file"][accept="image/jpeg,image/png,image/webp"]').setInputFiles({ name: "added.png", mimeType: "image/png", buffer: png("added-2") });
   await expect(page.locator('img[alt="Image 3"]')).toBeVisible();
   // Remove the first (existing) photo.
   await page.locator('img[alt="Image 1"]').locator("xpath=..").locator("button").click();

@@ -1,3 +1,24 @@
+- 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300`; **not live**: production
+  migrations and the merge each need Mitra's yes; `100300` goes only after the app is live)
+  **Seller Home audit, Medium items batch 1 (20 of 36): SH-034, 035, 041–046, 054–062, 072, 073, 077** (and the Low
+  SH-063, which the new required-field checks needed).
+  - Why: Mitra, 2026-11-17, "plan a fix for all the bugs which were in medium priority and then fix them ... do it in the
+    batch of 20". Decisions: social links shown on the store; a 3-person floor on seller search terms. Plan and record
+    `documentation/seller-home-medium-fixes-plan-2026-11-17.md`.
+  - Database: a seller's changed phone, WhatsApp, email and website checked as registration checks them (`100000`); a PDF
+    added to or removed from a live listing sends it back to review, and only super admins and product moderators may
+    change a listing's photos or PDFs, logged (`100100`); `vendor_engagement_events()` gives seller Analytics counts
+    with no account ids and a 3-visitor floor on search terms (`100200`), then browser roles lose `viewer_id`,
+    `session_id` and `query_text` on `engagement_events` (`100300`).
+  - App: every notice kind has a destination (`notification-kinds-check.mjs`) and empty tabs are hidden; the contact
+    sheet saves only what changed, waits for a failed read, takes a region outside India; social links per platform
+    and on the store; the score page has In review and an error state; Upload checks required answers per step, keeps
+    MOQ blank, shrinks and uploads photos before the listing (cleaned up on failure), keeps the form at the plan's
+    limit, makes its steps history entries and keeps typed answers across a refresh; `/products` and the catalogue form
+    show errors and the limit honestly; deleting a catalogue deletes its PDF.
+  - Checks: `scripts/seller-medium-fixes-check.mjs`, `scripts/notification-kinds-check.mjs`,
+    `tests/local/seller-home-medium.spec.ts` (8), related local specs (ranking-f1, sizes-media, vendor-serious,
+    seller-home-fixes, seller-home-high, listing-edits, catalogue-review, profile-score-ranking).
 - 2026-11-16 (branch `seller-home/fixes`, admin branch `seller-home/high-fixes`; migrations `20261116110000`–`110300`;
   **LIVE 2026-11-17**: migrations applied with the Supabase CLI (`db query --linked`, so not in the migration ledger),
   `razorpay-verify-payment` and `razorpay-webhook` deployed, buyer main `a96cbd3`, admin main `f3db33a`)

@@ -48,9 +48,9 @@ export function checkContactChanges(
     if (v === undefined || v === "") continue;
     const e164 = normalisePhone(v, india ? "IN" : "XX");
     if (!e164) {
-      return fail(k, india
-        ? `Enter a 10-digit Indian ${k === "phone" ? "phone" : "WhatsApp"} number.`
-        : `Enter the full international ${k === "phone" ? "phone" : "WhatsApp"} number, starting with + and the country code.`);
+      return fail(k, k === "phone"
+        ? india ? "Enter a 10-digit Indian phone number." : "Enter the full international phone number, starting with + and the country code."
+        : india ? "Enter a 10-digit Indian WhatsApp number." : "Enter the full international WhatsApp number, starting with + and the country code.");
     }
     patch[k] = e164;
   }

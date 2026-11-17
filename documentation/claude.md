@@ -1284,6 +1284,26 @@ undocumented. Deep technical rationale for each lives in
   never handed to a client (a fraud finding halves it); Fit reads a seller's location as it was when the lead was
   posted (a buyer's state is private); seeded `rating_avg` and `sold_count` never rank a seller; a test that changes a
   ranking input calls `admin.refresh_vendor_standing()` (Standing is kept by an hourly job).
+- **Every notice kind the database writes has somewhere to go** (2026-11-17, SH-034). `notificationKindMeta()` in
+  `src/lib/notificationsStore.ts` (the `ad_` and `certificate_` families by prefix); a kind with nowhere in this app
+  (`billing_incident`, admin-only) has `href: null` and no action. A new `notify(…, '<kind>'` adds its entry, or
+  `node scripts/notification-kinds-check.mjs` fails.
+- **A seller's contact fields are checked like registration's, in the sheet and the database** (2026-11-17, SH-041–043;
+  `20261117100000`). The Contact Details sheet saves only changed fields (`contactChanges`), refuses to edit over a
+  failed read, and outside India takes a typed region; `checkContactChanges` normalises a phone to E.164 and a website to
+  https://; `trg_vendor_profiles_contact_checks` judges a browser's new or changed value only.
+- **Social links: each box takes its own platform, and buyers see them** (Mitra, 2026-11-17, SH-044). `src/lib/socialLinks.ts`
+  (at most 3 per platform); the store shows them as "Find us online" behind the same contact gate as the website.
+- **Seller Analytics never names a visitor** (Mitra, 2026-11-17, "3-person floor"; SH-077). It reads
+  `vendor_engagement_events()`: a visitor key salted per answer, and a search term only once 3 different visitors used
+  it. Browser roles can't read `engagement_events.viewer_id`, `session_id` or `query_text` (`20261117100300`).
+- **Upload's steps are history entries, and a new listing's typed answers are kept in the tab** (2026-11-17, SH-054–061).
+  Each step's starred answers are required before Continue (`missingRequired`, `src/lib/uploadForm.ts`); photos are JPEG,
+  PNG or WebP, shrunk to 1600 px and uploaded before the listing row (removed again on failure); a blank MOQ stays blank
+  ("Not specified", never "2"); at the plan's limit the form stays and offers the draft.
+- **A listing's photos and PDFs follow its review** (2026-11-17, SH-056–057; `20261117100100`): a seller's PDF change sends a
+  live listing back to review like a photo change; only super admins and product moderators may change them as staff,
+  and that goes in the Admin Log.
 - **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,
   the profile score's inputs, the review states (registration, agreement, documents, listings, premises photos), the
   top 3 live products, the newest 3 leads (direct requests first) and the newest 3 chats (none archived, cleared or

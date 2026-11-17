@@ -179,8 +179,11 @@ const UploadCatalogue = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { data: myCatalogues = [] } = useMyCatalogues(user?.id);
-  const { data: vplan } = useVendorPlan(user?.id);
+  const { data: myCatalogues = [], isPending: cataloguesPending } = useMyCatalogues(user?.id);
+  const { data: vplan, isPending: planPending } = useVendorPlan(user?.id);
+  // Until both the plan and the list are known the limit can't be judged, so Upload waits (SH-072: it let a file go
+  // up while the list was still loading).
+  const allowanceKnown = Boolean(user) && !cataloguesPending && !planPending;
   // Paid plans publish any number of PDF catalogues (has_auto_catalog). The Free plan keeps
   // limits.catalogues_max of them (1, Mitra 2026-11-13), not counting rejected ones: the same count
   // enforce_catalogue_plan() makes, which decides. Block only once we KNOW the plan (not while loading).
@@ -258,13 +261,8 @@ const UploadCatalogue = () => {
   // ── Submit ──
   const handleSubmit = async () => {
     if (!user) { toast.error("Sign in as a vendor to publish"); return; }
-    if (autoCatalogBlocked) {
-      toast.error("The Free plan includes 1 PDF catalogue", {
-        description: "Upgrade to Basic or above to add more.",
-      });
-      navigate("/subscription");
-      return;
-    }
+    // The form is locked at the limit (SH-073); this only guards a tap that raced the lock.
+    if (autoCatalogBlocked || !allowanceKnown) return;
     if (!selectedFile) {
       toast.error("Please select a PDF file to upload");
       return;
@@ -363,7 +361,23 @@ const UploadCatalogue = () => {
           </motion.p>
         )}
 
-        {/* ── Upload section ── */}
+        {/* ── Upload section ── At the plan's limit the form is locked with the reason (SH-073): it used to take a
+            file and a title and then jump to /subscription, throwing both away. */}
+        {autoCatalogBlocked ? (
+          <motion.div variants={section} data-testid="catalogue-form-locked" className="rounded-2xl border border-gray-100 bg-white p-5 text-center shadow-sm">
+            <BookOpen className="mx-auto h-8 w-8 text-gray-300" />
+            <p className="mt-2 text-sm font-semibold text-gray-900">You've used your plan's PDF catalogue</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-gray-500">
+              To add another, delete the one below or upgrade to Basic or above, where you can add as many as you like.
+            </p>
+            <button
+              onClick={() => navigate("/subscription")}
+              className="mt-3 rounded-xl bg-brand-vendor px-4 py-2 text-sm font-bold text-white hover:bg-brand-vendor/90"
+            >
+              See plans
+            </button>
+          </motion.div>
+        ) : (
         <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           <h2 className="text-sm font-bold text-gray-900">Upload PDF</h2>
 
@@ -475,10 +489,10 @@ const UploadCatalogue = () => {
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !allowanceKnown}
             className={cn(
               "w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 shadow-sm",
-              isSubmitting
+              isSubmitting || !allowanceKnown
                 ? "bg-brand-vendor/60 cursor-not-allowed"
                 : "bg-brand-vendor hover:bg-brand-vendor/90 active:scale-[0.99]"
             )}
@@ -494,11 +508,12 @@ const UploadCatalogue = () => {
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4" /> Upload Catalogue
+                <Plus className="w-4 h-4" /> {allowanceKnown ? "Upload Catalogue" : "Checking your plan…"}
               </>
             )}
           </button>
         </motion.div>
+        )}
 
         {/* ── Existing catalogues ── */}
         {catalogues.length > 0 && (

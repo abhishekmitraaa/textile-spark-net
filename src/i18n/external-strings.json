@@ -557,6 +557,19 @@
   "Retail Chain / Institutional Buyer",
   "Not set",
   "Pincode lookup works for India only. Enter your pincode, or leave it empty.",
-  "Detected {0}, but no pincode was found. Enter it below."
+  "Detected {0}, but no pincode was found. Enter it below.",
+  "Other searches",
+  "Keep the owner's name under 120 characters.",
+  "Enter a 10-digit Indian phone number.",
+  "Enter a 10-digit Indian WhatsApp number.",
+  "Enter the full international phone number, starting with + and the country code.",
+  "Enter the full international WhatsApp number, starting with + and the country code.",
+  "Enter an email address like you@business.in.",
+  "Enter your website's address, like yourbusiness.in.",
+  "Pick the state your business is in.",
+  "Keep the state or region under 80 characters.",
+  "Enter a 6-digit PIN code.",
+  "Enter a valid postal code.",
+  "Keep each address line under 200 characters."
  ]
 }

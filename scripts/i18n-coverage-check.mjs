@@ -56,6 +56,8 @@ const SKIP_FILES = [/data[\\/]indiaStates\.ts$/, /data[\\/]countries\.ts$/,/lib[
 // catalogues map them to "" so "3 match" + "es" doesn't read "3 मेलes".
 const IGNORE = new Set([
   "es",
+  // lib/queries/vendorStore.ts: an ISO country code default, a value not text.
+  "IN",
   "Tshirt", // Trends.tsx image key
   // lib/siteConfig.ts: font families and Google Fonts weight axes, CSS values only.
   "Open Sans", "Roboto", "DM Sans",

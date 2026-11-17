@@ -103,7 +103,8 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
             {field.required && <span className="ml-1 text-destructive">*</span>}
           </Label>
           <Select value={(value as string) || ""} onValueChange={onChange}>
-            <SelectTrigger>
+            {/* The label's htmlFor needs this id (SH-063): without it the dropdown had no name and tapping the label did nothing. */}
+            <SelectTrigger id={field.id}>
               <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>

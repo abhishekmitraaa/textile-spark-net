@@ -1,10 +1,15 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef, useEffect } from "react";
+import { shrinkImage } from "@/lib/shrinkImage";
+import {
+  LISTING_PHOTO_ACCEPT, LISTING_PHOTO_MAX_SIDE, isListingPhotoType, missingRequired, listOf,
+  parseUploadDraft, uploadDraftKey, draftHasAnswers, type UploadDraft,
+} from "@/lib/uploadForm";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 import { fileExt } from "@/lib/fileExt";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { resolveCategoryId, resolveSubcategoryId, sellerIdsForCategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
@@ -111,10 +116,29 @@ const Upload = () => {
   const steps = isEdit ? ALL_STEPS.filter((s) => s.id !== "category" && s.id !== "subcategory") : ALL_STEPS;
   const [submitting, setSubmitting] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [currentStep, setCurrentStep] = useState<Step>(isEdit ? "details" : "category");
+  const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
+  // The steps are history entries (SH-060): each step after the first is pushed with its name in the entry's state, so
+  // the phone's Back goes one step back instead of leaving /upload, and a refresh stays on the step. A step whose
+  // earlier answers aren't there (a refresh that lost them) falls back to the first step that still needs answering.
+  const firstStep: Step = isEdit ? "details" : "category";
+  const wantedStep = (location.state as { uploadStep?: Step } | null)?.uploadStep;
+  const currentStep: Step = (() => {
+    const s = wantedStep && steps.some((x) => x.id === wantedStep) ? wantedStep : firstStep;
+    if (isEdit) return s;
+    const i = ALL_STEPS.findIndex((x) => x.id === s);
+    if (i >= 1 && !selectedCategory) return "category";
+    if (i >= 2 && !selectedSubCategory) return "subcategory";
+    return s;
+  })();
+  const setCurrentStep = (s: Step) => {
+    if (s === currentStep) return;
+    navigate(location.pathname + location.search, { state: { uploadStep: s } });
+  };
+  // Required answers not given on the step being left, shown under the buttons (SH-054).
+  const [stepProblem, setStepProblem] = useState<string[]>([]);
   // The listing's photos in display order. One list for both kinds (2026-10-21): a photo the listing already
   // has carries its product_images row id; a newly picked one carries its File, uploaded on submit. Two
   // parallel arrays (previews and Files) fell out of step in edit mode, so removing an existing photo dropped
@@ -135,6 +159,44 @@ const Upload = () => {
   // Whether this listing accepts customization requests. Drives whether the
   // buyer's Request Quotation form shows its customization section at all.
   const [customizationAvailable, setCustomizationAvailable] = useState(false);
+
+  // A new listing's typed answers are kept in this tab (sessionStorage) until it is saved or started over, so a
+  // refresh or an accidental Back doesn't lose them (SH-060). Photos, videos and PDFs can't be kept: they're picked again.
+  const draftRestored = useRef(false);
+  // Saving starts only after the restore has rendered: in the same pass it would store the still-empty form over the draft.
+  const [draftReady, setDraftReady] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  useEffect(() => {
+    if (isEdit || !user || draftRestored.current) return;
+    draftRestored.current = true;
+    let d: UploadDraft | null = null;
+    try { d = parseUploadDraft(window.sessionStorage.getItem(uploadDraftKey(user.id))); } catch { d = null; }
+    setDraftReady(true);
+    if (!draftHasAnswers(d) || !d) return;
+    setSelectedCategory(d.selectedCategory);
+    setSelectedSubCategory(d.selectedSubCategory);
+    setSelectedSubType(d.selectedSubType);
+    setFormValues(d.formValues);
+    setProductName(d.productName);
+    setProductDescription(d.productDescription);
+    setSku(d.sku);
+    setPrice(d.price);
+    setUnit(d.unit);
+    setCustomizationAvailable(d.customizationAvailable);
+    setRestoredDraft(true);
+  }, [isEdit, user]);
+  const clearDraft = () => {
+    if (!user) return;
+    try { window.sessionStorage.removeItem(uploadDraftKey(user.id)); } catch { /* storage unavailable: nothing kept */ }
+  };
+  const startOver = () => {
+    clearDraft();
+    setSelectedCategory(null); setSelectedSubCategory(null); setSelectedSubType(null);
+    setFormValues({}); setProductName(""); setProductDescription(""); setSku(""); setPrice(""); setUnit("");
+    setCustomizationAvailable(false); setImages([]); setVideoFiles([]); setPdfFiles([]);
+    setRestoredDraft(false); setStepProblem([]);
+    navigate(location.pathname + location.search, { replace: true, state: null });
+  };
 
   // Prefill the form from the loaded product when editing.
   useEffect(() => {
@@ -177,6 +239,29 @@ const Upload = () => {
       lengths: editing.lengths ?? [],
     }));
   }, [editing]);
+
+  // Keep the new listing's answers as they change (after any restore has run).
+  useEffect(() => {
+    if (isEdit || !user || !draftReady) return;
+    const d: UploadDraft = {
+      v: 1, selectedCategory, selectedSubCategory, selectedSubType, formValues, productName, productDescription,
+      sku, price, unit, customizationAvailable,
+    };
+    try {
+      if (draftHasAnswers(d)) window.sessionStorage.setItem(uploadDraftKey(user.id), JSON.stringify(d));
+      else window.sessionStorage.removeItem(uploadDraftKey(user.id));
+    } catch { /* storage unavailable: the form still works, it just isn't kept */ }
+  }, [isEdit, user, draftReady, selectedCategory, selectedSubCategory, selectedSubType, formValues, productName, productDescription,
+      sku, price, unit, customizationAvailable]);
+
+  // Picked files can't be kept: ask before the tab closes or reloads with some waiting to be saved.
+  const filesWaiting = images.some((i) => i.file) || videoFiles.length > 0 || pdfFiles.length > 0;
+  useEffect(() => {
+    if (!filesWaiting || submitting) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [filesWaiting, submitting]);
 
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
@@ -236,7 +321,10 @@ const Upload = () => {
   // Add real image Files (from drop or the file picker), capped at 6 photos in all. Storage takes pictures of
   // at most 10 MB (the bucket's limit since 2026-10-21), so a bigger one is refused here, with the reason.
   const addImageFiles = (files: File[]) => {
-    const imgs = files.filter((f) => f.type.startsWith("image/"));
+    // JPEG, PNG and WebP only (SH-058): BMP, TIFF and SVG passed `image/*` and the bucket refused them at Publish.
+    const wrongType = files.filter((f) => f.type.startsWith("image/") && !isListingPhotoType(f.type));
+    if (wrongType.length) toast.error("Add JPEG, PNG or WebP photos", { description: `${wrongType.map((f) => f.name).join(", ")} can't be used.` });
+    const imgs = files.filter((f) => isListingPhotoType(f.type));
     const tooBig = imgs.filter((f) => f.size > MAX_IMAGE_BYTES);
     if (tooBig.length) toast.error(tooBig.length === 1 ? "This photo is over 10 MB" : "Some photos are over 10 MB", { description: "Add a smaller photo." });
     const fit = imgs.filter((f) => f.size <= MAX_IMAGE_BYTES);
@@ -291,6 +379,9 @@ const Upload = () => {
     setFormValues((prev) => ({ ...prev, [fieldId]: value }));
   };
 
+  const missingOn = (step: Step, publishing: boolean) =>
+    missingRequired(step, dynamicFields, formValues, { productName, price, publishing });
+
   const canProceed = () => {
     switch (currentStep) {
       case "category":
@@ -298,7 +389,7 @@ const Upload = () => {
       case "subcategory":
         return !!selectedSubCategory;
       case "details":
-        return !!productName;
+        return missingOn("details", false).length === 0;
       case "images":
         return true;
       case "pricing":
@@ -309,30 +400,46 @@ const Upload = () => {
   };
 
   const goToNextStep = () => {
+    const missing = missingOn(currentStep, false);
+    if (missing.length) { setStepProblem(missing); return; }
+    setStepProblem([]);
     const idx = steps.findIndex((s) => s.id === currentStep);
     if (idx < steps.length - 1) {
       setCurrentStep(steps[idx + 1].id);
     }
   };
 
+  // The on-screen Previous is the same move as the phone's Back when this step was pushed; otherwise it pushes the step before.
   const goToPreviousStep = () => {
+    setStepProblem([]);
     const idx = steps.findIndex((s) => s.id === currentStep);
-    if (idx > 0) {
-      setCurrentStep(steps[idx - 1].id);
-    }
+    if (idx <= 0) return;
+    if (wantedStep === currentStep) navigate(-1);
+    else setCurrentStep(steps[idx - 1].id);
   };
 
   // Upload newly picked image Files to the product-images bucket under the vendor's own folder and return
   // their public URLs, in order. Every file gets a name of its own (2026-10-21): the name used to be its
   // index from 0, so a photo added while editing overwrote the listing's cover at <uid>/<pid>/0. Storage
   // also refuses to overwrite a picture a listing uses (migration 20261021100000), so no upsert.
-  const uploadImages = async (productId: string, files: File[]): Promise<string[]> => {
+  // Each photo is shrunk to 1600 px first, like every other upload (SH-061): 6 × 10 MB originals were served to buyers.
+  // `stored` collects the paths written, so a failed Publish can remove them again (SH-058).
+  const uploadImages = async (productId: string, files: File[], stored: string[] = []): Promise<string[]> => {
     const urls: string[] = [];
     for (const file of files) {
-      const ext = fileExt(file.name, "jpg");
+      let body: Blob = file;
+      let ext = fileExt(file.name, "jpg");
+      try {
+        const shrunk = await shrinkImage(file, LISTING_PHOTO_MAX_SIDE);
+        body = shrunk.blob;
+        ext = shrunk.ext;
+      } catch {
+        // Couldn't be re-encoded here: the original goes up as it is (it is a JPEG, PNG or WebP under 10 MB).
+      }
       const path = `${user!.id}/${productId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type || undefined });
+      const { error } = await supabase.storage.from("product-images").upload(path, body, { contentType: body.type || file.type || undefined });
       if (error) throw error;
+      stored.push(path);
       urls.push(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
     }
     return urls;
@@ -418,6 +525,14 @@ const Upload = () => {
       toast.error("Add a price before publishing", { description: "Or use Save as Draft to finish it later." });
       return;
     }
+    // Every required Details answer, for both buttons (SH-054). In edit mode the Details fields aren't shown, so none apply.
+    const missingDetails = missingOn("details", false);
+    if (!isEdit && missingDetails.length) {
+      toast.error(`Add ${listOf(missingDetails)} first`, { description: "They're required on every listing." });
+      setStepProblem(missingDetails);
+      setCurrentStep("details");
+      return;
+    }
     // Country of Origin is required on every product listing (it's in
     // productCommonFields with required: true), so publishing without it is
     // blocked the same way a missing price is — but only when the form is
@@ -433,11 +548,11 @@ const Upload = () => {
     }
     // Plan product-cap: block publishing a NEW listing beyond the vendor's cap
     // (drafts and edits are unaffected — a draft doesn't occupy a listing slot).
+    // The form stays as it is (SH-059): it used to jump to /subscription and throw every answer away.
     if (intent === "review" && productCapReached) {
       toast.error("Product limit reached", {
-        description: `Your plan allows ${productCap} listed products. Upgrade to list more.`,
+        description: `Your plan allows ${productCap} listed products. Save this one as a draft now, and publish it after you upgrade.`,
       });
-      navigate("/subscription");
       return;
     }
 
@@ -522,6 +637,7 @@ const Upload = () => {
         });
         await saveEditedImages(editId);
         await uploadMedia(editId, subNameForMedia());
+        clearDraft();
         queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's counts (SH-015)
         toast.success("Product updated", {
@@ -544,16 +660,42 @@ const Upload = () => {
         (await resolveSubcategoryId(category?.name, subName)) ??
         (await resolveCategoryId(subName, category?.name, productName));
 
+      // Photos first, then the listing (SH-058): the row used to be written first, so a failed photo left a listing
+      // with no pictures holding a plan slot, and the still-filled form invited a second Publish. A failure now removes
+      // the listing (if it was written) and every photo uploaded, and the form stays for another try.
+      const productId = crypto.randomUUID();
+      const storedPaths: string[] = [];
+      let rowWritten = false;
+      const undo = async () => {
+        if (rowWritten) {
+          const { error: delErr } = await supabase.from("products").delete().eq("id", productId);
+          if (delErr) console.warn("[Upload] couldn't remove the half-saved listing:", delErr.message);
+        }
+        if (storedPaths.length) {
+          const { error: rmErr } = await supabase.storage.from("product-images").remove(storedPaths);
+          if (rmErr) console.warn("[Upload] photos left in storage:", rmErr.message);
+        }
+      };
+      let urls: string[];
+      try {
+        urls = await uploadImages(productId, images.flatMap((i) => (i.file ? [i.file] : [])), storedPaths);
+      } catch (e) {
+        await undo();
+        throw e;
+      }
+
       const { data: inserted, error } = await supabase
         .from("products")
         .insert({
+          id: productId,
           vendor_id: user.id,
           name: productName,
           description: productDescription || null,
           price_value: price ? Number(price) : null,
           currency: "₹",
           category_id,
-          moq: (formValues["moq"] as string) || "2",
+          // Left blank, it stays blank ("Not specified" to buyers): it used to be saved as "2" (SH-055).
+          moq: str("moq"),
           fabric,
           gsm,
           fit_type: fitType,
@@ -576,15 +718,16 @@ const Upload = () => {
         })
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) { await undo(); throw error; }
+      rowWritten = true;
 
-      const urls = await uploadImages(inserted.id, images.flatMap((i) => (i.file ? [i.file] : [])));
       if (urls.length > 0) {
         const { error: imgErr } = await supabase
           .from("product_images")
           .insert(urls.map((url, position) => ({ product_id: inserted.id, url, position })));
-        if (imgErr) throw imgErr;
+        if (imgErr) { await undo(); throw imgErr; }
       }
+      clearDraft();
       await uploadMedia(inserted.id, subName ?? category?.name ?? null);
 
       // Refresh any cached product lists so the vendor's Products page and the
@@ -690,6 +833,13 @@ const Upload = () => {
         )}
       </motion.div>
 
+      {restoredDraft && (
+        <motion.div variants={section} className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm" data-testid="upload-draft-restored">
+          <span className="text-muted-foreground">We kept what you typed before. Add the photos, videos and PDFs again.</span>
+          <button type="button" onClick={startOver} className="font-semibold text-accent hover:underline">Start over</button>
+        </motion.div>
+      )}
+
       {/* Plan product-cap notice */}
       {productCapReached && (
         <motion.div variants={section} className="mb-6">
@@ -725,6 +875,7 @@ const Upload = () => {
               transition={TAP_T}
               onClick={() => {
                 if (index <= currentStepIndex || (index === currentStepIndex + 1 && canProceed())) {
+                  setStepProblem([]);
                   setCurrentStep(step.id);
                 }
               }}
@@ -944,13 +1095,13 @@ const Upload = () => {
                   Drag and drop images here
                 </p>
                 <p className="mb-3 text-xs text-muted-foreground lg:mb-4">
-                  PNG, JPG, MP4, PDF up to 10MB (max 6 images, 3 videos, 3 PDFs)
+                  JPG, PNG, WebP, MP4, PDF up to 10MB (max 6 images, 3 videos, 3 PDFs)
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <input
                     ref={imageInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={LISTING_PHOTO_ACCEPT}
                     multiple
                     className="hidden"
                     onChange={onPickImages}
@@ -1239,6 +1390,12 @@ const Upload = () => {
           )}
         </AnimatePresence>
 
+        {stepProblem.length > 0 && (
+          <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5 text-sm text-destructive" data-testid="upload-step-problem">
+            {`Add ${listOf(stepProblem)} to continue.`}
+          </p>
+        )}
+
         {/* Navigation buttons */}
         <motion.div variants={section} className="mt-6 flex items-center justify-between gap-4">
           <motion.button
@@ -1270,7 +1427,7 @@ const Upload = () => {
                 whileTap={TAP}
                 transition={TAP_T}
                 onClick={goToNextStep}
-                disabled={!canProceed()}
+                disabled={currentStep === "category" ? !selectedCategory : currentStep === "subcategory" ? !selectedSubCategory : false}
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-50"
               >
                 Continue

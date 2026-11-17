@@ -89,7 +89,7 @@ function toCloseUp(v: RawVideo): VideoCloseUp {
     brandName: v.vendor_profiles?.brand_name ?? "Vendor",
     brandLine: v.brand_line,
     price: v.price ?? "",
-    moq: v.moq ?? "2",
+    moq: v.moq?.trim() ?? "", // empty hides the MOQ line; "2" was invented (SH-055)
     rating: Number(v.rating),
     reviews: v.reviews ?? "",
     likes: v.likes_count,
