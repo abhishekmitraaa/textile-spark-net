@@ -50,19 +50,31 @@ the builder. Their banner parts stay filtered out.
    - "The Cosora team is setting up the part that runs outside the app."
    - "Set up by the Cosora team on <date>."
 
-## Open points (Mitra's to decide later)
+## Decided after the first build (Mitra, 2026-11-17: "add the field for message and change the wording")
 
-- **Direct Broadcast charges ₹15 once per campaign** (`unitsFor()`: one unit, whatever the days), so a seller pays for one message. The builder has no "how many messages" field. Either it gets one, or the team sends one broadcast per campaign; Mitra's call. Who receives it is up to the team, and delivery has no tracking in the app.
-- **The descriptions on the four cards are the old ones** (for example, "Appear in Google search results and shopping tab"). They promise reach that depends on how the team runs each campaign. Under the "no invented claims" rule they need Mitra's wording if they over-promise.
+- **Direct Broadcast is bought by the message.**
+  - The builder asks "Messages per listing", from 10 to 10,000 and starting at 100 (my call), and charges ₹15 × messages × listings, whatever the days.
+  - `clampMessages()` / `withMessages()` are in both pricing copies, and `scripts/ad-pricing-check.mjs` compares them over generated orders, out-of-range counts included.
+  - `razorpay-create-order` stores the clamped count in `ad_orders.spec.messages`. `admin.ad_broadcast_messages()` reads it back for Manual work ("Message buyers · 300 messages") and for the seller's Your Campaigns line.
+  - Before this, a broadcast cost ₹15 once per listing: one message.
+- **The four cards' descriptions now say what the team does** and promise no reach:
+  - **Facebook & Instagram Ad:** "Cosora's team promotes your listing on Facebook and Instagram, with a link back to it on Cosora."
+  - **Google Product Ad:** "… lists your product on Google Shopping, with a link back to it on Cosora."
+  - **Social Media Combo:** "Facebook, Instagram and Google Shopping together: Cosora's team sets up all three for your listing."
+  - **Direct Broadcast:** "Cosora's team sends a message about your listing to buyers in its category. You choose how many messages, at ₹15 each."
+
+## Still open
+
 - **No refund path for a manual type the team can't carry out.** It would be a refund through finance, as for any campaign.
+- **Delivery of the messages isn't tracked in the app;** the team's note on "Mark done" is the record.
 
 ## Tests
 
 - `tests/local/manual-ads.spec.ts` (4):
   - who lists and who marks, and only after approval, through PostgREST (notice and Admin Log included);
-  - the server sells the four, up to a Razorpay order id on a paid plan, and still refuses the three banner types;
-  - the builder tags and notice, and Your Campaigns' lines;
-  - the Cosora-Admin view: an ads writer marks one done, and support only reads.
+  - the server sells the four, up to a Razorpay order id on a paid plan, and still refuses the three banner types; a broadcast's count is clamped, priced and stored;
+  - the builder tags, notice and messages field, and Your Campaigns' lines;
+  - the Cosora-Admin view: an ads writer marks one done, a broadcast shows its messages, and support only reads.
 - Updated:
   - `tests/local/seller-home-medium-b.spec.ts`: the builder still has no banners, and the website and message goals are back;
   - `tests/local/todo-open.spec.ts`: the three social types show "/day", and Web & Mobile Combo is gone.

@@ -43,7 +43,7 @@ import { DiscountCodeField } from "@/components/vendor/DiscountCodeField";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { useSellerRegistration, canPublish, type SellerRegistration } from "@/lib/queries/sellerRegistration";
 import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
-import { computeOrderRupees, priceLines, VERIFICATION_DAYS } from "@/lib/adPricing";
+import { computeOrderRupees, priceLines, VERIFICATION_DAYS, BROADCAST_MESSAGES, clampMessages, PER_MESSAGE_TYPES } from "@/lib/adPricing";
 import { sellableAdTypes, MANUAL_AD_TYPES, hasManualAdType } from "@/lib/adSlots";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -83,15 +83,15 @@ const AD_TYPES: AdType[] = [
   { id: "searchListing",        name: "Search Listing Ad",           price: "₹35",  period: "/day", Icon: Search,       description: "Appear at the top of search results when buyers look for products in your category. Targeted visibility for intent-driven buyers.", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop" },
   { id: "featuredProduct",      name: "Featured Product",            price: "₹55",  period: "/day", Icon: Star,         description: "Premium placement for your key products on category pages. The highest-visibility position for serious buyers.", image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=800&auto=format&fit=crop" },
   { id: "storePromotion",       name: "Store Promotion",             price: "₹99",  period: "/day", Icon: Store,        description: "Promote your entire store for maximum brand exposure. Best for building long-term relationships with bulk buyers.", image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop" },
-  { id: "directBroadcast",      name: "Direct Broadcast",            price: "₹15",  period: "/msg", Icon: Radio,        description: "Send direct messages to targeted buyers who match your product category. Pay only per message sent.", image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop" },
+  { id: "directBroadcast",      name: "Direct Broadcast",            price: "₹15",  period: "/msg", Icon: Radio,        description: "Cosora's team sends a message about your listing to buyers in its category. You choose how many messages, at ₹15 each.", image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop" },
   { id: "wholesalerPick",       name: "Wholesaler Pick Ad",          price: "₹59",  period: "/day",     Icon: ShoppingBag,  description: "Get featured in the exclusive Wholesaler Pick section. 72-hour guaranteed exposure with bumps.", image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=800&auto=format&fit=crop" },
   { id: "brandAd",              name: "Brand Ad",                    price: "₹69",  period: "/day",     Icon: Award,        description: "Showcase your entire brand story and collection. Drives visits via store and key product exposures.", image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop" },
   { id: "websiteBanner",        name: "Website Banner Ad",           price: "₹89",  period: "/day", Icon: Globe,        description: "Large scale visibility on the Cosora desktop website. Maximum impact for site-wide brand awareness.", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop" },
   { id: "mobileBanner",         name: "Mobile Banner Ad",            price: "₹99",  period: "/day", Icon: Smartphone,   description: "Optimized banners for the Cosora mobile app. Reach on-the-go buyers with high-converting mobile placements.", image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=800&auto=format&fit=crop" },
   { id: "webMobileCombo",       name: "Web & Mobile Combo",          price: "₹129", period: "/day",     Icon: Monitor,      description: "The ultimate visibility package. Reach buyers across all devices with synchronized desktop and mobile banners.", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop" },
-  { id: "fbInsta",              name: "Facebook & Instagram Ad",     price: "₹59",  period: "/day",     Icon: Facebook,     description: "Leverage social media to drive traffic to your Cosora store. Reaches buyers outside the platform.", image: "https://images.unsplash.com/photo-1611162617263-435d74236edc?q=80&w=800&auto=format&fit=crop" },
-  { id: "googleProduct",        name: "Google Product Ad",           price: "₹59",  period: "/day",     Icon: BarChart3,    description: "Appear in Google search results and shopping tab. Captures high-intent buyers actively searching.", image: "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?q=80&w=800&auto=format&fit=crop" },
-  { id: "socialCombo",          name: "Social Media Combo",          price: "₹99",  period: "/day",     Icon: Megaphone,    description: "Combined reach of Facebook, Instagram and Google. Maximum off-platform exposure.", image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=800&auto=format&fit=crop" },
+  { id: "fbInsta",              name: "Facebook & Instagram Ad",     price: "₹59",  period: "/day",     Icon: Facebook,     description: "Cosora's team promotes your listing on Facebook and Instagram, with a link back to it on Cosora.", image: "https://images.unsplash.com/photo-1611162617263-435d74236edc?q=80&w=800&auto=format&fit=crop" },
+  { id: "googleProduct",        name: "Google Product Ad",           price: "₹59",  period: "/day",     Icon: BarChart3,    description: "Cosora's team lists your product on Google Shopping, with a link back to it on Cosora.", image: "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?q=80&w=800&auto=format&fit=crop" },
+  { id: "socialCombo",          name: "Social Media Combo",          price: "₹99",  period: "/day",     Icon: Megaphone,    description: "Facebook, Instagram and Google Shopping together: Cosora's team sets up all three for your listing.", image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=800&auto=format&fit=crop" },
   { id: "trustedSeal",          name: "Trusted Seal & Verified Badge",price: "₹44", period: "",     Icon: Shield,       description: "Boost conversion with a trusted seller badge on your profile and all product cards.", image: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?q=80&w=800&auto=format&fit=crop" },
   { id: "verifiedCertificate",  name: "Cosora Verified Certificate", price: "₹199", period: "",     Icon: BadgeCheck,   description: "Official premium trust signal. Verified certificate displayed on your full profile.", image: "https://images.unsplash.com/photo-1523240715639-99a86501111b?q=80&w=800&auto=format&fit=crop" },
 ];
@@ -404,8 +404,11 @@ function AdCreationSteps({
   showMoreAdTypes, setShowMoreAdTypes,
   cityLimit, scopeLabel, vendorCats, planGrantsSeal, planName,
   stateTargeting, allowCountries, selectedCountries, setSelectedCountries,
+  broadcastMessages, setBroadcastMessages,
 }: {
   products: VendorProductRow[];
+  /** Direct Broadcast's messages per listing, as typed (clamped when it's priced). */
+  broadcastMessages: string; setBroadcastMessages: (v: string) => void;
   selectedAdTypes: string[]; setSelectedAdTypes: (v: string[]) => void;
   selectedProducts: string[]; setSelectedProducts: (v: string[]) => void;
   selectedDuration: string; setSelectedDuration: (v: string) => void;
@@ -648,6 +651,33 @@ function AdCreationSteps({
                   These run outside the app. Once Cosora approves your campaign, our team sets them up for you and marks them
                   done under Your Campaigns, and you get a notice.
                 </p>
+              </div>
+            )}
+
+            {/* Direct Broadcast is bought by the message (Mitra, 2026-11-17, "add the field for message"). */}
+            {selectedAdTypes.some((id) => PER_MESSAGE_TYPES.has(id)) && (
+              <div className="rounded-2xl border border-gray-200 bg-white p-4" data-testid="broadcast-messages">
+                <label htmlFor="broadcast-messages" className="text-sm font-bold text-gray-900">Messages per listing</label>
+                <input
+                  id="broadcast-messages"
+                  type="number"
+                  inputMode="numeric"
+                  min={BROADCAST_MESSAGES.min}
+                  max={BROADCAST_MESSAGES.max}
+                  step={10}
+                  value={broadcastMessages}
+                  onChange={(e) => setBroadcastMessages(e.target.value)}
+                  onBlur={() => setBroadcastMessages(String(clampMessages(broadcastMessages)))}
+                  className="mt-2 w-40 rounded-xl border border-gray-300 px-3 py-2 text-base tabular-nums focus:border-[#ff2160] focus:outline-none"
+                />
+                <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+                  {`₹15 a message, from ${BROADCAST_MESSAGES.min.toLocaleString("en-IN")} to ${BROADCAST_MESSAGES.max.toLocaleString("en-IN")}. Cosora's team sends them to buyers in your listing's category after approval.`}
+                </p>
+                {String(clampMessages(broadcastMessages)) !== broadcastMessages.trim() && (
+                  <p className="mt-1 text-xs font-medium text-amber-700">
+                    {`You'll be charged for ${clampMessages(broadcastMessages).toLocaleString("en-IN")} messages.`}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -991,11 +1021,13 @@ function PaymentModal({
 function buildAdSpec(
   products: VendorProductRow[], selectedAdTypes: string[], selectedProducts: string[], days: number,
   selectedCategories: string[], selectedCities: string[],
-  stateTargeting = false, selectedCountries: string[] = [],
+  stateTargeting = false, selectedCountries: string[] = [], broadcastMessages = "",
 ): AdSpec {
   return {
     placementIds: selectedAdTypes,
     days,
+    // Only an order with a broadcast carries a message count; the server clamps it the same way.
+    messages: selectedAdTypes.some((id) => PER_MESSAGE_TYPES.has(id)) ? clampMessages(broadcastMessages) : undefined,
     campaignLabel: selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.name).filter(Boolean).join(", ") || "Ad",
     items: selectedProducts.map((pid) => {
       const prod = products.find(p => p.id === pid);
@@ -1013,13 +1045,14 @@ function buildAdSpec(
 // ── CostSummary ──
 function CostSummary({
   products, selectedAdTypes, selectedProducts, selectedDuration, selectedCategories, selectedCities, vendorId, onCreated, canAds,
-  stateTargeting, selectedCountries,
+  stateTargeting, selectedCountries, broadcastMessages,
 }: {
   products: VendorProductRow[]; selectedAdTypes: string[]; selectedProducts: string[]; selectedDuration: string;
   selectedCategories: string[]; selectedCities: string[];
   vendorId?: string; onCreated: () => void; canAds: boolean;
-  stateTargeting: boolean; selectedCountries: string[];
+  stateTargeting: boolean; selectedCountries: string[]; broadcastMessages: string;
 }) {
+  const messages = clampMessages(broadcastMessages);
   const [payOpen, setPayOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -1030,13 +1063,13 @@ function CostSummary({
   const [quoteNote, setQuoteNote] = useState<string | null>(null);
   const [requoting, setRequoting] = useState(false);
   const quotedFor = useRef("");
-  const specKey = [selectedAdTypes.join(","), selectedDuration, selectedProducts.join(",")].join("|");
+  const specKey = [selectedAdTypes.join(","), selectedDuration, selectedProducts.join(","), messages].join("|");
   useEffect(() => {
     if (!quote || quotedFor.current === specKey || !selectedAdTypes.length || !selectedProducts.length) return;
     let cancelled = false;
     setRequoting(true);
     const t = setTimeout(async () => {
-      const spec = buildAdSpec(products, selectedAdTypes, selectedProducts, parseInt(selectedDuration) || 1, selectedCategories, selectedCities, stateTargeting, selectedCountries);
+      const spec = buildAdSpec(products, selectedAdTypes, selectedProducts, parseInt(selectedDuration) || 1, selectedCategories, selectedCities, stateTargeting, selectedCountries, broadcastMessages);
       const res = await quoteAdDiscount(spec, quote.code);
       if (cancelled) return;
       setRequoting(false);
@@ -1111,13 +1144,13 @@ function CostSummary({
   // The visible change: trustedSeal and verifiedCertificate are now charged
   // ONCE for the account instead of once per product per day. A ₹199
   // certificate across 3 products on a 30-day campaign quoted ₹17,910 before.
-  const total = computeOrderRupees(selectedAdTypes, days, selectedProducts.length);
-  const lines = priceLines(selectedAdTypes, days, selectedProducts.length);
+  const total = computeOrderRupees(selectedAdTypes, days, selectedProducts.length, messages);
+  const lines = priceLines(selectedAdTypes, days, selectedProducts.length, messages);
   // With a code applied, what the vendor pays is the server's quote.
   const payable = quote ? quote.total : total;
 
   const buildSpec = (): AdSpec =>
-    buildAdSpec(products, selectedAdTypes, selectedProducts, days, selectedCategories, selectedCities, stateTargeting, selectedCountries);
+    buildAdSpec(products, selectedAdTypes, selectedProducts, days, selectedCategories, selectedCities, stateTargeting, selectedCountries, broadcastMessages);
 
   const applyCode = async (code: string): Promise<string | null> => {
     setQuoteNote(null);
@@ -1538,7 +1571,8 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
               <p className="mt-1.5 pl-12 text-[11px] text-gray-500">{rs.reason}</p>
               {/* The part the Cosora team does by hand (Mitra, 2026-11-17). */}
               {hasManualAdType(a.placement) && (() => {
-                const doneAt = manualWork?.get(a.id) ?? null;
+                const work = manualWork?.get(a.id);
+                const doneAt = work?.doneAt ?? null;
                 const approved = !["pending_review", "changes_requested", "rejected"].includes(a.status);
                 return (
                   <p className="mt-1 pl-12 text-[11px] font-medium text-amber-800" data-testid="manual-ad-status">
@@ -1547,6 +1581,7 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
                       : approved
                         ? "The Cosora team is setting up the part that runs outside the app."
                         : "After approval, the Cosora team sets up the part that runs outside the app."}
+                    {work?.messages ? ` ${work.messages.toLocaleString("en-IN")} broadcast messages per listing.` : ""}
                   </p>
                 );
               })()}
@@ -1768,6 +1803,7 @@ const Advertisements = () => {
   const [selectedAdTypes, setSelectedAdTypes] = useState<string[]>(["openListing"]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedDuration, setSelectedDuration] = useState("7");
+  const [broadcastMessages, setBroadcastMessages] = useState(String(BROADCAST_MESSAGES.initial));
   // Targeting defaults are empty = untargeted (shown to everyone); the vendor
   // opts in to category/city targeting.
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -1831,6 +1867,7 @@ const Advertisements = () => {
                 vendorCats={vendorCats} planGrantsSeal={planGrantsSeal} planName={planName}
                 stateTargeting={stateTargeting} allowCountries={adScope === "global"}
                 selectedCountries={selectedCountries} setSelectedCountries={setSelectedCountries}
+                broadcastMessages={broadcastMessages} setBroadcastMessages={setBroadcastMessages}
               />
               <div className="min-[1400px]:sticky min-[1400px]:top-24">
                 <CostSummary
@@ -1845,6 +1882,7 @@ const Advertisements = () => {
                   canAds={canAds}
                   stateTargeting={stateTargeting}
                   selectedCountries={selectedCountries}
+                  broadcastMessages={broadcastMessages}
                 />
               </div>
             </motion.div>

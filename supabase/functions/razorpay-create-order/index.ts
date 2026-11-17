@@ -41,7 +41,7 @@ function json(body: unknown, status = 200): Response {
 // scripts/ad-pricing-check.mjs now asserts the one remaining duplicate (the
 // browser's, in src/lib/adPricing.ts) matches this one across 4000 generated
 // orders, because a drift here quotes the vendor one price and charges another.
-import { isVerificationOnly, type AdSpec } from "../_shared/adPricing.ts";
+import { isVerificationOnly, withMessages, type AdSpec } from "../_shared/adPricing.ts";
 import { checkAdOrder } from "../_shared/adOrderChecks.ts";
 import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 import { adReach } from "../_shared/adReach.ts";
@@ -99,7 +99,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // as the plan allows it (a one-state plan that named none gets the vendor's own state).
   const reach = await adReach(url, serviceKey, vendorId, asked, true);
   if (!reach.ok) return json({ error: "ad_reach", reason: reach.reason ?? "unavailable", message: reach.message }, 200);
-  const spec = reach.spec;
+  // A broadcast's message count is clamped and kept with the order (withMessages): what is stored is what was charged.
+  const spec = withMessages(reach.spec);
 
   const lines = adAmounts(spec);
   if (lines.gross <= 0) return json({ error: "zero_amount" }, 400);

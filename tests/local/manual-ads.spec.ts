@@ -66,7 +66,7 @@ test("the database: who lists, who marks, and only after approval", async () => 
   expect(denied.error?.code).toBe("42501");
   const mine = await me.rpc("my_ad_manual_work");
   expect(mine.error).toBeNull();
-  expect(mine.data).toEqual([{ ad_id: ad, done_at: null }]);
+  expect(mine.data).toEqual([{ ad_id: ad, done_at: null, messages: null }]);
 
   // Support reads it and can't mark it.
   const support = await clientAs("support");
@@ -98,7 +98,7 @@ test("the database: who lists, who marks, and only after approval", async () => 
 
   // "Not done" takes it back; the seller's view follows.
   expect((await admin.rpc("admin_ad_manual_done", { p_ad: ad, p_done: false })).error).toBeNull();
-  expect((await me.rpc("my_ad_manual_work")).data).toEqual([{ ad_id: ad, done_at: null }]);
+  expect((await me.rpc("my_ad_manual_work")).data).toEqual([{ ad_id: ad, done_at: null, messages: null }]);
   expect(sql(`select string_agg(action, ',' order by id) from admin.audit_log
                where target_table = 'admin.ad_manual_work' and changes ->> 'ad_id' = '${ad}'`)).toBe("insert,delete");
 });
@@ -139,10 +139,24 @@ test("the server sells the four again, and still not the website banners", async
       expect(answer.error, `${t}: ${JSON.stringify(answer)}`).toBeUndefined();
       expect(answer.order_id ?? answer.orderId, t).toMatch(/^order_manual_/);
     }
+    // Direct Broadcast by the message: the count is clamped, priced (₹15 × messages × listings) and kept with the order.
+    const bodyFor = (messages: unknown) => ({ spec: { placementIds: ["openListing", "directBroadcast"], days: 3, messages,
+      items: [{ productId: product, title: "Manual order listing", imageUrl: null }] } });
+    for (const [asked, kept] of [[250, 250], [3, 10], [99_999, 10_000]] as const) {
+      const res = await fetch(`${edge}/razorpay-create-order`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${s.session.access_token}`, apikey: stack().ANON },
+        body: JSON.stringify(bodyFor(asked)),
+      });
+      const answer = (await res.json()) as { orderId?: string; amount?: number };
+      expect(answer.orderId, String(asked)).toMatch(/^order_manual_/);
+      expect(sql(`select (spec ->> 'messages') || '|' || amount from public.ad_orders where order_id = '${answer.orderId}'`))
+        .toBe(`${kept}|${(22 * 3 + 15 * kept) * 100}`);
+    }
     for (const t of ["websiteBanner", "mobileBanner", "webMobileCombo"]) {
       expect((await order(["openListing", t])).error, t).toBe("not_sold");
     }
-    expect(sql(`select count(*) from public.ad_orders where vendor_id = '${s.id}'`)).toBe("4");
+    expect(sql(`select count(*) from public.ad_orders where vendor_id = '${s.id}'`)).toBe("7");
   } finally {
     await new Promise<void>((resolve) => (mock ? mock.close(() => resolve()) : resolve()));
   }
@@ -171,6 +185,15 @@ test("the builder tags the four and explains what happens; Your Campaigns says w
   const banner = page.getByTestId("manual-ad-banner");
   await expect(banner).toContainText("The Cosora team sets these up by hand");
   await expect(banner).toContainText("Facebook & Instagram Ad");
+  // Direct Broadcast asks how many messages; out of range, it says what will be charged.
+  await expect(page.getByTestId("broadcast-messages")).toHaveCount(0);
+  await card("Direct Broadcast").click();
+  const messages = page.getByLabel("Messages per listing");
+  await expect(messages).toHaveValue("100");
+  await messages.fill("3");
+  await expect(page.getByTestId("broadcast-messages")).toContainText("You'll be charged for 10 messages.");
+  await messages.blur();
+  await expect(messages).toHaveValue("10");
 
   // Your Campaigns: one waiting for review, one done.
   const status = page.getByTestId("manual-ad-status");
@@ -184,6 +207,13 @@ test("Cosora-Admin › Ads › Manual work: an ads writer marks one done; suppor
   const s = await seller("manual-admin");
   const title = `Manual admin ${Date.now().toString(36)}`;
   campaign(s.id, title, "openListing,socialCombo", "active");
+  const order = `order_manual_admin_${Date.now()}`;
+  sql(`insert into public.ad_orders (order_id, vendor_id, spec, amount, status)
+       values ('${order}', '${s.id}', '{"placementIds":["directBroadcast"],"days":7,"items":[],"messages":300}', 450000, 'paid')`);
+  const broadcastTitle = `Broadcast ${Date.now().toString(36)}`;
+  const broadcast = campaign(s.id, broadcastTitle, "directBroadcast", "active");
+  sql(`set session_replication_role = replica; update public.advertisements set ad_order_id = '${order}' where id = '${broadcast}';
+       set session_replication_role = origin;`);
 
   const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
   const admin = await ctx.newPage();
@@ -192,6 +222,7 @@ test("Cosora-Admin › Ads › Manual work: an ads writer marks one done; suppor
   await admin.getByRole("radio", { name: "Manual work" }).click();
   const row = admin.getByTestId("manual-row").filter({ hasText: title });
   await expect(row).toContainText("Social Media Combo");
+  await expect(admin.getByTestId("manual-row").filter({ hasText: broadcastTitle })).toContainText("Message buyers · 300 messages");
   await row.getByRole("button", { name: "Mark done" }).click();
   await admin.getByLabel(/Note/).fill("Boosted post, 3 days");
   await admin.getByRole("dialog").getByRole("button", { name: "Mark done" }).click();

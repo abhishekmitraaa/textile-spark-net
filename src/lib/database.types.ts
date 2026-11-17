@@ -6904,7 +6904,7 @@ export type Database = {
       vendor_cap_plan: { Args: { p_vendor: string }; Returns: string }
       my_ad_manual_work: {
         Args: never
-        Returns: { ad_id: string; done_at: string | null }[]
+        Returns: { ad_id: string; done_at: string | null; messages: number | null }[]
       }
       vendor_response_threads: {
         Args: never

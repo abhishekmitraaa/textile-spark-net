@@ -10,6 +10,9 @@
 --   public.admin_ad_manual_list()   the campaigns, for super admins, ads moderators and support (the Ads section's readers)
 --   public.admin_ad_manual_done()   mark done / not done, for super admins and ads moderators (the Ads section's writers)
 --   public.my_ad_manual_work()      the seller's own campaigns that hold a manual type, and whether each is done
+--
+-- Direct Broadcast is bought by the message (Mitra, 2026-11-17, "add the field for message"): the count per listing is
+-- in the paid order's spec (ad_orders.spec ->> 'messages', clamped by razorpay-create-order), and both lists return it.
 
 create table if not exists admin.ad_manual_work (
   ad_id   uuid primary key references public.advertisements (id) on delete cascade,
@@ -23,6 +26,18 @@ drop trigger if exists trg_admin_audit on admin.ad_manual_work;
 create trigger trg_admin_audit after insert or update or delete on admin.ad_manual_work
   for each row execute function admin.audit_row_change('');
 
+-- A broadcast's paid message count, from the order that published the campaign (null without one).
+create or replace function admin.ad_broadcast_messages(p_order text)
+returns integer
+language sql
+stable
+set search_path = ''
+as $function$
+  select case when o.spec ->> 'messages' ~ '^[0-9]{1,6}$' then (o.spec ->> 'messages')::integer end
+    from public.ad_orders o
+   where o.order_id = p_order
+$function$;
+
 -- The four, in one place for the functions below.
 create or replace function admin.manual_ad_types()
 returns text[]
@@ -35,7 +50,7 @@ create or replace function public.admin_ad_manual_list()
 returns table (
   ad_id uuid, vendor_id uuid, vendor_name text, title text, placement text, manual_types text[],
   status text, starts_at timestamptz, ends_at timestamptz, created_at timestamptz,
-  product_id uuid, product_name text, done_at timestamptz, done_by_name text, note text
+  product_id uuid, product_name text, done_at timestamptz, done_by_name text, note text, messages integer
 )
 language plpgsql
 stable
@@ -53,7 +68,9 @@ begin
                 where t = any (admin.manual_ad_types())),
          a.status::text, a.starts_at, a.ends_at, a.created_at,
          a.product_id, p.name, w.done_at,
-         (select pr.full_name from public.profiles pr where pr.id = w.done_by), w.note
+         (select pr.full_name from public.profiles pr where pr.id = w.done_by), w.note,
+         case when string_to_array(replace(coalesce(a.placement, ''), ' ', ''), ',') @> array['directBroadcast']
+              then admin.ad_broadcast_messages(a.ad_order_id) end
     from public.advertisements a
     left join public.vendor_profiles vp on vp.id = a.vendor_id
     left join public.products p on p.id = a.product_id
@@ -112,13 +129,15 @@ end
 $function$;
 
 create or replace function public.my_ad_manual_work()
-returns table (ad_id uuid, done_at timestamptz)
+returns table (ad_id uuid, done_at timestamptz, messages integer)
 language sql
 stable
 security definer
 set search_path = ''
 as $function$
-  select a.id, w.done_at
+  select a.id, w.done_at,
+         case when string_to_array(replace(coalesce(a.placement, ''), ' ', ''), ',') @> array['directBroadcast']
+              then admin.ad_broadcast_messages(a.ad_order_id) end
     from public.advertisements a
     left join admin.ad_manual_work w on w.ad_id = a.id
    where a.vendor_id = (select auth.uid())

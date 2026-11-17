@@ -71,16 +71,28 @@ for (let i = 0; i < 4000; i++) {
   const placements = Array.from({ length: n }, () => TYPES[Math.floor(rnd() * TYPES.length)]);
   const days = 1 + Math.floor(rnd() * 400);
   const products = Math.floor(rnd() * 12); // includes 0, to exercise the clamp
+  // Direct Broadcast's messages (2026-11-17): absent, out of range both ways, and in range, to exercise the clamp.
+  const messages = [undefined, 0, 5, 10, 100, 2_345, 10_000, 50_000, "abc"][Math.floor(rnd() * 9)];
   const spec = {
     placementIds: placements,
     days,
     items: Array.from({ length: products }, (_, k) => ({ productId: `p${k}`, title: `P${k}`, imageUrl: null })),
+    messages,
   };
-  const a = client.computeOrderRupees(placements, days, products);
+  const a = client.computeOrderRupees(placements, days, products, messages);
   const b = edge.computeOrderRupees(spec);
   sweeps++;
   if (a !== b) mismatches.push(`[${placements}] ${days}d x${products} -> client ₹${a} vs edge ₹${b}`);
 }
+// 3a. A broadcast is ₹15 × messages × listings, whatever the days; the stored spec carries exactly what was charged.
+check("a broadcast is priced by the message, per listing",
+  edge.computeOrderRupees({ placementIds: ["directBroadcast"], days: 30, items: [{}, {}], messages: 100 }) === 3000
+  && client.computeOrderRupees(["directBroadcast"], 1, 2, 100) === 3000
+  && edge.computeOrderRupees({ placementIds: ["directBroadcast"], days: 1, items: [{}], messages: 3 }) === 150
+  && edge.computeOrderRupees({ placementIds: ["directBroadcast"], days: 1, items: [{}], messages: 99_999 }) === 150_000);
+check("withMessages keeps a clamped count only when the order has a broadcast",
+  edge.withMessages({ placementIds: ["openListing", "directBroadcast"], days: 1, items: [], messages: 4 }).messages === 10
+  && !("messages" in edge.withMessages({ placementIds: ["openListing"], days: 1, items: [], messages: 400 })));
 check(`shown price === charged price (${sweeps} generated orders)`, mismatches.length === 0,
   mismatches.slice(0, 3).join(" | "));
 

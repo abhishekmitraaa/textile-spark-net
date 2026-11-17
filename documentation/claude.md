@@ -1323,6 +1323,9 @@ undocumented. Deep technical rationale for each lives in
   (`admin_ad_manual_list()`), and an ads writer marks it done with `admin_ad_manual_done()` (only after approval).
   Marking it done notifies the seller (`ad_manual_done`), and Your Campaigns shows the date (`my_ad_manual_work()`).
   A new type done by hand goes in `MANUAL_AD_TYPES`, `admin.manual_ad_types()` and the admin view's labels together.
+  **Direct Broadcast is bought by the message** (Mitra, 2026-11-17): ₹15 × messages (10–10,000) × listings, never × days;
+  `clampMessages()` / `withMessages()` in both pricing copies, and the count paid for is `ad_orders.spec.messages`
+  (stored by `razorpay-create-order`, read by `admin.ad_broadcast_messages()`).
 - **Opening a chat writes nothing** (2026-11-17, SH-105): `useChatThread()` reads the conversation; the first message
   creates it (insert if missing, never rewritten). An id that isn't an account is `invalid`.
 - **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,

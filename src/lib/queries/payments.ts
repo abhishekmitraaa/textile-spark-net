@@ -31,6 +31,8 @@ export interface AdSpec {
   // countries outside India. The server holds both to the vendor's plan.
   targetStates?: string[];
   targetCountries?: string[];
+  /** Direct Broadcast's messages per listing; the server clamps it (10 to 10,000). */
+  messages?: number;
 }
 
 // Why the server wouldn't take an ad's reach (admin.ad_reach's reasons), in the vendor's words.

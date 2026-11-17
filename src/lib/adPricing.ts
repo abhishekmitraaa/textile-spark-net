@@ -64,8 +64,20 @@ export function verificationSpec<T extends { placementIds: string[] }>(spec: T):
   };
 }
 
-export function unitsFor(id: string, days: number): number {
-  if (PER_MESSAGE_TYPES.has(id)) return 1;
+/**
+ * Direct Broadcast is bought by the message (Mitra, 2026-11-17, "add the field for message"): ₹15 × messages, per
+ * listing, whatever the days. The seller picks how many (10 to 10,000, 100 to start); the server clamps what it is sent
+ * and keeps the count in the paid order's spec, where Cosora-Admin's Manual work reads it.
+ */
+export const BROADCAST_MESSAGES = { min: 10, max: 10_000, initial: 100 } as const;
+export function clampMessages(n: unknown): number {
+  const v = Math.floor(Number(n));
+  if (!Number.isFinite(v)) return BROADCAST_MESSAGES.min;
+  return Math.min(BROADCAST_MESSAGES.max, Math.max(BROADCAST_MESSAGES.min, v));
+}
+
+export function unitsFor(id: string, days: number, messages?: unknown): number {
+  if (PER_MESSAGE_TYPES.has(id)) return clampMessages(messages);
   if (VENDOR_LEVEL_TYPES.has(id)) return 1;
   return days;
 }
@@ -86,10 +98,10 @@ export function splitPlacements(ids: readonly string[] | undefined | null): {
   };
 }
 
-export function subtotalRupees(ids: readonly string[], days: number): number {
+export function subtotalRupees(ids: readonly string[], days: number, messages?: unknown): number {
   return ids.reduce((sum, id) => {
     const price = AD_PRICE[id];
-    return price ? sum + price * unitsFor(id, days) : sum;
+    return price ? sum + price * unitsFor(id, days, messages) : sum;
   }, 0);
 }
 
@@ -101,11 +113,12 @@ export function computeOrderRupees(
   placementIds: readonly string[] | undefined | null,
   days: number,
   productCount: number,
+  messages?: unknown,
 ): number {
   const d = clampDays(days);
   const items = Math.max(1, productCount);
   const { perProduct, vendorLevel } = splitPlacements(placementIds);
-  return subtotalRupees(perProduct, d) * items + subtotalRupees(vendorLevel, d);
+  return subtotalRupees(perProduct, d, messages) * items + subtotalRupees(vendorLevel, d);
 }
 
 /**
@@ -126,19 +139,20 @@ export function priceLines(
   placementIds: readonly string[] | undefined | null,
   days: number,
   productCount: number,
+  messages?: unknown,
 ): PriceLine[] {
   const d = clampDays(days);
   const items = Math.max(1, productCount);
   const { perProduct, vendorLevel } = splitPlacements(placementIds);
   const lines: PriceLine[] = [];
   for (const id of perProduct) {
-    const unit = unitsFor(id, d);
+    const unit = unitsFor(id, d, messages);
     lines.push({
       id,
       rupees: AD_PRICE[id] * unit * items,
       vendorLevel: false,
       basis: PER_MESSAGE_TYPES.has(id)
-        ? `₹${AD_PRICE[id]} × ${items} product${items === 1 ? "" : "s"}`
+        ? `₹${AD_PRICE[id]} × ${unit} messages × ${items} product${items === 1 ? "" : "s"}`
         : `₹${AD_PRICE[id]} × ${d} day${d === 1 ? "" : "s"} × ${items} product${items === 1 ? "" : "s"}`,
     });
   }

@@ -55,6 +55,18 @@ export const AD_PRICE: Record<string, number> = {
 export const PER_MESSAGE_TYPES = new Set(["directBroadcast"]);
 
 /**
+ * Direct Broadcast is bought by the message (Mitra, 2026-11-17, "add the field for message"): ₹15 × messages, per
+ * listing, whatever the days. The seller picks how many (10 to 10,000, 100 to start); the server clamps what it is sent
+ * and keeps the count in the paid order's spec, where Cosora-Admin's Manual work reads it.
+ */
+export const BROADCAST_MESSAGES = { min: 10, max: 10_000, initial: 100 } as const;
+export function clampMessages(n: unknown): number {
+  const v = Math.floor(Number(n));
+  if (!Number.isFinite(v)) return BROADCAST_MESSAGES.min;
+  return Math.min(BROADCAST_MESSAGES.max, Math.max(BROADCAST_MESSAGES.min, v));
+}
+
+/**
  * About the VENDOR, not a product. Charged once for the whole order and
  * materialised as a single campaign row with no product_id.
  *
@@ -105,9 +117,9 @@ export function verificationSpec<T extends { placementIds: string[] }>(spec: T):
   };
 }
 
-/** How many billing units one placement costs across a campaign of `days`. */
-export function unitsFor(id: string, days: number): number {
-  if (PER_MESSAGE_TYPES.has(id)) return 1;
+/** How many billing units one placement costs across a campaign of `days` (and `messages`, for a broadcast). */
+export function unitsFor(id: string, days: number, messages?: unknown): number {
+  if (PER_MESSAGE_TYPES.has(id)) return clampMessages(messages);
   if (VENDOR_LEVEL_TYPES.has(id)) return 1; // flat, for the life of the campaign
   return days;
 }
@@ -130,10 +142,10 @@ export function splitPlacements(ids: readonly string[] | undefined | null): {
 }
 
 /** Rupee subtotal for a set of placements over `days`, for ONE product. */
-export function subtotalRupees(ids: readonly string[], days: number): number {
+export function subtotalRupees(ids: readonly string[], days: number, messages?: unknown): number {
   return ids.reduce((sum, id) => {
     const price = AD_PRICE[id];
-    return price ? sum + price * unitsFor(id, days) : sum;
+    return price ? sum + price * unitsFor(id, days, messages) : sum;
   }, 0);
 }
 
@@ -150,6 +162,19 @@ export interface AdSpec {
    *  (subscriptions P5). Held to the vendor's plan by ../_shared/adReach.ts. */
   targetStates?: string[];
   targetCountries?: string[];
+  /** Direct Broadcast's messages per listing (clampMessages). Absent when the order has no broadcast. */
+  messages?: number;
+}
+
+/**
+ * The spec as it is priced and stored: a broadcast's message count clamped, and dropped when there is no broadcast,
+ * so the count in ad_orders.spec is exactly what was charged.
+ */
+export function withMessages<T extends AdSpec>(spec: T): T {
+  const next = { ...spec };
+  if ((spec?.placementIds ?? []).some((id) => PER_MESSAGE_TYPES.has(id))) next.messages = clampMessages(spec.messages);
+  else delete next.messages;
+  return next;
 }
 
 /**
@@ -164,7 +189,7 @@ export function computeOrderRupees(spec: AdSpec): number {
   const days = clampDays(spec?.days);
   const items = Math.max(1, (spec?.items ?? []).length);
   const { perProduct, vendorLevel } = splitPlacements(spec?.placementIds);
-  return subtotalRupees(perProduct, days) * items + subtotalRupees(vendorLevel, days);
+  return subtotalRupees(perProduct, days, spec?.messages) * items + subtotalRupees(vendorLevel, days);
 }
 
 export function computeOrderPaise(spec: AdSpec): number {
@@ -241,7 +266,7 @@ export function buildAdRows(vendorId: string, spec: AdSpec): AdRow[] {
   const rows: AdRow[] = [];
 
   if (perProduct.length > 0) {
-    const perProductRupees = subtotalRupees(perProduct, days);
+    const perProductRupees = subtotalRupees(perProduct, days, spec?.messages);
     const dailyBudget = Math.max(1, Math.round(perProductRupees / days));
     for (const it of spec?.items ?? []) {
       rows.push({

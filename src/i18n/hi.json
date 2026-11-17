@@ -8969,5 +8969,14 @@
  "The Cosora team is setting up the part that runs outside the app.": "Cosora टीम ऐप के बाहर चलने वाला हिस्सा सेट कर रही है।",
  "After approval, the Cosora team sets up the part that runs outside the app.": "मंज़ूरी के बाद, Cosora टीम ऐप के बाहर चलने वाला हिस्सा सेट करती है।",
  "Cosora has set up your ad": "Cosora ने आपका विज्ञापन सेट कर दिया है",
- "The Cosora team has done the part of \"{0}\" that is run by hand. See Your Campaigns.": "Cosora टीम ने \"{0}\" का हाथ से चलने वाला हिस्सा पूरा कर दिया है। Your Campaigns देखें।"
+ "The Cosora team has done the part of \"{0}\" that is run by hand. See Your Campaigns.": "Cosora टीम ने \"{0}\" का हाथ से चलने वाला हिस्सा पूरा कर दिया है। Your Campaigns देखें।",
+ "Cosora's team sends a message about your listing to buyers in its category. You choose how many messages, at ₹15 each.": "Cosora की टीम आपकी लिस्टिंग के बारे में उसकी श्रेणी के खरीदारों को संदेश भेजती है। कितने संदेश, यह आप चुनते हैं, हर संदेश ₹15 का।",
+ "Cosora's team promotes your listing on Facebook and Instagram, with a link back to it on Cosora.": "Cosora की टीम Facebook और Instagram पर आपकी लिस्टिंग का प्रचार करती है, Cosora पर उसकी लिंक के साथ।",
+ "Cosora's team lists your product on Google Shopping, with a link back to it on Cosora.": "Cosora की टीम आपके उत्पाद को Google Shopping पर डालती है, Cosora पर उसकी लिंक के साथ।",
+ "Facebook, Instagram and Google Shopping together: Cosora's team sets up all three for your listing.": "Facebook, Instagram और Google Shopping एक साथ: Cosora की टीम आपकी लिस्टिंग के लिए तीनों सेट करती है।",
+ "Messages per listing": "हर लिस्टिंग के संदेश",
+ "₹15 a message, from {0} to {1}. Cosora's team sends them to buyers in your listing's category after approval.": "₹15 प्रति संदेश, {0} से {1} तक। मंज़ूरी के बाद Cosora की टीम इन्हें आपकी लिस्टिंग की श्रेणी के खरीदारों को भेजती है।",
+ "You'll be charged for {0} messages.": "आपसे {0} संदेशों का शुल्क लिया जाएगा।",
+ "{0} broadcast messages per listing.": "हर लिस्टिंग के लिए {0} ब्रॉडकास्ट संदेश।",
+ "₹{0} × {1} messages × {2} product{3}": "₹{0} × {1} संदेश × {2} उत्पाद"
 }

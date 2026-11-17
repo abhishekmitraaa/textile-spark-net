@@ -534,15 +534,16 @@ export async function logAdClick(adId: string): Promise<void> {
 
 /**
  * The seller's campaigns that hold an ad type the Cosora team does by hand (Mitra, 2026-11-17), and when the team marked
- * each done (null: not yet). Keyed by campaign id. my_ad_manual_work() answers only for the caller.
+ * each done (null: not yet), with a broadcast's paid messages per listing. Keyed by campaign id. my_ad_manual_work() answers only for the caller.
  */
 export function useMyAdManualWork(vendorId: string | undefined) {
   return useQuery({
     queryKey: ["ad_manual_work", vendorId],
-    queryFn: async (): Promise<Map<string, string | null>> => {
+    queryFn: async (): Promise<Map<string, { doneAt: string | null; messages: number | null }>> => {
       const { data, error } = await supabase.rpc("my_ad_manual_work");
       if (error) throw error;
-      return new Map(((data ?? []) as { ad_id: string; done_at: string | null }[]).map((r) => [r.ad_id, r.done_at]));
+      type Row = { ad_id: string; done_at: string | null; messages: number | null };
+      return new Map(((data ?? []) as Row[]).map((r) => [r.ad_id, { doneAt: r.done_at, messages: r.messages }]));
     },
     enabled: Boolean(vendorId),
   });

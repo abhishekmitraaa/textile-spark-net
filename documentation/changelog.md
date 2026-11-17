@@ -9,8 +9,12 @@
     the seller) and `my_ad_manual_work()`.
   - App: tags on the four cards, a notice when one is picked, a status line in Your Campaigns, and the website and
     message goals back. Cosora-Admin: Ads › Manual work (To do / In review / Done, Mark done with a note, Not done).
+  - Then (Mitra: "add the field for message and change the wording"): Direct Broadcast asks "Messages per listing"
+    (10–10,000) and charges ₹15 each, stored with the order and shown in Manual work; the four cards' descriptions say
+    what the team does and promise no reach.
   - Checks: `tests/local/manual-ads.spec.ts` (4); seller-home-medium-b and todo-open updated;
-    `seller-medium-fixes-check.mjs`. Record: `documentation/manual-ad-types-2026-11-17.md`.
+    `seller-medium-fixes-check.mjs`, `ad-pricing-check.mjs` (message counts). Record:
+    `documentation/manual-ad-types-2026-11-17.md`.
 - 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300`, `110000`, `110100`; four payment
   functions; **LIVE 2026-11-17**, both batches together, Mitra: "release both batch together")
   **Seller Home audit, Medium items batch 2 (16): SH-078–080, 091, 093–098, 101–106.** Get verified on any plan (SH-093,
