@@ -3,7 +3,7 @@
 Durable record of everything explicitly **deferred rather than built**, so it
 does not get lost the way the previous "still open" ledger nearly did.
 
-Last reviewed: 2026-11-17 (Seller Home fixes released).
+Last reviewed: 2026-11-17 (Seller Home fixes released; every feature switch on).
 Longer-form engineering notes live in `documentation/ToDo.md`; this file is the
 short list of things someone has to *decide*.
 
@@ -11,14 +11,12 @@ short list of things someone has to *decide*.
 
 ## High priority
 
-- **Seller registration go-live steps (added 2026-11-13, after the registration release).** The new registration is
-  live with both of its switches off. In order:
-  - Review the 10 office photos from 5 existing sellers in Cosora-Admin › Premises photos. The migration moved them
-    into the review queue, and they won't show on those stores until approved.
+- **Seller registration go-live steps (added 2026-11-13).** Both switches went on for everyone on 2026-11-17, so
+  sellers who haven't finished registering can't add listings, videos, catalogues, ads or quotes. Still open:
+  - Review the 10 office photos from 5 existing sellers in Cosora-Admin › Premises photos. They won't show on those
+    stores until approved.
   - Have "Abc" sign the agreement on `/kyc`. That seller is registered but has never signed the Supplier Agreement.
-  - Turn on `seller_registration_required` in Cosora-Admin › Feature switches. From then on, sellers who haven't
-    finished registering can't add listings, videos, catalogues, ads or quotes.
-  - Leave `overseas_seller_registration` off until the CA confirms GST on plans sold to sellers outside India.
+  - `overseas_seller_registration` is on although the CA hasn't confirmed GST on plans sold to sellers outside India.
 
 - **Real Razorpay payments.** `RAZORPAY_KEY_SECRET` is unset. Every ad and
   subscription payment currently runs through the demo-mode fallback path in

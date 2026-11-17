@@ -170,8 +170,9 @@ undocumented. Deep technical rationale for each lives in
     Categories are Cosora's names and need no floor. Staff hide a term with a reason (`admin_search_trend_hide`).
   - **Typed terms are off for now; only categories are public** (Mitra, 2026-10-18, "Categories only for now",
     migration `20261018150000`). A guest is counted by the session id its browser sends and `log_engagement_event` is
-    open by design, so a script can pose as 3 visitors: switch `search_trending_terms` stays off until terms need staff
-    approval or only signed-in searches count.
+    open by design, so a script can pose as 3 visitors. Mitra switched `search_trending_terms` on for everyone on
+    2026-11-17 before terms need staff approval or only signed-in searches count (ToDo.md); staff take-down is the
+    only control until then.
   - The public gets words only (`trending_searches()`), never counts. They ride in `site-config/site.json` when the
     `search_trending` switch is on for everyone; listed accounts read the function. A list not for yesterday isn't
     shown (`isShowable`). Google Trends or another source can feed the same tables later.
@@ -188,7 +189,7 @@ undocumented. Deep technical rationale for each lives in
 - **Onboarding is finished at the last step, and only the server says so** (2026-10-19; buyer sign-up audit, 2026-11-14). `chooseRole()` saves the role only; a buyer is onboarded by `accept_buyer_terms(version)` (`src/lib/buyerTerms.ts`), a seller by `submit_vendor_registration()`. A browser can't write `onboarded`, `terms_version` or `terms_accepted_at` (`trg_profiles_signup_owned`, migrations `20261114100000` and `100600`).
   - **The Terms a buyer accepts are recorded with their version.** `terms_acceptances` keeps every acceptance; `BUYER_TERMS_VERSION` must equal `buyer_terms_version()`, and the function refuses any other (`stale_terms`). The sign-up card and `/terms` render one text (`src/data/terms.ts`, `<TermsClauses>`): a change to it is a new version in both places.
   - **The sign-up steps** (`SignupStep`) need a session and decide once on arrival: finished (onboarded with a Terms record) goes Home, onboarded without one may open Terms only. Each step saves to the account (Sub-role `buyer_profiles.buyer_role`, `src/data/buyerRoles.ts`; Account Information only what changed, `accountInfoChanges()`), and a reload shows every answer again. On-screen Back is `useStepBack(fallback)`, never a push of the previous step.
-  - **Finishing sign-up is a gate behind `buyer_signup_required`** (`BuyerSignupGate` in `BuyerShell`, off until Mitra turns it on): not onboarded → role selection; onboarded with no Terms record → Terms, once. Sellers (seller side, or registered, exempt or pending) and Help, fraud reports and feedback are never caught.
+  - **Finishing sign-up is a gate behind `buyer_signup_required`** (`BuyerSignupGate` in `BuyerShell`, on for everyone since 2026-11-17): not onboarded → role selection; onboarded with no Terms record → Terms, once. Sellers (seller side, or registered, exempt or pending) and Help, fraud reports and feedback are never caught.
   - **Sign-in leaves no trail in the back button** (`src/lib/authHistory.ts`): the first sign-in page's history entry is marked when the code is sent; a returning sign-in and Terms go back to it and replace it (`finishAuthFlow`). A new account's next step replaces the code screen; a Register buyer goes on to Sub-role.
   - **A profile read that fails is "unknown", never "no profile"** (`readProfileRow`, `profileError`): sign-in pages show Retry instead of routing. supabase-js already retries a GET on 503/520 (1, 2, 4 s); don't stack retries on those.
 - **An open requirement has a deadline the database owns** (2026-10-19). `rfqs.expires_at` is set by `trg_rfqs_deadline` (7 days) and moved only by `extend_rfq_deadline()`. Anything that lists leads for sellers, or lets a seller quote, leaves out requirements past it.
@@ -1290,7 +1291,7 @@ undocumented. Deep technical rationale for each lives in
   /leads, so there is no second copy of who sees what; the private phone and email come from `my_vendor_private()`.
   `useVendorDashboard()` maps it. A new home card adds a key to the function, never a query of its own. Seller Home's
   four states stay distinct (`SellerHomeState`: signed out, not a seller, error with Retry, loading).
-- **Live updates go through the hub when `live_updates_hub` is on** (2026-11-16; `20261116100400`; the switch ships off).
+- **Live updates go through the hub when `live_updates_hub` is on** (2026-11-16; `20261116100400`; on for everyone since 2026-11-17).
   One private Broadcast channel per account, `user:<id>`, opened once above the router (`RealtimeHubProvider`,
   `src/lib/realtimeHub.tsx`). Statement-level triggers send `notifications` or `chat` with no content, once per person
   per statement ("Read all" is one event), and listeners re-read (`useHubEvent()`, 300 ms debounce). A new live badge

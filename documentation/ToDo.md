@@ -41,26 +41,14 @@ with no need to dictate format, context, or reference each time.
 - Reference: Seller Home fixes, 2026-11-16 (SH-011).
 - Status: Open
 
-### Turn on the live-update hub — added 2026-11-16
-- Task: the Seller Home fixes are live (2026-11-17: every migration, both payment functions and both apps), so this is
-  the last step. Mitra turns on `live_updates_hub` (Cosora-Admin › Feature switches, with a reason), first for a few
-  accounts, then everyone.
-- Context: one private Broadcast channel per account replaces each tab's per-page table subscriptions (SH-030,
-  SH-031, SH-036). Off, nothing changes. Watch Realtime's connection count and the `realtime.messages` partitions
-  after switching on; if hosted Realtime refuses the join, the app falls back to the old subscriptions by itself.
-- Reference: migration `20261116100400_live_updates_hub.sql`; `src/lib/realtimeHub.tsx`.
-- Status: Open
-
-### Turn on seller registration's two switches — added 2026-11-13
-- Task: after the release, Mitra turns on `seller_registration_required` (unregistered sellers can't add listings,
-  videos, catalogues, ads or quotes) and, when ready for sellers outside India, `overseas_seller_registration`
-  (Cosora-Admin › Feature switches, with a reason).
-- Context: both are live and off since 2026-11-13 (migration `20261113100000`). Before the first: check Cosora-Admin
-  › Registrations has someone reviewing documents (sellers are told 3–5 days) and that the seller registered without
-  an agreement has signed on `/kyc` (production had one, "Abc"). Review the 10 office photos that moved into
-  Cosora-Admin › Premises photos (5 sellers); until approved they don't show on the stores. Before the second: the CA
-  item below.
-- Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5).
+### Finish what seller registration's switches were waiting on — added 2026-11-13
+- Task: both switches are on for everyone since 2026-11-17 (Mitra). Still to do: review the 10 office photos in
+  Cosora-Admin › Premises photos (5 sellers; until approved they don't show on the stores), get the one seller
+  registered without an agreement ("Abc") to sign on `/kyc`, and make sure someone reviews registrations in
+  Cosora-Admin › Registrations (sellers are told 3–5 days).
+- Context: `overseas_seller_registration` went on before the CA item below was answered, so sellers outside India
+  can now register and buy plans invoiced with IGST and "Outside India" as the place of supply.
+- Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5); migration `20261113100000`.
 - Status: Open
 
 ### CA: GST on plans and ads sold to sellers outside India — added 2026-11-13
@@ -150,8 +138,9 @@ with no need to dictate format, context, or reference each time.
 - Status: Open
 
 ### Let typed search terms into Trending once they can't be faked — added 2026-11-01
-- Task: before switching `search_trending_terms` on, make typed terms safe: staff approval of each term, or count
-  signed-in searches only.
+- Task: make typed terms safe: staff approval of each term, or count signed-in searches only. `search_trending_terms`
+  was switched on for everyone on 2026-11-17 (Mitra) before this was done, so typed terms are public now; until then,
+  staff take down a bad term in Cosora-Admin (`admin_search_trend_hide`), or the switch goes off again.
 - Context: a script posing as 3 guest sessions can publish any filter-passing words (push security review,
   2026-10-18); since then only categories are public (Mitra: "Categories only for now"). Securityflags.md row
   "Trending searches publish what people typed".
