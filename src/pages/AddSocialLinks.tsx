@@ -8,6 +8,7 @@ import { ChevronLeft, Plus, Trash2, CheckCircle2, Check, Info } from "lucide-rea
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyVendorProfile, saveVendorProfile } from "@/lib/queries/vendorStore";
+import { normaliseSocialLink, SOCIAL_MAX_PER_PLATFORM } from "@/lib/socialLinks";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface SocialField {
@@ -140,12 +141,14 @@ const cardIn = {
 interface PlatformCardProps {
   platform: SocialPlatform;
   fields: SocialField[];
+  /** Field ids whose text doesn't belong in this box (SH-044). */
+  invalid: Set<string>;
   onChange: (id: string, value: string) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
 }
 
-function PlatformCard({ platform, fields, onChange, onAdd, onRemove }: PlatformCardProps) {
+function PlatformCard({ platform, fields, invalid, onChange, onAdd, onRemove }: PlatformCardProps) {
   const reduced = useReducedMotion();
   const isAnyFilled = fields.some((f) => f.value.trim().length > 0);
 
@@ -195,17 +198,29 @@ function PlatformCard({ platform, fields, onChange, onAdd, onRemove }: PlatformC
             transition={{ ease: E, duration: 0.22 }}
           >
             <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
-              <input
-                type="text"
-                value={field.value}
-                onChange={(e) => onChange(field.id, e.target.value)}
-                placeholder={platform.placeholder}
-                className="flex-1 text-sm text-gray-900 placeholder:text-gray-300 bg-transparent border-none outline-none"
-              />
+              <div className="min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={field.value}
+                  onChange={(e) => onChange(field.id, e.target.value)}
+                  placeholder={platform.placeholder}
+                  aria-label={`${platform.label} link${idx > 0 ? ` ${idx + 1}` : ""}`}
+                  aria-invalid={invalid.has(field.id) || undefined}
+                  className="w-full text-sm text-gray-900 placeholder:text-gray-300 bg-transparent border-none outline-none"
+                />
+                {invalid.has(field.id) && (
+                  <p role="alert" className="mt-1 text-xs font-medium text-red-600">
+                    {platform.key === "other"
+                      ? "Enter a website address. Social profiles go in their own boxes above."
+                      : `Enter a link to your ${platform.label} page, like ${platform.placeholder.replace(/^@\S+ or /, "")}.`}
+                  </p>
+                )}
+              </div>
               {idx > 0 && (
                 <motion.button
                   whileTap={{ scale: 0.85 }}
                   transition={TAP_T}
+                  aria-label="Remove this link"
                   onClick={() => onRemove(field.id)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors shrink-0"
                 >
@@ -217,7 +232,8 @@ function PlatformCard({ platform, fields, onChange, onAdd, onRemove }: PlatformC
         ))}
       </AnimatePresence>
 
-      {/* Add another link */}
+      {/* Add another link (at most SOCIAL_MAX_PER_PLATFORM: the store shows no more than that) */}
+      {fields.length < SOCIAL_MAX_PER_PLATFORM && (
       <motion.button
         whileTap={TAP}
         transition={TAP_T}
@@ -227,6 +243,7 @@ function PlatformCard({ platform, fields, onChange, onAdd, onRemove }: PlatformC
         <Plus className="w-3.5 h-3.5" />
         Add another link
       </motion.button>
+      )}
     </motion.div>
   );
 }
@@ -247,13 +264,16 @@ function buildFieldMap(social: Record<string, string[]> | undefined): Record<str
 export default function AddSocialLinks() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: store } = useMyVendorProfile(user?.id);
+  // Save waits for the saved links (SH-044): the page starts empty, and a save before the row loaded wrote {} over them.
+  const { data: store, isPending: storePending, error: storeError, refetch: refetchStore, isFetching: storeFetching } = useMyVendorProfile(user?.id);
   const qc = useQueryClient();
 
   const [fieldMap, setFieldMap] = useState<Record<string, SocialField[]>>(() => buildFieldMap(undefined));
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [invalid, setInvalid] = useState<Set<string>>(new Set());
   const reduced = useReducedMotion();
+  const loaded = Boolean(user) && !storePending && !storeError;
 
   // Seed once from the profile row. Re-seeding on every `store` change would
   // wipe whatever the vendor is mid-way through typing when the query refetches.
@@ -270,6 +290,7 @@ export default function AddSocialLinks() {
       [platformKey]: prev[platformKey].map((f) => (f.id === id ? { ...f, value } : f)),
     }));
     setSaved(false);
+    setInvalid((prev) => { if (!prev.has(id)) return prev; const next = new Set(prev); next.delete(id); return next; });
   };
 
   const handleAdd = (platformKey: string) => {
@@ -291,14 +312,26 @@ export default function AddSocialLinks() {
 
   const handleSave = async () => {
     if (!user) { toast.error("Sign in to save your social links"); return; }
+    if (!loaded) return;
     // Collapse the editing shape (id + value per field) down to the stored
-    // shape: platform -> non-empty URLs. Platforms left blank are dropped
-    // entirely rather than persisted as empty arrays.
+    // shape: platform -> https URLs that belong to that platform (SH-044). Platforms left
+    // blank are dropped entirely rather than persisted as empty arrays.
     const built: Record<string, string[]> = {};
+    const bad = new Set<string>();
     PLATFORMS.forEach((p) => {
-      const urls = (fieldMap[p.key] ?? []).map((f) => f.value.trim()).filter(Boolean);
-      if (urls.length) built[p.key] = urls;
+      const urls: string[] = [];
+      for (const f of fieldMap[p.key] ?? []) {
+        if (!f.value.trim()) continue;
+        const url = normaliseSocialLink(p.key, f.value);
+        if (url) { if (!urls.includes(url)) urls.push(url); } else bad.add(f.id);
+      }
+      if (urls.length) built[p.key] = urls.slice(0, SOCIAL_MAX_PER_PLATFORM);
     });
+    if (bad.size) {
+      setInvalid(bad);
+      toast.error("Check the highlighted links", { description: "Each box takes links to that platform only." });
+      return;
+    }
 
     setSaving(true);
     try {
@@ -358,9 +391,19 @@ export default function AddSocialLinks() {
             <Info className="w-4 h-4 text-brand-vendor" />
           </div>
           <p className="text-sm text-blue-700 font-medium leading-relaxed">
-            Social links on your vendor profile help buyers research and trust your business before reaching out.
+            Buyers see these links on your store, under your contact details. Each box takes links to that platform only.
           </p>
         </motion.div>
+
+        {storeError && (
+          <motion.div variants={cardIn} role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Your saved links couldn't be loaded</p>
+            <p className="mt-1 text-xs text-amber-800">Saving waits until they load, so nothing is overwritten. {errorMessage(storeError)}</p>
+            <button onClick={() => void refetchStore()} disabled={storeFetching} className="mt-2 rounded-lg bg-white px-3 py-1.5 text-xs font-bold ring-1 ring-amber-300 disabled:opacity-60">
+              {storeFetching ? "Trying again…" : "Try again"}
+            </button>
+          </motion.div>
+        )}
 
         {/* Platform cards — stagger in */}
         {PLATFORMS.map((platform) => (
@@ -368,6 +411,7 @@ export default function AddSocialLinks() {
             key={platform.key}
             platform={platform}
             fields={fieldMap[platform.key]}
+            invalid={invalid}
             onChange={(id, value) => handleChange(platform.key, id, value)}
             onAdd={() => handleAdd(platform.key)}
             onRemove={(id) => handleRemove(platform.key, id)}
@@ -380,7 +424,7 @@ export default function AddSocialLinks() {
             whileTap={TAP}
             transition={TAP_T}
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !loaded}
             className="w-full py-4 rounded-2xl font-semibold text-sm text-white bg-brand-vendor hover:bg-[#1a5ed4] transition-colors flex items-center justify-center gap-2 overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <AnimatePresence mode="wait">

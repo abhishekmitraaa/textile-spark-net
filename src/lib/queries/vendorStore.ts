@@ -106,6 +106,8 @@ export interface VendorStoreData {
   // Ranking Part 1, F2: what the business is and where it sells. stateCode follows
   // `state` in the database (sync_state_code); servedStates are india_states codes.
   stateCode: string | null;
+  /** ISO country code ('IN' for India); a seller outside India types a region instead of picking a state (SH-042). */
+  countryCode: string;
   primaryType: string | null;
   capabilities: string[];
   servedStates: string[];
@@ -117,7 +119,7 @@ export interface VendorStoreData {
 const MY_STORE_COLUMNS = `id, brand_name, about, city, state, country, business_type, website, logo_url, banner_url,
   owner_name, gstin, cin, is_verified, plan_expires_at, ad_verified_until, followers_count, rating_avg, reviews_count,
   profile_score, onboarding_complete, category, office_photos, year_established, employee_count, annual_turnover,
-  capacity, social, recommended_product_ids, created_at, state_code, primary_type, capabilities, served_states`;
+  capacity, social, recommended_product_ids, created_at, state_code, country_code, primary_type, capabilities, served_states`;
 
 /** The vendor's eight private fields. */
 export type VendorPrivate = Database["public"]["Functions"]["my_vendor_private"]["Returns"][number];
@@ -183,6 +185,7 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     recommendedProductIds: data.recommended_product_ids ?? [],
     createdAt: data.created_at,
     stateCode: data.state_code ?? null,
+    countryCode: data.country_code ?? "IN",
     primaryType: data.primary_type ?? null,
     capabilities: data.capabilities ?? [],
     servedStates: data.served_states ?? [],

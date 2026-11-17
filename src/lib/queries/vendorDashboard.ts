@@ -275,6 +275,10 @@ export interface ProfileScoreState {
   isError: boolean;
   /** False for a signed-out session or an account with no vendor_profiles row. */
   hasVendorRow: boolean;
+  /** Things that would meet a signal once Cosora approves them (SH-046): premises photos and listings in review. */
+  waiting: Partial<Record<keyof ProfileScoreChecks, number>>;
+  /** Read the dashboard again (the error state's Try again). */
+  retry: () => void;
 }
 
 /**
@@ -286,12 +290,17 @@ export interface ProfileScoreState {
  */
 export function useProfileScoreState(): ProfileScoreState {
   const { user } = useAuth();
-  const { data, isLoading, isError } = useVendorDashboard(user?.id);
+  const { data, isLoading, isError, refetch } = useVendorDashboard(user?.id);
+  const retry = () => void refetch();
 
   if (!user || isError || !data) {
-    return { score: null, checks: EMPTY_CHECKS, isLoading: Boolean(user) && isLoading, isError: Boolean(user) && isError, hasVendorRow: false };
+    return { score: null, checks: EMPTY_CHECKS, isLoading: Boolean(user) && isLoading, isError: Boolean(user) && isError, hasVendorRow: false, waiting: {}, retry };
   }
-  return { score: data.profileScore, checks: data.profileChecks, isLoading: false, isError: false, hasVendorRow: true };
+  const review = data.home.review;
+  const waiting: ProfileScoreState["waiting"] = {};
+  if (!data.profileChecks.officePhotos && review.premisesInReview > 0) waiting.officePhotos = review.premisesInReview;
+  if (!data.profileChecks.liveProduct && review.productsInReview > 0) waiting.liveProduct = review.productsInReview;
+  return { score: data.profileScore, checks: data.profileChecks, isLoading: false, isError: false, hasVendorRow: true, waiting, retry };
 }
 
 /** Convenience wrapper for callers that only need the number (null when there is none). */

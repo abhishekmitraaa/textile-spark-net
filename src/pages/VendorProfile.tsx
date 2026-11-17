@@ -752,6 +752,27 @@ const VendorProfile = () => {
                       </a>
                     </div>
                   )}
+
+                  {/* Social links (SH-044, Mitra 2026-11-17: "Show on the store"): a way to reach the seller, so behind
+                      the same gate as the website; only links that pass their platform's rules. */}
+                  {contactVisible && vendor.socialLinks.length > 0 && (
+                    <div className="flex items-start justify-between gap-4 text-sm" data-testid="store-social-links">
+                      <span className="shrink-0 text-gray-500">Find us online</span>
+                      <div className="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1">
+                        {vendor.socialLinks.map((l) => (
+                          <a
+                            key={l.url}
+                            href={l.url}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="font-semibold text-brand-buyer hover:underline"
+                          >
+                            {l.label}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

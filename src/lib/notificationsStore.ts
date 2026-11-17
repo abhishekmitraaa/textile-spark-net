@@ -69,8 +69,8 @@ export interface VendorNotification {
   /** ISO timestamp — seeded relative to first load, then persisted. */
   createdAt: string;
   read: boolean;
-  /** Where the card / CTA navigates. */
-  href: string;
+  /** Where the card / CTA navigates; null when the notice has nowhere to send the reader (no action button). */
+  href: string | null;
   actionLabel: string;
   requirement?: RequirementMeta;
 }
@@ -268,14 +268,19 @@ export function devOnlySampleNotifications(): VendorNotification[] {
  * never an exhaustive Record. A kind shipped by a newer migration than this
  * bundle renders as a neutral system notice instead of throwing.
  */
-const KIND_META: Record<string, {
+type KindMeta = {
   type: NotifType;
   tone: NotifTone;
   group: NotifGroup;
   actionLabel: string;
-  /** Where this kind sends the vendor, when it is not a chat notification. */
-  href?: string;
-}> = {
+  /** Where this kind sends the vendor, when it is not a chat notification. null: nowhere in this app. */
+  href?: string | null;
+};
+
+// Tabs (SH-035): "requirements" = buyer requirements (a seller's lead alerts, a buyer's own requirement reviewed);
+// "payments" = plans, refunds, autopay and payment incidents; "updates" = everything else. Nothing writes quote notices
+// yet, so "quotes" holds no kind and the page hides a tab with nothing in it.
+const KIND_META: Record<string, KindMeta> = {
   account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support", href: "/help/chat?category=account" },
   // Help & Support (plan P3e): what Cosora Support's functions send through support_notify().
   support_reply:       { type: "message", tone: "neutral",  group: "updates", actionLabel: "See the reply",   href: "/help/requests" },
@@ -297,22 +302,42 @@ const KIND_META: Record<string, {
   // A review of the reader's that Cosora removed (admin_review_report_decide, 2026-10-13).
   review_removed:      { type: "system",  tone: "warning",  group: "updates", actionLabel: "My reviews", href: "/profile/reviews" },
   // Plans (2026-10-02): a paid downgrade starting, and the 7-day money-back guarantee.
-  subscription_changed:  { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
-  subscription_canceled: { type: "system", tone: "warning",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
-  refund_requested:      { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
-  refund_processed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  subscription_changed:  { type: "payment", tone: "neutral",  group: "payments", actionLabel: "See your plan", href: "/subscription" },
+  subscription_canceled: { type: "payment", tone: "warning",  group: "payments", actionLabel: "See your plan", href: "/subscription" },
+  refund_requested:      { type: "payment", tone: "neutral",  group: "payments", actionLabel: "See your payments", href: "/my-payments" },
+  refund_processed:      { type: "payment", tone: "positive", group: "payments", actionLabel: "See your payments", href: "/my-payments" },
   // Autopay trouble and its two-days-before notice (subscriptions P3 and P4).
-  autopay:               { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  autopay:               { type: "payment", tone: "neutral",  group: "payments", actionLabel: "See your plan", href: "/subscription" },
   // The plan's last days (subscriptions P4): reminders before the end and the grace
   // notice, the lapse to Free, and listings paused or brought back by the plan's limit.
-  plan_expiring:         { type: "system", tone: "warning",  group: "updates", actionLabel: "Renew your plan", href: "/subscription" },
-  plan_lapsed:           { type: "system", tone: "warning",  group: "updates", actionLabel: "Choose a plan", href: "/subscription" },
+  plan_expiring:         { type: "payment", tone: "warning",  group: "payments", actionLabel: "Renew your plan", href: "/subscription" },
+  plan_lapsed:           { type: "payment", tone: "warning",  group: "payments", actionLabel: "Choose a plan", href: "/subscription" },
+  // A payment that needs Cosora's attention. Only super and finance admins get it, and it lives in Cosora-Admin
+  // (its body says so), so there is nothing to open here.
+  billing_incident:      { type: "payment", tone: "warning",  group: "payments", actionLabel: "", href: null },
   listings_paused:       { type: "system", tone: "warning",  group: "updates", actionLabel: "Choose listings", href: "/products?status=paused" },
   listings_resumed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
+  // Cosora's review of a seller's content (admin.content_decision_notice, 2026-10-21; product moderation).
+  product_approved:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products?status=active" },
+  product_rejected:      { type: "system", tone: "warning",  group: "updates", actionLabel: "See what to change", href: "/products?status=rejected" },
+  product_removed:       { type: "system", tone: "warning",  group: "updates", actionLabel: "See your products", href: "/products" },
+  product_flagged:       { type: "system", tone: "warning",  group: "updates", actionLabel: "See your products", href: "/products" },
+  product_reinstated:    { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
+  video_approved:        { type: "system", tone: "positive", group: "updates", actionLabel: "See your videos", href: "/upload-video" },
+  video_rejected:        { type: "system", tone: "warning",  group: "updates", actionLabel: "See your videos", href: "/upload-video" },
+  catalogue_approved:    { type: "system", tone: "positive", group: "updates", actionLabel: "See your catalogues", href: "/upload-catalogue" },
+  catalogue_rejected:    { type: "system", tone: "warning",  group: "updates", actionLabel: "See your catalogues", href: "/upload-catalogue" },
+  // Seller registration (2026-11-13): the decision, and a premises photo Cosora didn't approve.
+  registration_approved: { type: "system", tone: "positive", group: "updates", actionLabel: "View KYC", href: "/kyc" },
+  registration_rejected: { type: "system", tone: "warning",  group: "updates", actionLabel: "See what to change", href: "/kyc" },
+  premises_photo_rejected: { type: "system", tone: "warning", group: "updates", actionLabel: "See your photos", href: "/business-profile?focus=office-pictures" },
+  // Account deletion (Phase 2 of the My Profile brief): the request and its cancellation.
+  account_deletion_scheduled: { type: "system", tone: "warning", group: "updates", actionLabel: "See the request", href: "/profile/help" },
+  account_deletion_cancelled: { type: "system", tone: "neutral", group: "updates", actionLabel: "See your account", href: "/profile" },
   // A buyer's requirement that suits this vendor (subscriptions P6).
-  lead_match:            { type: "system", tone: "positive", group: "updates", actionLabel: "Open my leads", href: "/leads" },
+  lead_match:            { type: "requirement", tone: "brand", group: "requirements", actionLabel: "Open my leads", href: "/leads" },
   // A buyer's requirement reviewed by Cosora (2026-10-17): approved and live, or not approved with the reason.
-  rfq_review:            { type: "requirement", tone: "neutral", group: "updates", actionLabel: "Open My Quotes", href: "/requirement/my-quotes" },
+  rfq_review:            { type: "requirement", tone: "neutral", group: "requirements", actionLabel: "Open My Quotes", href: "/requirement/my-quotes" },
   // A CRM follow-up that is due (subscriptions P8).
   crm_follow_up:         { type: "system", tone: "warning",  group: "updates", actionLabel: "Open follow-ups", href: "/crm/follow-ups" },
   // From the vendor's account manager or team (subscriptions P9): a message, a missed call, a VIP note.
@@ -320,7 +345,7 @@ const KIND_META: Record<string, {
   account_manager_note:    { type: "system",  tone: "positive", group: "updates", actionLabel: "Open", href: "/account-manager" },
 };
 
-const FALLBACK_META: (typeof KIND_META)[string] = {
+const FALLBACK_META: KindMeta = {
   type: "system",
   tone: "neutral",
   group: "updates",
@@ -328,6 +353,24 @@ const FALLBACK_META: (typeof KIND_META)[string] = {
   // No href: an unknown kind has no known destination, so it falls through to
   // the conversation_id rule like every kind did before.
 };
+
+// Kinds built by concatenation in the database: 'ad_' || decision (approve, reject, pause, resume, suspend,
+// request changes…) and 'certificate_' || status. Every one of them is about the seller's campaigns or certificate,
+// both of which live on /advertisements.
+const AD_META: KindMeta = { type: "ad", tone: "neutral", group: "updates", actionLabel: "See your campaigns", href: "/advertisements" };
+const CERTIFICATE_META: KindMeta = { type: "system", tone: "neutral", group: "updates", actionLabel: "See your certificate", href: "/advertisements" };
+
+/** The view metadata for a kind, exported for scripts/notification-kinds-check.mjs. */
+export function notificationKindMeta(kind: string): KindMeta & { known: boolean } {
+  const exact = KIND_META[kind];
+  if (exact) return { ...exact, known: true };
+  if (kind.startsWith("ad_")) {
+    const warning = /(reject|suspend|paus|changes|refund)/.test(kind);
+    return { ...AD_META, tone: warning ? "warning" : kind === "ad_approved" ? "positive" : "neutral", known: true };
+  }
+  if (kind.startsWith("certificate_")) return { ...CERTIFICATE_META, known: true };
+  return { ...FALLBACK_META, known: false };
+}
 
 /** Shape of one row from `notifications`. Structural, to avoid a circular import. */
 export interface RawNotification {
@@ -341,7 +384,7 @@ export interface RawNotification {
 }
 
 export function toVendorNotification(row: RawNotification): VendorNotification {
-  const meta = KIND_META[row.kind] ?? FALLBACK_META;
+  const meta = notificationKindMeta(row.kind);
   return {
     id: row.id,
     type: meta.type,
@@ -355,10 +398,9 @@ export function toVendorNotification(row: RawNotification): VendorNotification {
     // conversation_id is the OTHER end of the link: /chat is the hub, and the
     // thread route keys on the other participant rather than the conversation,
     // so a row without one lands on the hub instead of a broken deep link.
-    // Falling all the way through to /notifications means "the page you are
-    // already on" — fine as a last resort, useless as a destination, which is
-    // why a kind that has somewhere real to go must say so above.
-    href: meta.href ?? (row.conversation_id ? "/chat" : "/notifications"),
+    // A kind with nowhere to go has no action at all (SH-034): it used to fall through to /notifications, the page
+    // the reader is already on, pushed onto itself.
+    href: meta.href === null ? null : meta.href ?? (row.conversation_id ? "/chat" : null),
     actionLabel: meta.actionLabel,
   };
 }

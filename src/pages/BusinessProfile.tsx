@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import StateSelect from "@/components/StateSelect";
 import { EditSheet, editFieldClass as fieldClass } from "@/components/vendor/EditSheet";
 import { stateByCode, stateCodeFor } from "@/data/indiaStates";
+import { contactChanges, checkContactChanges, type ContactForm } from "@/lib/contactDetails";
 import { BusinessTypeSheet, CapacitySheet, ServedStatesSheet } from "@/components/vendor/BusinessReachSheets";
 import { capabilityLabel, categoryRootName, primaryTypeLabel } from "@/data/vendorTypes";
 import { useLang } from "@/lib/i18n";
@@ -242,56 +243,95 @@ function EditAboutModal({ isOpen, onClose, initial, onSave }: { isOpen: boolean;
   );
 }
 
-type ContactForm = {
-  ownerName: string; phone: string; whatsapp: string; ownerEmail: string; website: string;
-  addressLine: string; area: string; landmark: string; city: string; state: string; postalCode: string;
-};
-
-function EditContactModal({ isOpen, onClose, initial, onSave }: { isOpen: boolean; onClose: () => void; initial: ContactForm; onSave: (v: ContactForm) => Promise<void> }) {
+// The sheet saves only what changed, checked by registration's rules (SH-041, SH-043), and won't open on details it
+// couldn't read: a blank form saved over a failed read used to wipe the private fields. Outside India the state is a
+// typed region (SH-042): the list holds Indian states only, so overseas sellers could never save.
+function EditContactModal({ isOpen, onClose, initial, countryCode, loadError, retrying, onRetry, onSave }: {
+  isOpen: boolean; onClose: () => void; initial: ContactForm; countryCode: string;
+  loadError: unknown; retrying: boolean; onRetry: () => void;
+  onSave: (patch: Partial<ContactForm>) => Promise<boolean>;
+}) {
   const [form, setForm] = useState<ContactForm>(initial);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { if (isOpen) setForm(initial); }, [isOpen, initial]);
+  const [problem, setProblem] = useState<{ field: keyof ContactForm; message: string } | null>(null);
+  useEffect(() => { if (isOpen) { setForm(initial); setProblem(null); } }, [isOpen, initial]);
   if (!isOpen) return null;
-  const set = (k: keyof ContactForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const submit = async () => {
-    // A state from the list is required: ranking compares it with buyers' states (Ranking F2).
-    if (!stateCodeFor(form.state)) {
-      toast.error("Pick the state your business is in");
-      return;
-    }
-    setSaving(true);
-    try { await onSave(form); onClose(); } finally { setSaving(false); }
+  const india = countryCode === "IN";
+  const set = (k: keyof ContactForm) => (v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setProblem((p) => (p?.field === k ? null : p));
   };
+  const changes = contactChanges(initial, form);
+  const changed = Object.keys(changes).length > 0;
+  const submit = async () => {
+    if (!changed) { onClose(); return; }
+    const checked = checkContactChanges(changes, countryCode);
+    if (checked.ok === false) { setProblem({ field: checked.field, message: checked.message }); return; }
+    setSaving(true);
+    try { if (await onSave(checked.patch)) onClose(); } finally { setSaving(false); }
+  };
+  const hint = (k: keyof ContactForm) =>
+    problem?.field === k ? <p role="alert" className="mt-1 text-xs font-medium text-red-600">{problem.message}</p> : null;
+  if (loadError) {
+    return (
+      <EditSheet title="Contact Details" onClose={onClose} footer={<button onClick={onClose} className="w-full py-3 border border-gray-200 text-gray-700 font-bold rounded-xl">Close</button>}>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="alert">
+          <p className="font-semibold">Your contact details couldn't be loaded</p>
+          <p className="mt-1 text-xs text-amber-800">
+            So nothing is overwritten, editing waits until they load. {errorMessage(loadError)}
+          </p>
+          <button onClick={onRetry} disabled={retrying} className="mt-3 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-amber-900 ring-1 ring-amber-300 disabled:opacity-60">
+            {retrying ? "Trying again…" : "Try again"}
+          </button>
+        </div>
+      </EditSheet>
+    );
+  }
   return (
     <EditSheet
       title="Contact Details"
       onClose={onClose}
       footer={
-        <button onClick={submit} disabled={saving} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-          {saving ? "Saving..." : "Save"}
+        <button onClick={submit} disabled={saving || !changed} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+          {saving ? "Saving..." : changed ? "Save" : "No changes"}
         </button>
       }
     >
       <div className="space-y-3">
         <LabelledInput label="Owner name" value={form.ownerName} onChange={set("ownerName")} placeholder="Mr. R. Sharma" />
-        <LabelledInput label="Phone number" value={form.phone} onChange={set("phone")} placeholder="+91 90110 60851" type="tel" />
-        <LabelledInput label="WhatsApp number" value={form.whatsapp} onChange={set("whatsapp")} placeholder="+91 90110 60851" type="tel" />
+        {hint("ownerName")}
+        <LabelledInput label="Phone number" value={form.phone} onChange={set("phone")} placeholder={india ? "+91 90110 60851" : "+44 20 7946 0958"} type="tel" />
+        {hint("phone")}
+        <LabelledInput label="WhatsApp number" value={form.whatsapp} onChange={set("whatsapp")} placeholder={india ? "+91 90110 60851" : "+44 7700 900123"} type="tel" />
+        {hint("whatsapp")}
         <LabelledInput label="Email address" value={form.ownerEmail} onChange={set("ownerEmail")} placeholder="you@business.in" type="email" />
+        {hint("ownerEmail")}
         <LabelledInput label="Website" value={form.website} onChange={set("website")} placeholder="https://yourbusiness.in" type="url" />
+        {hint("website")}
         <div className="pt-1">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Address</p>
           <div className="space-y-3">
             <LabelledInput label="Address line" value={form.addressLine} onChange={set("addressLine")} placeholder="2nd Floor, Umiya Nagar" />
+            {hint("addressLine")}
             <LabelledInput label="Area" value={form.area} onChange={set("area")} placeholder="Ring Road" />
+            {hint("area")}
             <LabelledInput label="Landmark" value={form.landmark} onChange={set("landmark")} placeholder="Opposite Udhna Depot" />
+            {hint("landmark")}
             <div className="grid grid-cols-2 gap-3">
               <LabelledInput label="City" value={form.city} onChange={set("city")} placeholder="Surat" />
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-gray-700">State</span>
-                <StateSelect value={form.state} onChange={set("state")} className={fieldClass} />
-              </label>
+              {india ? (
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold text-gray-700">State</span>
+                  <StateSelect value={form.state} onChange={set("state")} className={fieldClass} />
+                </label>
+              ) : (
+                <LabelledInput label="State or region" value={form.state} onChange={set("state")} placeholder="Greater London" />
+              )}
             </div>
-            <LabelledInput label="Postal code" value={form.postalCode} onChange={set("postalCode")} placeholder="395002" />
+            {hint("city")}
+            {hint("state")}
+            <LabelledInput label="Postal code" value={form.postalCode} onChange={set("postalCode")} placeholder={india ? "395002" : "SW1A 1AA"} />
+            {hint("postalCode")}
           </div>
         </div>
       </div>
@@ -356,7 +396,7 @@ const BusinessProfile = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { data: store } = useMyVendorProfile(user?.id);
+  const { data: store, error: storeError, isFetching: storeFetching, refetch: refetchStore } = useMyVendorProfile(user?.id);
   const { data: reviewData } = useVendorReviews(user?.id);
   const { data: dashboard } = useVendorDashboard(user?.id);
   const { data: catalogues, isLoading: cataloguesLoading } = useMyCatalogues(user?.id);
@@ -1819,7 +1859,11 @@ const BusinessProfile = () => {
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
         initial={contactInitial}
-        onSave={async (v) => { await persist(v, "Contact details updated"); }}
+        countryCode={store?.countryCode ?? "IN"}
+        loadError={storeError ?? (store === undefined ? new Error("Still loading your details.") : null)}
+        retrying={storeFetching}
+        onRetry={() => void refetchStore()}
+        onSave={(patch) => persist(patch, "Contact details updated")}
       />
 
       {/* One hidden picker shared by both "+" tiles (strip and grid). */}

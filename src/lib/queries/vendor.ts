@@ -1,3 +1,4 @@
+import { socialLinksForDisplay } from "@/lib/socialLinks";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
@@ -62,6 +63,8 @@ export interface VendorProfileData {
   /** Premises photos Cosora approved (vendor_profiles.office_photos, kept by the review: 2026-11-13). Empty: the
    *  store shows no Office Pictures section. Never a stock picture. */
   officePhotos: string[];
+  /** Social links that pass their platform's rules (socialLinksForDisplay), for the store page (SH-044). */
+  socialLinks: { key: string; label: string; url: string }[];
   /** The business categories the seller registered with (vendor_profiles.category); the store's "Sells". */
   categories: string[];
   /** The registered seller's country (registeredCountry()); outside India shows "International supplier". */
@@ -88,7 +91,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
   const { data: v, error } = await supabase
     .from("vendor_profiles")
     .select(
-      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, website, owner_name, gstin, cin, has_phone, has_whatsapp, employee_count, year_established, created_at, capacity, annual_turnover, office_photos, category, country_code, onboarding_complete",
+      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, website, owner_name, gstin, cin, has_phone, has_whatsapp, employee_count, year_established, created_at, capacity, annual_turnover, office_photos, category, country_code, onboarding_complete, social",
     )
     .eq("id", id)
     .maybeSingle();
@@ -166,6 +169,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     capacity: v.capacity ?? [],
     annualTurnover: v.annual_turnover,
     officePhotos: (v.office_photos ?? []).filter(Boolean),
+    socialLinks: socialLinksForDisplay(v.social),
     categories: v.category ?? [],
     countryCode: registeredCountry(vendorMini),
     products,

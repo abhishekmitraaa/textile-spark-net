@@ -39,7 +39,8 @@ const listItem = {
 const scoreItems = [
   { key: "contactDetails",  label: "Check your contact details", href: "/business-profile?focus=contact-details", Icon: ClipboardList },
   { key: "aboutUs",         label: "Add about us", href: "/business-profile?focus=about-us", Icon: Building2 },
-  { key: "liveProduct",     label: "Complete product details", href: "/upload", Icon: Package },
+  // Met by a listing Cosora approved and buyers can see (SH-046: it said "Complete product details").
+  { key: "liveProduct",     label: "Get a listing approved", href: "/products", Icon: Package },
   { key: "category",        label: "Add category", href: "/business-profile?focus=business-category", Icon: Tag },
   { key: "officePhotos",    label: "Business Picture add 5 hd Photos", href: "/business-profile?focus=office-pictures", Icon: Image },
   { key: "tenProducts",     label: "Add Upto 10 Products with Price & Image", href: "/upload", Icon: FileText },
@@ -72,6 +73,8 @@ const ScoreTile = ({
   href,
   Icon,
   done = false,
+  unknown = false,
+  waiting = 0,
   wide = false,
   className = "",
 }: {
@@ -80,6 +83,10 @@ const ScoreTile = ({
   Icon: LucideIcon;
   /** Whether this vendor has satisfied the signal behind the tile. */
   done?: boolean;
+  /** The checks couldn't be read (loading or failed): no badge, never "Missing" (SH-045). */
+  unknown?: boolean;
+  /** How many uploads would meet this signal once Cosora approves them (SH-046). */
+  waiting?: number;
   wide?: boolean;
   className?: string;
 }) => (
@@ -95,12 +102,19 @@ const ScoreTile = ({
       >
         {/* Badge: a green tick for a completed task, "Missing" for one that is
             genuinely outstanding. */}
-        {done ? (
+        {unknown ? null : done ? (
           <span
             aria-label="Completed"
             className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white lg:right-3 lg:top-3"
           >
             <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+        ) : waiting > 0 ? (
+          <span
+            title={`${waiting} waiting for Cosora's review`}
+            className="absolute right-2 top-2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold text-white lg:right-3 lg:top-3 lg:text-[10px]"
+          >
+            In review
           </span>
         ) : (
           <span className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-bold text-white lg:right-3 lg:top-3 lg:text-[10px]">
@@ -126,10 +140,12 @@ const ScoreTile = ({
 const BusinessProfileScorePage = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { score, checks, isLoading } = useProfileScoreState();
+  const { score, checks, isLoading, isError, hasVendorRow, waiting, retry } = useProfileScoreState();
+  // Without the seller's own rows nothing is known: no tile says "Missing" and no count is shown (SH-045).
+  const unknown = !hasVendorRow;
 
-  // Derived from the real checks, not from counting literals in the array above.
-  const missingCount = scoreItems.filter((item) => !checks[item.key]).length;
+  // Derived from the real checks, not from counting literals in the array above; what is in review isn't missing.
+  const missingCount = unknown ? 0 : scoreItems.filter((item) => !checks[item.key] && !waiting[item.key]).length;
 
   // Rating label + colours track the score so the header never contradicts it.
   const rating =
@@ -215,6 +231,14 @@ const BusinessProfileScorePage = () => {
           </div>
         </motion.div>
 
+        {isError && (
+          <motion.div variants={section} role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Your score couldn't be loaded</p>
+            <p className="mt-1 text-xs text-amber-800">Your profile is unchanged. Try again before editing anything.</p>
+            <button onClick={retry} className="mt-2 rounded-lg bg-white px-3 py-1.5 text-xs font-bold ring-1 ring-amber-300">Try again</button>
+          </motion.div>
+        )}
+
         {/* Task grid: 2 columns on mobile, 3 from 1024px, 4 from 1280px.
             Fifteen signals now, so the 3-column desktop layout divides evenly
             (5 rows) while 2 and 4 columns end one short — accepted rather than
@@ -232,6 +256,8 @@ const BusinessProfileScorePage = () => {
               href={item.href}
               Icon={item.Icon}
               done={checks[item.key]}
+              unknown={unknown}
+              waiting={waiting[item.key] ?? 0}
             />
           ))}
 

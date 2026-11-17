@@ -17,8 +17,11 @@ import {
 import {
   Plus, Search, Share2, MoreVertical,
   Eye, MessageSquare, Edit2, Trash2, Copy,
-  ChevronDown, Camera, PackageOpen, SearchX, LogIn, PauseCircle,
+  ChevronDown, Camera, PackageOpen, SearchX, LogIn, PauseCircle, AlertTriangle,
 } from "lucide-react";
+
+// The status values the filter offers; a notice may open the page on one (/products?status=rejected).
+const STATUS_FILTERS = ["all", "active", "draft", "pending", "paused", "rejected"] as const;
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -351,13 +354,17 @@ const Products = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: products = [], isLoading } = useMyProducts(user?.id);
+  const { data: products = [], isLoading, error: productsError, refetch: refetchProducts, isFetching } = useMyProducts(user?.id);
   const [search, setSearch] = useState("");
   const searchBox = useRef<HTMLInputElement>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  // /products?status=paused is where the "listings paused" notice sends the vendor.
+  // /products?status=paused is where the "listings paused" notice sends the vendor (and ?status=rejected / active the
+  // listing decisions, SH-034).
   const [params] = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState(params.get("status") === "paused" ? "paused" : "all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const s = params.get("status");
+    return s && (STATUS_FILTERS as readonly string[]).includes(s) ? s : "all";
+  });
   // The header's search sends the seller here with ?q= (SH-028): start from it and put the cursor in the box.
   const q = params.get("q");
   useEffect(() => {
@@ -589,7 +596,7 @@ const Products = () => {
           {/* ── Product count ── */}
           <motion.div variants={section} className="flex min-h-[1.25rem] items-center justify-between gap-3 px-1">
             <p className="text-xs lg:text-sm text-gray-500">
-              {!user ? ""
+              {!user || productsError ? ""
                 : isLoading ? "Loading your products…"
                 : `${filtered.length} product${filtered.length !== 1 ? "s" : ""}`}
               {/* Counts the whole catalog, so only shown against the unfiltered total. */}
@@ -629,6 +636,26 @@ const Products = () => {
           ) : isLoading ? (
             <motion.div key="loading" variants={reduced ? {} : section} initial="hidden" animate="show" className="space-y-2.5 lg:space-y-2">
               {[0, 1, 2].map(i => <RowSkeleton key={i} />)}
+            </motion.div>
+          ) : productsError ? (
+            // A failed read is never "your catalog is empty" (SH-062): that invited a seller with listings to upload
+            // them again and hit the plan's limit.
+            <motion.div key="error" variants={reduced ? {} : section} initial="hidden" animate="show">
+              <StatePanel
+                icon={AlertTriangle}
+                title="Your products couldn't be loaded"
+                body={`Nothing is lost: your listings are still there. ${errorMessage(productsError)}`}
+              >
+                <motion.button
+                  whileTap={TAP}
+                  transition={TAP_T}
+                  onClick={() => void refetchProducts()}
+                  disabled={isFetching}
+                  className="mt-3 text-brand-vendor text-sm font-semibold hover:underline disabled:opacity-60"
+                >
+                  {isFetching ? "Trying again…" : "Try again"}
+                </motion.button>
+              </StatePanel>
             </motion.div>
           ) : filtered.length === 0 ? (
             <motion.div key="empty" variants={reduced ? {} : section} initial="hidden" animate="show">

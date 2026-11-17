@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -132,9 +132,10 @@ function NotificationCard({
   const tone = TONE_STYLE[n.tone];
   const primary = n.type === "requirement";
 
+  // A notice with nowhere to go (n.href null) only marks itself read: it used to push /notifications onto itself.
   const open = () => {
     if (!n.read) onRead(n.id);
-    navigate(n.href);
+    if (n.href) navigate(n.href);
   };
 
   return (
@@ -149,7 +150,7 @@ function NotificationCard({
       {/* Full-card click target (stretched-link pattern). */}
       <button
         onClick={open}
-        aria-label={`Open notification: ${n.title}`}
+        aria-label={n.href ? `Open notification: ${n.title}` : `Mark as read: ${n.title}`}
         className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-vendor/45 focus-visible:ring-offset-1"
       />
 
@@ -205,6 +206,7 @@ function NotificationCard({
 
           {n.requirement && <RequirementChips meta={n.requirement} />}
 
+          {n.href && (
           <div className="mt-3.5">
             <motion.button
               whileTap={reduced ? undefined : TAP}
@@ -221,6 +223,7 @@ function NotificationCard({
               <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.4} />
             </motion.button>
           </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -265,6 +268,15 @@ const Notifications = () => {
     return c;
   }, [all]);
 
+  // Every notice per tab, read or not: a tab with nothing in it is hidden (SH-035). Nothing writes quote notices yet,
+  // so "Quotes & Leads" stays hidden until something does; the tab being looked at always stays.
+  const totals = useMemo(() => {
+    const c: Record<TabKey, number> = { all: all.length, requirements: 0, quotes: 0, payments: 0, updates: 0 };
+    for (const n of all) c[n.group] += 1;
+    return c;
+  }, [all]);
+  const visibleTabs = TABS.filter((t) => t.key === "all" || t.key === tab || totals[t.key] > 0);
+
   const filtered = useMemo(
     () =>
       (tab === "all" ? all : all.filter((n) => n.group === tab))
@@ -304,7 +316,7 @@ const Notifications = () => {
               )}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              New buyer requirements in your domains, plus quote, lead, payment and account updates.
+              Updates on your listings, requirements, payments and account.
             </p>
           </div>
           <motion.button
@@ -321,7 +333,7 @@ const Notifications = () => {
         </motion.div>
 
         {/* Requirements spotlight — the headline event, only when there are unread ones */}
-        {counts.requirements > 0 && (
+        {role === "seller" && counts.requirements > 0 && (
           <motion.button
             variants={section}
             onClick={() => setTab("requirements")}
@@ -333,9 +345,9 @@ const Notifications = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900">
-                {counts.requirements} new {counts.requirements === 1 ? "requirement" : "requirements"} match your domains
+                {counts.requirements} new {counts.requirements === 1 ? "requirement notice" : "requirement notices"}
               </p>
-              <p className="mt-0.5 text-xs text-gray-500">Quote early to get ahead of other vendors.</p>
+              <p className="mt-0.5 text-xs text-gray-500">Open them to see the requirements on Leads.</p>
             </div>
             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-brand-vendor">
               Review
@@ -350,7 +362,7 @@ const Notifications = () => {
           className="sticky top-14 z-20 -mx-4 mt-4 border-b border-gray-100 bg-background/90 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/70 lg:top-16 lg:-mx-6 lg:px-6"
         >
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
-            {TABS.map((t) => {
+            {visibleTabs.map((t) => {
               const active = tab === t.key;
               const badge = counts[t.key];
               return (
@@ -408,9 +420,17 @@ const Notifications = () => {
             </div>
             <p className="text-base font-bold text-gray-900">You're all caught up</p>
             <p className="mx-auto mt-1.5 max-w-sm text-sm text-gray-500">
-              Nothing here right now. When buyers post requirements in your domains, they'll show up so you can quote
-              first.
+              {tab === "all"
+                ? "Nothing here right now. Cosora's decisions on your listings, payments and account show up here."
+                : "Nothing in this tab right now."}
             </p>
+            {role === "seller" && (
+              <p className="mx-auto mt-2 max-w-sm text-xs text-gray-400">
+                Buyer requirements are always listed on{" "}
+                <Link to="/leads" className="font-semibold text-brand-vendor hover:underline">Leads</Link>, whatever your
+                plan sends you as alerts.
+              </p>
+            )}
           </motion.div>
         ) : (
           <div className="mt-5 space-y-6">
