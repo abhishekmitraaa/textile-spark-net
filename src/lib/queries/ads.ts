@@ -531,3 +531,19 @@ export async function logAdClick(adId: string): Promise<void> {
   await supabase.rpc("ad_click", { ad: adId, p_session: sessionId() ?? undefined });
   void logEngagement({ eventType: "ad_click", adId, source: "ad" });
 }
+
+/**
+ * The seller's campaigns that hold an ad type the Cosora team does by hand (Mitra, 2026-11-17), and when the team marked
+ * each done (null: not yet). Keyed by campaign id. my_ad_manual_work() answers only for the caller.
+ */
+export function useMyAdManualWork(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["ad_manual_work", vendorId],
+    queryFn: async (): Promise<Map<string, string | null>> => {
+      const { data, error } = await supabase.rpc("my_ad_manual_work");
+      if (error) throw error;
+      return new Map(((data ?? []) as { ad_id: string; done_at: string | null }[]).map((r) => [r.ad_id, r.done_at]));
+    },
+    enabled: Boolean(vendorId),
+  });
+}

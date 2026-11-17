@@ -122,15 +122,18 @@ test("a Free seller buys the Trusted Seal with no campaign and no listing", asyn
   expect(row).toBe("trustedSeal|none|pending_review|30");
 });
 
-test("the certificate is a year, and the builder no longer sells the seal or unseen ad types", async ({ browser }) => {
+test("the certificate is a year, and the builder sells neither the seal nor the deferred banners", async ({ browser }) => {
   const who = await account("mb-cert");
   const page = await open(browser, who.session, "/advertisements");
-  // The campaign builder: no seal, no certificate, no website or social types, no goals that pick them.
+  // The campaign builder: no seal, no certificate, no website banners. The goals that pick a type done by hand are
+  // back since Mitra brought those types back (2026-11-17).
   const builder = page.locator("#adCreationSteps");
   await expect(builder.getByText("Trusted Seal & Verified Badge")).toHaveCount(0);
   await expect(builder.getByText("Website Banner", { exact: false })).toHaveCount(0);
-  await expect(builder.getByText("Visit your website")).toHaveCount(0);
-  await expect(builder.getByText("Message you")).toHaveCount(0);
+  await expect(builder.getByText("Mobile Banner", { exact: false })).toHaveCount(0);
+  await expect(builder.getByText("Web & Mobile Combo")).toHaveCount(0);
+  await expect(builder.getByText("Visit your website")).toHaveCount(1);
+  await expect(builder.getByText("Message you")).toHaveCount(1);
   // The certificate on its own.
   const section = page.getByTestId("get-verified");
   await section.scrollIntoViewIfNeeded();

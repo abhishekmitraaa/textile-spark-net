@@ -33,15 +33,13 @@ test("the ad types billed per day say /day", async ({ browser }) => {
   await page.getByRole("button", { name: /^More \(\d+ more options\)$/ }).click();
   // A card's accessible name starts with its title; Playwright's string name match is a substring match.
   const card = (name: string) => page.getByRole("button").filter({ has: page.getByRole("heading", { name, exact: true }) });
-  for (const name of ["Wholesaler Pick Ad", "Brand Ad"]) {
+  for (const name of ["Wholesaler Pick Ad", "Brand Ad", "Facebook & Instagram Ad", "Google Product Ad", "Social Media Combo"]) {
     await expect(card(name), name).toContainText("/day");
     await expect(card(name), name).not.toContainText("one-time");
   }
-  // Since 2026-11-17 (SH-094) types no buyer sees aren't sold, and the certificate is bought on its own in Get verified
-  // (SH-093), where its term is a year.
-  for (const name of ["Web & Mobile Combo", "Facebook & Instagram Ad", "Google Product Ad", "Social Media Combo"]) {
-    await expect(card(name), name).toHaveCount(0);
-  }
+  // The website and mobile banners and their combo aren't sold (SH-094); the off-app types are, done by hand (Mitra,
+  // 2026-11-17). The certificate is bought on its own in Get verified (SH-093), where its term is a year.
+  await expect(card("Web & Mobile Combo"), "Web & Mobile Combo").toHaveCount(0);
   await expect(page.getByTestId("verify-verifiedCertificate")).toContainText("1 year of the badge from approval");
   await ctx.close();
 });

@@ -64,14 +64,16 @@ export const VENDOR_LEVEL_TYPES = new Set(["trustedSeal", "verifiedCertificate"]
 
 /**
  * Ad types a seller can buy today (Seller Home audit SH-094, 2026-11-17): a slot buyers see, the badge, or the printed
- * certificate. The rest (website and mobile banners, the off-platform Facebook/Instagram and Google types and their
- * bundles, direct messages) render nowhere yet, so they are refused before payment. The browser's copy is
+ * certificate, or done by hand by the Cosora team (Facebook/Instagram, Google Shopping, their bundle, direct messages:
+ * Mitra 2026-11-17). The website and mobile banners and their combo render nowhere yet, so they are refused before payment. The browser's copy is
  * sellableAdTypes() in src/lib/adSlots.ts; scripts/seller-medium-fixes-check.mjs holds them equal.
  */
 export const SELLABLE_AD_TYPES = new Set([
-  "brandAd", "featuredProduct", "openListing", "searchListing", "storePromotion", "trustedSeal", "verifiedCertificate",
-  "wholesalerPick",
+  "brandAd", "directBroadcast", "fbInsta", "featuredProduct", "googleProduct", "openListing", "searchListing",
+  "socialCombo", "storePromotion", "trustedSeal", "verifiedCertificate", "wholesalerPick",
 ]);
+// fbInsta, googleProduct, socialCombo and directBroadcast are carried out by hand by the Cosora team after approval
+// (Mitra, 2026-11-17; src/lib/adSlots.ts MANUAL_AD_TYPES). websiteBanner, mobileBanner and webMobileCombo stay unsold.
 
 // ── Getting verified on its own (Seller Home audit SH-093, Mitra 2026-11-17: "Sell them to Free sellers") ──
 // The Trusted Seal and the Verified Certificate are bought on their own, by any registered seller on any plan,

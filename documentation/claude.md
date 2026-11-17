@@ -1311,10 +1311,18 @@ undocumented. Deep technical rationale for each lives in
   order (`verificationSpec()` in `_shared/adPricing.ts`, mirrored in `src/lib/adPricing.ts`): no listing, no targeting,
   `VERIFICATION_DAYS` (seal 30, certificate 365, the certificate carrying the badge), and `adReach()` doesn't apply the
   plan's ad reach to it. Approval still grants the badge; a plan that includes the seal shows "Included".
-- **Only ad types a buyer can see are sold** (2026-11-17, SH-094): `sellableAdTypes()` (src/lib/adSlots.ts: a slot that
-  isn't deferred, the badge, the certificate) and `SELLABLE_AD_TYPES` on the server, held equal by
-  `scripts/seller-medium-fixes-check.mjs`. A new slot makes its types sellable in both. Every ad order passes
+- **Only ad types a buyer can see, or the Cosora team does by hand, are sold** (2026-11-17, SH-094; manual types Mitra,
+  2026-11-17): `sellableAdTypes()` (src/lib/adSlots.ts: a slot that isn't deferred, the badge, the certificate,
+  `MANUAL_AD_TYPES`) and `SELLABLE_AD_TYPES` on the server, held equal by `scripts/seller-medium-fixes-check.mjs`. The
+  website and mobile banners and their Web & Mobile Combo stay unsold. A new slot makes its types sellable in both. Every ad order passes
   `checkAdOrder()` (`_shared/adOrderChecks.ts`) before money moves: registered seller, sellable types, own live listings.
+- **Facebook & Instagram, Google Product, Social Media Combo and Direct Broadcast are done by hand** (Mitra, 2026-11-17,
+  "those ads will go to the admin dashboard as they will be done manually"; migration `20261117120000`). They have no
+  slot in the app (`MANUAL_AD_TYPES`; they stay in `UNPLACED_AD_TYPES`). The builder tags them and says so when one is
+  picked. Once approved, a campaign holding one is listed in Cosora-Admin › Ads › Manual work
+  (`admin_ad_manual_list()`), and an ads writer marks it done with `admin_ad_manual_done()` (only after approval).
+  Marking it done notifies the seller (`ad_manual_done`), and Your Campaigns shows the date (`my_ad_manual_work()`).
+  A new type done by hand goes in `MANUAL_AD_TYPES`, `admin.manual_ad_types()` and the admin view's labels together.
 - **Opening a chat writes nothing** (2026-11-17, SH-105): `useChatThread()` reads the conversation; the first message
   creates it (insert if missing, never rewritten). An id that isn't an account is `invalid`.
 - **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,

@@ -1,6 +1,6 @@
 {
  "_about": "Text the page shows that is not in this codebase. scripts/i18n-coverage-check.mjs requires every string here in src/i18n/hi.json and gu.json. Each group's _source says where it comes from.",
- "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3. Help & Support's support_notify() texts (migrations 20260930213143 and 20260930213451) were added on 2026-10-01. The complimentary plan notice from admin_subscription_grant() (subscriptions P12, migration 20261009194403) was added on 2026-10-09.",
+ "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3. Help & Support's support_notify() texts (migrations 20260930213143 and 20260930213451) were added on 2026-10-01. The complimentary plan notice from admin_subscription_grant() (subscriptions P12, migration 20261009194403) was added on 2026-10-09. The manual ad work notice from admin_ad_manual_done() (migration 20261117120000) was added on 2026-11-17.",
  "notifications": [
   "Your registration is in",
   "We're checking your documents (usually 3–5 days). Your first listing goes live after review (24–48 hours).",
@@ -68,7 +68,9 @@
   "You have a complimentary plan",
   "Cosora gave you the {0} plan until {1}, at no charge.",
   "A review you wrote was removed",
-  "Cosora removed one of your reviews because it didn't follow our review guidelines. Contact Cosora Support if you think this was a mistake."
+  "Cosora removed one of your reviews because it didn't follow our review guidelines. Contact Cosora Support if you think this was a mistake.",
+  "Cosora has set up your ad",
+  "The Cosora team has done the part of \"{0}\" that is run by hand. See Your Campaigns."
  ],
  "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated. Since Help & Support P5 (2026-10-01) an FAQ can carry its own Hindi and Gujarati (faqs.translations), which the app shows first; this list is then the fallback. The category headings are listed at the end. Five answers were rewritten by the subscriptions P13 truth pass (2026-10-09): autopay, renewal, the lead limit, the lowest plan and how leads are managed.",
  "faqs": [

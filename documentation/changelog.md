@@ -1,3 +1,16 @@
+- 2026-11-17 (branch `ads/manual-types`, admin branch `ads/manual-types`; migration `20261117120000`; built and tested
+  locally, **not released**)
+  **Ad types done by hand.** Facebook & Instagram, Google Product, Social Media Combo and Direct Broadcast are sold again.
+  The Cosora team carries them out after approval.
+  - Why: Mitra, 2026-11-17, "bring back all the ad type except the mobile banner and the website banner and create a
+    banner for the other ad types that those ads will go to the admin dashboard as they will be done manually". The
+    website and mobile banners stay unsold, and so does Web & Mobile Combo, their bundle.
+  - Database: `admin.ad_manual_work`; `admin_ad_manual_list()`, `admin_ad_manual_done()` (only after approval; notifies
+    the seller) and `my_ad_manual_work()`.
+  - App: tags on the four cards, a notice when one is picked, a status line in Your Campaigns, and the website and
+    message goals back. Cosora-Admin: Ads › Manual work (To do / In review / Done, Mark done with a note, Not done).
+  - Checks: `tests/local/manual-ads.spec.ts` (4); seller-home-medium-b and todo-open updated;
+    `seller-medium-fixes-check.mjs`. Record: `documentation/manual-ad-types-2026-11-17.md`.
 - 2026-11-17 (branch `seller-home/medium-fixes`; migrations `20261117100000`–`100300`, `110000`, `110100`; four payment
   functions; **LIVE 2026-11-17**, both batches together, Mitra: "release both batch together")
   **Seller Home audit, Medium items batch 2 (16): SH-078–080, 091, 093–098, 101–106.** Get verified on any plan (SH-093,

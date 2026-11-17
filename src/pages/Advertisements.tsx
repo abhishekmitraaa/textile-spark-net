@@ -26,7 +26,7 @@ import { supportChatHref } from "@/lib/supportContact";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, useVendorHomeState, useAdReasonLabels, type AdRow } from "@/lib/queries/ads";
+import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, useVendorHomeState, useAdReasonLabels, useMyAdManualWork, type AdRow } from "@/lib/queries/ads";
 import { useFeatureFlag } from "@/lib/queries/featureFlags";
 import { INDIA_STATES } from "@/data/indiaStates";
 import { useLang } from "@/lib/i18n";
@@ -44,7 +44,7 @@ import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { useSellerRegistration, canPublish, type SellerRegistration } from "@/lib/queries/sellerRegistration";
 import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
 import { computeOrderRupees, priceLines, VERIFICATION_DAYS } from "@/lib/adPricing";
-import { sellableAdTypes } from "@/lib/adSlots";
+import { sellableAdTypes, MANUAL_AD_TYPES, hasManualAdType } from "@/lib/adSlots";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -102,6 +102,15 @@ const SEAL_AD_TYPES = new Set(["trustedSeal", "verifiedCertificate"]);
 // bought on their own in "Get verified"; types with no live slot yet aren't sold.
 const SELLABLE = new Set<string>(sellableAdTypes());
 const BUILDER_AD_TYPES = AD_TYPES.filter((a) => SELLABLE.has(a.id) && !SEAL_AD_TYPES.has(a.id));
+// Done by hand by the Cosora team after approval (Mitra, 2026-11-17): they run outside the app, so the builder says so.
+const MANUAL = new Set<string>(MANUAL_AD_TYPES);
+function ManualTag() {
+  return (
+    <span className="mt-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-inset ring-amber-200">
+      Set up by hand by the Cosora team
+    </span>
+  );
+}
 // A campaign goal pre-selects the placement types that actually serve it — this
 // is what makes the goal picker do something real (see toggleGoal).
 // Only types that are sold (SH-094): "Visit your website" and "Message you" picked website banners, Google Shopping and
@@ -540,6 +549,7 @@ function AdCreationSteps({
                     </div>
                     <div className="flex flex-1 flex-col p-4">
                       <h5 className="text-sm font-bold text-gray-900">{ad.name}</h5>
+                      {MANUAL.has(ad.id) && <ManualTag />}
                       <p className="mt-1.5 text-xs leading-relaxed text-gray-500">{ad.description}</p>
                       <div className="mt-4 flex items-end justify-between border-t border-gray-100 pt-3">
                         {included ? (
@@ -581,6 +591,7 @@ function AdCreationSteps({
                         {selectedAdTypes.includes(ad.id) && <div className="w-3 h-3 bg-[#f75f71] rounded-full" />}
                       </div>
                       <span className="text-sm font-bold text-gray-800">{ad.name}</span>
+                      {MANUAL.has(ad.id) && <ManualTag />}
                     </div>
                     {SEAL_AD_TYPES.has(ad.id) && planGrantsSeal ? (
                       <span className="rounded-full bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 whitespace-nowrap">
@@ -625,6 +636,20 @@ function AdCreationSteps({
               className="w-full py-3 rounded-xl font-bold text-sm text-[#FF6B6B] bg-[#fff5f5] hover:bg-[#fff0f0] transition-all border border-[#FF6B6B]/20 lg:mx-auto lg:block lg:w-auto lg:px-12">
               {showMoreAdTypes ? "Show Less" : `More (${BUILDER_AD_TYPES.length - 5} more options)`}
             </button>
+
+            {/* A manual ad type picked: what happens to it (Mitra, 2026-11-17). */}
+            {selectedAdTypes.some((id) => MANUAL.has(id)) && (
+              <div role="note" data-testid="manual-ad-banner" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-bold">The Cosora team sets these up by hand</p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                  {selectedAdTypes.filter((id) => MANUAL.has(id)).map((id) => AD_TYPES.find((a) => a.id === id)?.name ?? id).join(", ")}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                  These run outside the app. Once Cosora approves your campaign, our team sets them up for you and marks them
+                  done under Your Campaigns, and you get a notice.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1426,6 +1451,8 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
   ads: AdRow[]; onToggle: (id: string, status: "active" | "paused") => void; onDelete: (id: string) => void;
 }) {
   const { data: reasonLabels } = useAdReasonLabels();
+  const { user } = useAuth();
+  const { data: manualWork } = useMyAdManualWork(user?.id);
   // The campaign open in "Edit and resubmit" (SH-089): "changes needed" used to be a dead end.
   const [editing, setEditing] = useState<AdRow | null>(null);
   if (ads.length === 0) return null;
@@ -1509,6 +1536,20 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
                 </button>
               </div>
               <p className="mt-1.5 pl-12 text-[11px] text-gray-500">{rs.reason}</p>
+              {/* The part the Cosora team does by hand (Mitra, 2026-11-17). */}
+              {hasManualAdType(a.placement) && (() => {
+                const doneAt = manualWork?.get(a.id) ?? null;
+                const approved = !["pending_review", "changes_requested", "rejected"].includes(a.status);
+                return (
+                  <p className="mt-1 pl-12 text-[11px] font-medium text-amber-800" data-testid="manual-ad-status">
+                    {doneAt
+                      ? `Set up by the Cosora team on ${new Date(doneAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.`
+                      : approved
+                        ? "The Cosora team is setting up the part that runs outside the app."
+                        : "After approval, the Cosora team sets up the part that runs outside the app."}
+                  </p>
+                );
+              })()}
               {/* Cosora stopped or flagged it: the vendor can ask why, about this campaign (P3e). */}
               {rs.tone === "attention" && (
                 <Link

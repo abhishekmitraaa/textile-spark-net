@@ -102,8 +102,17 @@ check("SH-060: an empty form isn't kept", !upload.draftHasAnswers({ ...draft, se
 const sellable = [...slots.sellableAdTypes()].sort();
 check("SH-094: the browser and the server sell the same ad types", eq(sellable, [...edgePricing.SELLABLE_AD_TYPES].sort()),
   `browser ${sellable} / server ${[...edgePricing.SELLABLE_AD_TYPES].sort()}`);
-check("SH-094: nothing unplaced or deferred is sold",
-  !["websiteBanner", "mobileBanner", "webMobileCombo", "fbInsta", "googleProduct", "socialCombo", "directBroadcast"].some((t) => sellable.includes(t)));
+check("SH-094: the deferred banners and their combo are not sold",
+  !["websiteBanner", "mobileBanner", "webMobileCombo"].some((t) => sellable.includes(t)));
+// Mitra, 2026-11-17: the four off-app types are sold again and done by hand by the Cosora team.
+check("manual ad types are sold, and only those four",
+  eq([...slots.MANUAL_AD_TYPES].sort(), ["directBroadcast", "fbInsta", "googleProduct", "socialCombo"])
+  && slots.MANUAL_AD_TYPES.every((t) => sellable.includes(t)));
+check("manual ad types never render as an in-app card",
+  slots.MANUAL_AD_TYPES.every((t) => !slots.PLACED_AD_TYPES.includes(t)));
+check("hasManualAdType reads the placement CSV",
+  slots.hasManualAdType("openListing, fbInsta") && !slots.hasManualAdType("openListing,trustedSeal")
+  && !slots.hasManualAdType(null) && slots.hasManualAdType("directBroadcast"));
 check("SH-093: both copies give the seal 30 days and the certificate a year",
   eq(clientPricing.VERIFICATION_DAYS, edgePricing.VERIFICATION_DAYS) && edgePricing.VERIFICATION_DAYS.trustedSeal === 30 && edgePricing.VERIFICATION_DAYS.verifiedCertificate === 365);
 const vs = edgePricing.verificationSpec({ placementIds: ["trustedSeal", "trustedSeal"], days: 999, items: [{ productId: "x", title: "t", imageUrl: null }], targetStates: ["GJ"] });

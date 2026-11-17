@@ -182,13 +182,29 @@ export function adSlotBlock<T>(slot: AdSlotId, items: readonly T[], index: numbe
 }
 
 /**
- * Ad types a seller can buy today (SH-094, 2026-11-17): a slot buyers actually see (not deferred), the badge, or the
- * printed certificate. Everything else is "coming soon": the builder doesn't offer it and razorpay-create-order refuses
- * it (supabase/functions/_shared/adPricing.ts SELLABLE_AD_TYPES; scripts/seller-medium-fixes-check.mjs compares them).
+ * Ad types the Cosora team carries out by hand (Mitra, 2026-11-17: "bring back all the ad types except the mobile banner
+ * and the website banner … those ads will go to the admin dashboard as they will be done manually"). They have no slot
+ * in the app (UNPLACED_AD_TYPES says why); after Cosora approves a campaign, it is listed in Cosora-Admin › Ads › Manual
+ * work, the team runs it outside the app (Facebook and Instagram, Google Shopping, messages to buyers) and marks it
+ * done, and the seller is told. The website and mobile banners, and their Web & Mobile Combo, stay off: their slot is
+ * deferred, not manual.
+ */
+export const MANUAL_AD_TYPES: readonly AdType[] = ["fbInsta", "googleProduct", "socialCombo", "directBroadcast"];
+
+/**
+ * Ad types a seller can buy today (SH-094, 2026-11-17): a slot buyers actually see (not deferred), the badge, the
+ * printed certificate, or one the team does by hand (MANUAL_AD_TYPES). The rest are not offered and
+ * razorpay-create-order refuses them (supabase/functions/_shared/adPricing.ts SELLABLE_AD_TYPES;
+ * scripts/seller-medium-fixes-check.mjs compares them).
  */
 export function sellableAdTypes(): AdType[] {
   const live = Object.values(AD_SLOTS).filter((s) => !(s as AdSlot).deferred).flatMap((s) => s.types as readonly AdType[]);
-  return Array.from(new Set<AdType>([...live, ...BADGE_AD_TYPES, ...FULFILMENT_AD_TYPES])).sort();
+  return Array.from(new Set<AdType>([...live, ...BADGE_AD_TYPES, ...FULFILMENT_AD_TYPES, ...MANUAL_AD_TYPES])).sort();
+}
+
+/** True when a campaign's placement CSV holds any type the team does by hand. */
+export function hasManualAdType(placement: string | null | undefined): boolean {
+  return (placement ?? "").split(",").some((p) => (MANUAL_AD_TYPES as readonly string[]).includes(p.trim()));
 }
 
 /** Ad types that have at least one real buyer-side slot. */
@@ -204,17 +220,17 @@ export const PLACED_AD_TYPES: readonly AdType[] =
  */
 export const UNPLACED_AD_TYPES: Readonly<Record<string, string>> = {
   directBroadcast:
-    "Sold per message (₹15/msg) but there is no buyer-facing messaging surface to " +
-    "deliver into. Blocked on Cosora's own messaging service (separate repo).",
+    "Sold per message (₹15/msg); there is no buyer-facing messaging surface to deliver into, " +
+    "so the Cosora team sends the messages by hand (MANUAL_AD_TYPES).",
   webMobileCombo:
     "A bundle of websiteBanner + mobileBanner, which already share the single " +
     "New Arrivals banner slot. A separate placement would render the same banner twice.",
   fbInsta:
-    "Off-platform Facebook/Instagram reach. No on-platform slot can honestly represent it.",
+    "Off-platform Facebook/Instagram reach, set up by hand by the Cosora team. No on-platform slot can honestly represent it.",
   googleProduct:
-    "Off-platform Google Shopping reach. Same as fbInsta.",
+    "Off-platform Google Shopping reach, set up by hand by the Cosora team. Same as fbInsta.",
   socialCombo:
-    "Bundle of fbInsta + googleProduct, both off-platform.",
+    "Bundle of fbInsta + googleProduct, both off-platform and set up by hand by the Cosora team.",
 };
 
 /** trustedSeal renders as the existing product-card badge, which is already live and correct. */

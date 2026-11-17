@@ -8958,5 +8958,16 @@
  "Couldn't check your registration. Try again in a moment.": "आपका पंजीकरण जाँचा नहीं जा सका। थोड़ी देर में फिर से कोशिश करें।",
  "Couldn't check your listings. Try again in a moment.": "आपकी लिस्टिंग जाँची नहीं जा सकीं। थोड़ी देर में फिर से कोशिश करें।",
  "Pick each listing to promote once.": "प्रचार के लिए हर लिस्टिंग एक बार चुनें।",
- "Pick listings from your products.": "अपने उत्पादों में से लिस्टिंग चुनें।"
+ "Pick listings from your products.": "अपने उत्पादों में से लिस्टिंग चुनें।",
+ "Off-platform Facebook/Instagram reach, set up by hand by the Cosora team. No on-platform slot can honestly represent it.": "प्लेटफ़ॉर्म के बाहर Facebook/Instagram पहुँच, जिसे Cosora टीम हाथ से सेट करती है। प्लेटफ़ॉर्म पर कोई स्लॉट इसे ईमानदारी से नहीं दिखा सकता।",
+ "Off-platform Google Shopping reach, set up by hand by the Cosora team. Same as fbInsta.": "प्लेटफ़ॉर्म के बाहर Google Shopping पहुँच, जिसे Cosora टीम हाथ से सेट करती है। fbInsta जैसा ही।",
+ "Bundle of fbInsta + googleProduct, both off-platform and set up by hand by the Cosora team.": "fbInsta + googleProduct का बंडल, दोनों प्लेटफ़ॉर्म के बाहर और Cosora टीम द्वारा हाथ से सेट किए जाते हैं।",
+ "Set up by hand by the Cosora team": "Cosora टीम हाथ से सेट करती है",
+ "The Cosora team sets these up by hand": "इन्हें Cosora टीम हाथ से सेट करती है",
+ "These run outside the app. Once Cosora approves your campaign, our team sets them up for you and marks them done under Your Campaigns, and you get a notice.": "ये ऐप के बाहर चलते हैं। Cosora आपका अभियान मंज़ूर करने के बाद, हमारी टीम इन्हें आपके लिए सेट करती है और Your Campaigns में पूरा होने का निशान लगाती है, और आपको सूचना मिलती है।",
+ "Set up by the Cosora team on {0}.": "Cosora टीम ने {0} को सेट किया।",
+ "The Cosora team is setting up the part that runs outside the app.": "Cosora टीम ऐप के बाहर चलने वाला हिस्सा सेट कर रही है।",
+ "After approval, the Cosora team sets up the part that runs outside the app.": "मंज़ूरी के बाद, Cosora टीम ऐप के बाहर चलने वाला हिस्सा सेट करती है।",
+ "Cosora has set up your ad": "Cosora ने आपका विज्ञापन सेट कर दिया है",
+ "The Cosora team has done the part of \"{0}\" that is run by hand. See Your Campaigns.": "Cosora टीम ने \"{0}\" का हाथ से चलने वाला हिस्सा पूरा कर दिया है। Your Campaigns देखें।"
 }
