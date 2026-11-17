@@ -50,7 +50,7 @@ import { toast } from "sonner";
 import {
   Phone, Eye, Users, TrendingUp, TrendingDown, PhoneMissed,
   MousePointerClick, ChevronLeft, ChevronRight, X, Plus, Check,
-  Building2, ShoppingBag, List, Calendar, Zap, Shield, BadgeCheck,
+  Building2, ShoppingBag, List, Zap, Shield, BadgeCheck,
   Globe, Smartphone, Monitor, Facebook, BarChart3, Award, Radio,
   Search, Star, Store, Megaphone, Minus,
 } from "lucide-react";
@@ -385,7 +385,7 @@ function PricingHeader() {
         <div className="text-orange-600 text-sm font-semibold mb-2 lg:tracking-[0.18em] lg:uppercase lg:text-xs">PAY PER AD</div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2 lg:text-3xl">Simple, Transparent Pricing</h2>
         <p className="text-sm text-gray-600 leading-relaxed lg:max-w-2xl lg:mx-auto lg:text-base">
-          No subscriptions. Choose your product, set your duration, target your audience. Pay only for what you use.
+          Choose your listings, how long the campaign runs and who sees it. You pay once for each campaign, at the price shown before you pay.
         </p>
       </div>
     </div>
@@ -737,14 +737,11 @@ function AdCreationSteps({
 
             {/* Duration */}
             <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+              {/* No "Date Range" button (SH-099): it did nothing. The paid days start when Cosora approves the campaign. */}
               <div className="flex items-center justify-between mb-4">
                 <h5 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                   <MousePointerClick className="w-4 h-4" /> Duration
                 </h5>
-                <button className="flex items-center gap-2 bg-gray-200/50 p-2 rounded-xl">
-                  <Calendar className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Range</span>
-                </button>
               </div>
               {/* Once the checkout rail claims 300px this column is too narrow for
                   four abreast — fold to 2×2 until there is room again. */}
@@ -774,7 +771,7 @@ function AdCreationSteps({
           </div>
 
           <div className="pl-0 md:pl-11 space-y-6">
-            <p className="text-sm text-gray-500 font-medium italic">Automatically finds and updates audiences</p>
+            <p className="text-sm text-gray-500 font-medium">Leave both empty to show your ad to every buyer.</p>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
               {/* Category — REAL: filters which buyers see the ad on category
@@ -1045,12 +1042,14 @@ function buildAdSpec(
 // ── CostSummary ──
 function CostSummary({
   products, selectedAdTypes, selectedProducts, selectedDuration, selectedCategories, selectedCities, vendorId, onCreated, canAds,
-  stateTargeting, selectedCountries, broadcastMessages,
+  stateTargeting, selectedCountries, broadcastMessages, planState,
 }: {
   products: VendorProductRow[]; selectedAdTypes: string[]; selectedProducts: string[]; selectedDuration: string;
   selectedCategories: string[]; selectedCities: string[];
   vendorId?: string; onCreated: () => void; canAds: boolean;
   stateTargeting: boolean; selectedCountries: string[]; broadcastMessages: string;
+  /** Whether the plan is known yet (SH-099): signed out or loading, nothing says "your Free plan". */
+  planState: "signedOut" | "loading" | "error" | "ready";
 }) {
   const messages = clampMessages(broadcastMessages);
   const [payOpen, setPayOpen] = useState(false);
@@ -1121,6 +1120,23 @@ function CostSummary({
 
   // Free tier can't run ads (ad_location_scope = none) — show an upsell instead
   // of the checkout so enforcement happens at the point of action.
+  if (planState !== "ready") {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-gray-200 mt-6 text-center min-[1400px]:mt-0 min-[1400px]:text-left" data-testid="ads-plan-state">
+        {planState === "signedOut" ? (
+          <>
+            <p className="text-base font-bold text-gray-900 mb-1">Sign in to advertise</p>
+            <Link to="/login" className="text-sm font-semibold text-[#ff2160] hover:underline">Sign in</Link>
+          </>
+        ) : planState === "error" ? (
+          <p className="text-sm text-gray-600">We couldn't check your plan. Reload the page to try again.</p>
+        ) : (
+          <p className="text-sm text-gray-500">Checking your plan…</p>
+        )}
+      </div>
+    );
+  }
+
   if (!canAds) {
     return (
       <div className="bg-white rounded-xl p-6 border border-amber-200 mt-6 text-center min-[1400px]:mt-0 min-[1400px]:text-left">
@@ -1564,9 +1580,13 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
                     Edit and resubmit
                   </button>
                 )}
-                <button onClick={() => onDelete(a.id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
-                  <X className="w-4 h-4" />
-                </button>
+                {/* Only a draft can be deleted (SH-099): every submitted campaign has a review history, which nobody
+                    deletes (guard_ad_deletion), so the X failed on every paid campaign. */}
+                {a.status === "draft" && (
+                  <button onClick={() => onDelete(a.id)} aria-label="Delete draft" className="p-1 text-gray-400 hover:text-red-500 shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <p className="mt-1.5 pl-12 text-[11px] text-gray-500">{rs.reason}</p>
               {/* The part the Cosora team does by hand (Mitra, 2026-11-17). */}
@@ -1758,11 +1778,13 @@ function GetVerified({ vendorId, planGrantsSeal, planName, registered, onCreated
 
 const Advertisements = () => {
   const reduced = useReducedMotion();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
   const { data: myAds = [] } = useMyAds(user?.id);
   const { data: myProducts = [] } = useMyProducts(user?.id);
-  const { data: vplan } = useVendorPlan(user?.id);
+  const { data: vplan, isError: planError } = useVendorPlan(user?.id);
+  const planState: "signedOut" | "loading" | "error" | "ready" =
+    !authLoading && !user ? "signedOut" : vplan ? "ready" : planError ? "error" : "loading";
   const { data: vendorCats = [] } = useVendorCategories(user?.id);
   // Plan ad-location scope drives ad enforcement: Free can't run ads; paid tiers
   // can target up to 1 / 4 / unlimited locations (pan-India / global).
@@ -1883,6 +1905,7 @@ const Advertisements = () => {
                   stateTargeting={stateTargeting}
                   selectedCountries={selectedCountries}
                   broadcastMessages={broadcastMessages}
+                  planState={planState}
                 />
               </div>
             </motion.div>

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMySubmittedQuotes } from "@/lib/queries/rfqs";
 import type { MySubmittedQuote } from "@/lib/queries/rfqs";
 import { QuoteDetailDialog } from "@/components/vendor/QuoteDetailDialog";
+import { priceText } from "@/lib/currency";
 import { useCallBuyer } from "@/lib/queries/calls";
 import {
   useVendorOrderValue, useVendorResponsiveness, formatInrCompact, formatDelay,
@@ -276,7 +277,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                     <p className="text-xs text-gray-400 lg:text-[13px]">{q.buyerName}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-lg font-bold text-brand-buyer lg:text-xl lg:tabular-nums">₹ {q.pricePerUnit}</p>
+                    <p className="text-lg font-bold text-brand-buyer lg:text-xl lg:tabular-nums">{priceText("₹", q.pricePerUnit)}</p>
                     <p className="text-[10px] text-gray-400 lg:text-xs">per unit</p>
                   </div>
                 </div>
@@ -286,7 +287,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                 {q.image && (
                   <div className="lg:flex lg:flex-wrap lg:items-center lg:gap-x-5 lg:gap-y-1 lg:mb-2">
                     <p className="text-xs text-gray-600 mb-1 lg:mb-0">RFQ: {q.rfqCode}</p>
-                    <p className="text-xs text-gray-700 mb-1 lg:mb-0">Price: ₹{q.pricePerUnit}/unit&nbsp;&nbsp;MOQ: {q.moq}</p>
+                    <p className="text-xs text-gray-700 mb-1 lg:mb-0">Price: {priceText("₹", q.pricePerUnit)}/unit&nbsp;&nbsp;MOQ: {q.moq}</p>
                     <p className="text-xs text-gray-700 mb-2 lg:mb-0">Lead Time: {q.leadTime}</p>
                   </div>
                 )}

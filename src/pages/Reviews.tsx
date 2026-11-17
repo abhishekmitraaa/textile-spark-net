@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Star, Share2, X, ChevronDown, AlertCircle, Package } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useVendorReviews, useVendorProductReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { REVIEW_PAGE, useVendorReviews, useVendorProductReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { ReviewLinkShare } from "@/components/vendor/ReviewLinkShare";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { errorMessage } from "@/lib/errorMessage";
@@ -213,8 +213,11 @@ type Tab = "store" | "products";
 const Reviews = () => {
   const reduced = useReducedMotion();
   const { user, loading: authLoading } = useAuth();
-  const store = useVendorReviews(user?.id);
-  const products = useVendorProductReviews(user?.id);
+  // A page at a time, with "Show older reviews" (SH-108).
+  const [storeLimit, setStoreLimit] = useState(REVIEW_PAGE);
+  const [productLimit, setProductLimit] = useState(REVIEW_PAGE);
+  const store = useVendorReviews(user?.id, storeLimit);
+  const products = useVendorProductReviews(user?.id, productLimit);
   const { reply, replyToProduct } = useReviewMutations();
   const [tab, setTab] = useState<Tab>("store");
   const [qrOpen, setQrOpen] = useState(false);
@@ -281,8 +284,13 @@ const Reviews = () => {
       );
     }
 
+    const shown = tab === "store" ? storeReviews.length : productReviews.length;
+    const total = tab === "store" ? reviewerCount : store.data?.productCount ?? shown;
     return (
       <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3">
+        {shown < total && (
+          <p className="sr-only">{`Showing ${shown} of ${total}`}</p>
+        )}
         {tab === "store"
           ? storeReviews.map((review) => (
               <motion.div key={review.id} variants={listItem}>
@@ -327,19 +335,26 @@ const Reviews = () => {
                 />
               </motion.div>
             ))}
+        {shown < total && (
+          <button type="button" onClick={() => (tab === "store" ? setStoreLimit((l) => l + REVIEW_PAGE) : setProductLimit((l) => l + REVIEW_PAGE))}
+            className="mx-auto block rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+            Show older reviews
+          </button>
+        )}
       </motion.div>
     );
   };
 
   const tabCount = (t: Tab) => {
-    const q = t === "store" ? store : products;
-    if (!q.data) return null;
-    return t === "store" ? storeReviews.length : productReviews.length;
+    // The counts are over every review, not the page loaded (SH-108).
+    if (!store.data) return null;
+    return t === "store" ? store.data.count : store.data.productCount;
   };
 
   return (
     <DashboardLayout>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-5 pb-8">
+        <h1 className="text-lg font-bold text-gray-900">Reviews</h1>
 
         {/* ── Get Ratings Section ── */}
         <motion.div variants={section}>

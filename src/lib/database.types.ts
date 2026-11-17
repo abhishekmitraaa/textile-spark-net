@@ -6903,6 +6903,11 @@ export type Database = {
       }
       vendor_cap_plan: { Args: { p_vendor: string }; Returns: string }
       my_profile_score: { Args: never; Returns: number }
+      chat_buyer_card: {
+        Args: { p_other: string }
+        Returns: { name: string; company: string | null; city: string | null; member_since: string }[]
+      }
+      vendor_review_stats: { Args: { p_vendor: string }; Returns: Json }
       my_ad_manual_work: {
         Args: never
         Returns: { ad_id: string; done_at: string | null; messages: number | null }[]

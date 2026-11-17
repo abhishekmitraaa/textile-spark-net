@@ -722,11 +722,15 @@ async function fetchConversations(userId: string): Promise<ChatSummary[]> {
 
   const others = Array.from(new Set(rows.map((c) => (c.user_a === userId ? c.user_b : c.user_a))));
   const meta = new Map<string, { name: string; avatar: string | null }>();
-  if (others.length) {
-    const [{ data: profiles }, { data: vendors }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, avatar_url").in("id", others),
-      supabase.from("vendor_profiles").select("id, brand_name").in("id", others),
+  // In groups of 100 (SH-107): one GET with every id failed past about 400 chats, and every name became "User".
+  for (let i = 0; i < others.length; i += 100) {
+    const ids = others.slice(i, i + 100);
+    const [{ data: profiles, error: pErr }, { data: vendors, error: vErr }] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, avatar_url").in("id", ids),
+      supabase.from("vendor_profiles").select("id, brand_name").in("id", ids),
     ]);
+    if (pErr) throw pErr;
+    if (vErr) throw vErr;
     const vmap = new Map((vendors ?? []).map((v) => [v.id, v.brand_name]));
     for (const p of profiles ?? []) {
       meta.set(p.id, { name: vmap.get(p.id) ?? p.full_name ?? "User", avatar: p.avatar_url });

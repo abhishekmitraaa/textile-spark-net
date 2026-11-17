@@ -150,8 +150,10 @@ test("a chat opens on its newest 40 messages and loads older ones", async ({ bro
   await expect(page.getByText("AS line 15", { exact: true })).toHaveCount(0);
   expect(await box.evaluate((el) => el.scrollTop)).toBeGreaterThan(200);
 
-  // The button does the same; at the start of the chat it goes away.
-  await page.getByTestId("chat-load-older").click();
+  // The button does the same; at the start of the chat it goes away. Pressed where it is (as a keyboard or screen
+  // reader does): a click scrolls it into view first, which reaches the top and loads the older page on its own, so
+  // the button turned to "Loading…" and went away before the click landed (the flake logged on 2026-11-17).
+  await page.getByTestId("chat-load-older").evaluate((b) => (b as HTMLButtonElement).click());
   await expect(page.getByText("AS line 1", { exact: true })).toBeAttached({ timeout: 15_000 });
   await expect(page.getByTestId("chat-load-older")).toHaveCount(0);
   await expect(page.getByText(/^AS line \d+$/)).toHaveCount(95); // each once

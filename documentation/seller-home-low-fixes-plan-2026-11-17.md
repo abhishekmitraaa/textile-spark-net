@@ -58,7 +58,21 @@ missing) pass. What was built differs from the plan below in these places:
 | SH-081 | Quote prices must be more than 0: a CHECK on `quotes.price_per_unit` (`not valid`, so old rows are left alone), the same test in both forms, and a keypad with a decimal point. |
 | SH-082 | **(Mitra: view only)** "View quote" opens a read-only dialog with the quote and the request it answers. |
 
-## Batch 2 (7, and the failing chat spec)
+## Batch 2 (7, and the failing chat spec): built and tested locally, 2026-11-17
+
+Migration `20261117140000` (applied locally). Tests: `tests/local/seller-home-low-b.spec.ts` 5/5; `audit-second`'s chat
+test 5/5 in a row. What was built differs from the plan below in these places:
+- SH-099: impressions keep their own counter, `public.ad_impression_daily` (campaign, viewer, India day), keyed like
+  clicks: 8 a day per viewer, 5 seconds apart, the owner's views not counted. Signed out with no session, every call is
+  one shared viewer. A script inventing session ids still gets 8 per invented id, as with clicks before their
+  per-campaign cap; a per-campaign cap on signed-out impressions would be a new limit, so it is left for Mitra.
+- SH-099, the FAQ: the line that says ads "can be stopped" is FAQ wording (Andy's/Mitra's), not changed in code. Sellers
+  can pause; the paid days are kept while paused.
+- SH-108: the lists load 100 at a time with "Show older reviews"; the tab counts are over every review.
+- audit-second: the app was right. Playwright's click scrolled the button into view, the scroll reached the top and
+  loaded the older page by itself, and the button turned to "Loading…" and went away before the click. The test now
+  presses the button where it is, as a keyboard or screen reader does.
+
 
 | Item | Plan |
 |---|---|

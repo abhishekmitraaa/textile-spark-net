@@ -9068,5 +9068,18 @@
  "It comes off your store and the buyer feed, and the file is deleted. This can't be undone.": "यह आपके स्टोर और खरीदार फ़ीड से हट जाएगा, और फ़ाइल हटा दी जाएगी। इसे वापस नहीं किया जा सकता।",
  "Sign in to see your notifications": "अपनी सूचनाएँ देखने के लिए साइन इन करें",
  "Show older notifications": "पुरानी सूचनाएँ दिखाएँ",
- "About Us saved. It counts toward your profile score from {0} characters.": "About Us सहेजा गया। यह {0} अक्षरों से आपके प्रोफ़ाइल स्कोर में गिना जाता है।"
+ "About Us saved. It counts toward your profile score from {0} characters.": "About Us सहेजा गया। यह {0} अक्षरों से आपके प्रोफ़ाइल स्कोर में गिना जाता है।",
+ "Choose your listings, how long the campaign runs and who sees it. You pay once for each campaign, at the price shown before you pay.": "अपनी लिस्टिंग, अभियान कितने दिन चलेगा और कौन उसे देखेगा, चुनें। हर अभियान के लिए आप एक बार, भुगतान से पहले दिखाई गई कीमत पर भुगतान करते हैं।",
+ "Leave both empty to show your ad to every buyer.": "हर खरीदार को अपना विज्ञापन दिखाने के लिए दोनों खाली छोड़ दें।",
+ "Sign in to advertise": "विज्ञापन देने के लिए साइन इन करें",
+ "We couldn't check your plan. Reload the page to try again.": "हम आपका प्लान जाँच नहीं सके। फिर से कोशिश करने के लिए पेज रीलोड करें।",
+ "Delete draft": "ड्राफ़्ट हटाएँ",
+ "Price:": "कीमत:",
+ "What this buyer shares with sellers on Cosora.": "यह खरीदार Cosora पर विक्रेताओं के साथ क्या साझा करता है।",
+ "This buyer's details aren't available.": "इस खरीदार का विवरण उपलब्ध नहीं है।",
+ "On Cosora since": "Cosora पर कब से",
+ "Showing {0} of {1}": "{1} में से {0} दिखाए जा रहे हैं",
+ "Show older reviews": "पुरानी समीक्षाएँ दिखाएँ",
+ "Share your review link": "अपना समीक्षा लिंक साझा करें",
+ "Keep the reply under 2,000 characters.": "उत्तर 2,000 अक्षरों से कम रखें।"
 }

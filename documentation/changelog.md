@@ -1,3 +1,14 @@
+- 2026-11-17 (branch `seller-home/low-fixes`; migration `20261117140000`; built and tested locally, **not released**)
+  **Seller Home audit, Low items batch 2 (7): SH-083, 084, 085, 099, 107, 108, 109**, and the `audit-second` flake.
+  - Decision: SH-107 "Small buyer card". Record `documentation/seller-home-low-fixes-plan-2026-11-17.md`.
+  - Database: lead alert history leaves out blocked buyers; `ad_impression` keeps its own daily counter per viewer;
+    `chat_buyer_card()`; `vendor_review_stats()`; replies at most 2,000 characters.
+  - App: Repeat Buyers counts a request and its chat once; Quotes prints paise; the ads page drops "No subscriptions",
+    "Automatically finds and updates audiences" and the dead "Date Range", shows the X on drafts only and doesn't claim
+    a Free plan while signed out or loading; the seller's "View Buyer Profile" opens the buyer card; chat names come in
+    groups of 100 and stay untranslated; review stats from the database, lists paged, sharing through ShareSheet;
+    headings on Reviews and Help; Help's Back stays in the app.
+  - Checks: `tests/local/seller-home-low-b.spec.ts` (5); `audit-second` fixed (the test, not the app).
 - 2026-11-17 (branch `seller-home/low-fixes`, stacked on `ads/manual-types`; migrations `20261117130000`, `130100`;
   built and tested locally, **not released**)
   **Seller Home audit, Low items batch 1 (20): SH-037–040, 047–053, 064–067, 069, 070, 074, 081, 082.**

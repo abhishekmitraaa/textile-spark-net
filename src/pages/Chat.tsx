@@ -370,12 +370,12 @@ function ChatRow({ conv, active, onOpen, onQuote }: { conv: ChatSummary; active?
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-1 text-sm font-bold text-gray-900">
-            <span className="truncate">{conv.name}</span>
+            <span className="truncate" data-no-translate>{conv.name}</span>
             {conv.starred && <Star aria-label="Starred" className="w-3 h-3 shrink-0 text-yellow-400 fill-yellow-400" />}
           </p>
           <span className="text-[11px] text-gray-400 shrink-0">{conv.timestamp}</span>
         </div>
-        <p className={cn("mt-0.5 text-xs truncate", conv.unread ? "text-gray-800 font-medium" : "text-gray-500")}>{conv.lastMessage}</p>
+        <p className={cn("mt-0.5 text-xs truncate", conv.unread ? "text-gray-800 font-medium" : "text-gray-500")} data-no-translate>{conv.lastMessage}</p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <QuoteChip product={conv.rfqProduct} onClick={onQuote} />
           {conv.unread > 0 && (
@@ -401,7 +401,7 @@ function CallRow({ call, onOpen, onCall, onQuote }: { call: CallRecord; onOpen: 
         className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer">
         <Avatar src={call.avatar} name={call.name} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-900 truncate">{call.name}</p>
+          <p className="text-sm font-bold text-gray-900 truncate" data-no-translate>{call.name}</p>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs">
             <Icon className={cn("w-3.5 h-3.5", color)} />
             <span className={cn("font-medium", missed ? "text-red-500" : "text-gray-500")}>{label}</span>

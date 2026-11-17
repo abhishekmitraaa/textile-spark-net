@@ -32,11 +32,20 @@ export interface RatingBucket {
 }
 
 export interface VendorReviewsData {
+  /** The newest `limit` store reviews (REVIEW_PAGE at a time). */
   reviews: VendorReview[];
+  /** Over every store review, from the database (vendor_review_stats; SH-108). */
   avg: number;
   count: number;
   breakdown: RatingBucket[];
+  /** How many product reviews the seller has, for the tab's count. */
+  productCount: number;
 }
+
+/** Reviews are read a page at a time (SH-108): the averages came from every row, which PostgREST cuts at 1,000. */
+export const REVIEW_PAGE = 100;
+
+interface ReviewStats { count: number; avg: number | null; breakdown: { stars: number; count: number }[] | null; product_count: number }
 
 interface RawReview {
   id: string;
@@ -58,13 +67,20 @@ function buildBreakdown(ratings: number[]): RatingBucket[] {
   });
 }
 
-async function fetchVendorReviews(vendorId: string): Promise<VendorReviewsData> {
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("id, rating, body, buyer_id, reviewer_name, reviewer_company, reply_body, replied_at, created_at")
-    .eq("vendor_id", vendorId)
-    .order("created_at", { ascending: false });
+async function fetchVendorReviews(vendorId: string, limit = REVIEW_PAGE): Promise<VendorReviewsData> {
+  const [{ data, error }, { data: statsRaw, error: statsError }] = await Promise.all([
+    supabase
+      .from("reviews")
+      .select("id, rating, body, buyer_id, reviewer_name, reviewer_company, reply_body, replied_at, created_at")
+      .eq("vendor_id", vendorId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit),
+    supabase.rpc("vendor_review_stats", { p_vendor: vendorId }),
+  ]);
   if (error) throw error;
+  if (statsError) throw statsError;
+  const stats = statsRaw as unknown as ReviewStats;
   const rows = (data ?? []) as RawReview[];
   const reviews: VendorReview[] = rows.map((r) => ({
     id: r.id,
@@ -77,15 +93,19 @@ async function fetchVendorReviews(vendorId: string): Promise<VendorReviewsData> 
     repliedAt: r.replied_at,
     createdAt: r.created_at,
   }));
-  const ratings = rows.map((r) => r.rating);
-  const avg = ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 0;
-  return { reviews, avg, count: ratings.length, breakdown: buildBreakdown(ratings) };
+  const count = Number(stats?.count ?? 0);
+  const byStars = new Map((stats?.breakdown ?? []).map((b) => [b.stars, Number(b.count)]));
+  const breakdown = [5, 4, 3, 2, 1].map((stars) => {
+    const n = byStars.get(stars) ?? 0;
+    return { stars, count: n, percent: count ? Math.round((n / count) * 100) : 0 };
+  });
+  return { reviews, avg: stats?.avg != null ? Number(stats.avg) : 0, count, breakdown, productCount: Number(stats?.product_count ?? 0) };
 }
 
-export function useVendorReviews(vendorId: string | undefined) {
+export function useVendorReviews(vendorId: string | undefined, limit = REVIEW_PAGE) {
   return useQuery({
-    queryKey: ["reviews", "vendor", vendorId],
-    queryFn: () => fetchVendorReviews(vendorId as string),
+    queryKey: ["reviews", "vendor", vendorId, limit],
+    queryFn: () => fetchVendorReviews(vendorId as string, limit),
     enabled: Boolean(vendorId),
   });
 }
@@ -171,7 +191,7 @@ interface RawVendorProductReview extends RawProductReview {
   products: { name: string | null; product_images: { url: string; position: number }[] | null } | null;
 }
 
-async function fetchVendorProductReviews(vendorId: string): Promise<VendorProductReview[]> {
+async function fetchVendorProductReviews(vendorId: string, limit = REVIEW_PAGE): Promise<VendorProductReview[]> {
   // product_reviews has no vendor_id, so scope through the product with an
   // inner join. Every status, not only live: a review on a listing that was
   // later unlisted is still the vendor's to read and answer, and
@@ -182,7 +202,9 @@ async function fetchVendorProductReviews(vendorId: string): Promise<VendorProduc
       "id, product_id, rating, body, buyer_id, reviewer_name, size_bought, photos, reply_body, replied_at, created_at, products!inner ( name, vendor_id, product_images ( url, position ) )",
     )
     .eq("products.vendor_id", vendorId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit);
   if (error) throw error;
   return ((data ?? []) as unknown as RawVendorProductReview[]).map((r) => ({
     id: r.id,
@@ -201,10 +223,10 @@ async function fetchVendorProductReviews(vendorId: string): Promise<VendorProduc
   }));
 }
 
-export function useVendorProductReviews(vendorId: string | undefined) {
+export function useVendorProductReviews(vendorId: string | undefined, limit = REVIEW_PAGE) {
   return useQuery({
-    queryKey: ["product_reviews", "vendor", vendorId],
-    queryFn: () => fetchVendorProductReviews(vendorId as string),
+    queryKey: ["product_reviews", "vendor", vendorId, limit],
+    queryFn: () => fetchVendorProductReviews(vendorId as string, limit),
     enabled: Boolean(vendorId),
   });
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ShareSheet from "@/components/buyer/ShareSheet";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 import { Star, Link2, Share2, Download } from "lucide-react";
@@ -52,18 +53,10 @@ export function ReviewLinkShare({ vendorId }: { vendorId: string | undefined }) 
     toast.success("Review link copied");
   };
 
-  const share = async () => {
-    if (!reviewUrl) return;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `Rate ${store?.brandName || "our business"} on Cosora`, url: reviewUrl });
-        return;
-      }
-    } catch {
-      // Dismissing the OS share sheet rejects — fall through to the clipboard.
-    }
-    await copyLink();
-  };
+  // Through <ShareSheet> (SH-108, claude.md "Sharing goes through <ShareSheet>"): WhatsApp and the rest, and the
+  // device's own menu, not a bare navigator.share.
+  const [shareOpen, setShareOpen] = useState(false);
+  const share = () => { if (reviewUrl) setShareOpen(true); };
 
   const downloadQr = () => {
     if (!qrDataUrl) return;
@@ -152,6 +145,13 @@ export function ReviewLinkShare({ vendorId }: { vendorId: string | undefined }) 
           </button>
         </div>
       </div>
+      <ShareSheet
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={reviewUrl}
+        title={`Rate ${store?.brandName || "our business"} on Cosora`}
+        heading="Share your review link"
+      />
     </div>
   );
 }

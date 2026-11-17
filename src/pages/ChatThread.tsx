@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { BuyerCard } from "@/components/chat/BuyerCard";
 import { useNavigate, useParams } from "react-router-dom";
 import { supportChatHref } from "@/lib/supportContact";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -79,6 +80,8 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const locked = underReview || blocked;
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  // A seller sees the buyer's small card; buyers have no store page (SH-107).
+  const [buyerCardOpen, setBuyerCardOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -211,7 +214,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
     if (await shareContact()) toast.success("Contact card sent");
   };
 
-  const goProfile = () => navigate(`/vendor/${conv.id}`);
+  const goProfile = () => (isSeller ? setBuyerCardOpen(true) : navigate(`/vendor/${conv.id}`));
   // Sellers manage quotes they've sent (/quotes); buyers track quotes received.
   const goQuote = () => navigate(isSeller ? "/quotes" : "/requirement/my-quotes");
   const hasText = draft.trim().length > 0;
@@ -535,6 +538,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
         </AlertDialogContent>
       </AlertDialog>
 
+      {conv && <BuyerCard buyerId={conv.id} open={buyerCardOpen} onOpenChange={setBuyerCardOpen} />}
       <ReportModal
         open={reportOpen}
         onClose={() => setReportOpen(false)}

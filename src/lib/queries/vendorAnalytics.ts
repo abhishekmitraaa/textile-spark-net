@@ -372,9 +372,13 @@ async function fetchRepeatBuyers(vendorId: string): Promise<RepeatBuyers> {
     touches.set(id, (touches.get(id) ?? 0) + 1);
   };
 
+  // A direct request opens a conversation too, so one request used to count twice and made its buyer a "repeat"
+  // (SH-083). Requests and calls count each; a conversation counts only for a buyer who sent no request.
+  const requested = new Set(((rfqRows ?? []) as { buyer_id: string }[]).map((r) => r.buyer_id));
   for (const c of (callRows ?? []) as { buyer_id: string }[]) bump(c.buyer_id);
   for (const c of (convRows ?? []) as { user_a: string; user_b: string }[]) {
-    bump(c.user_a === vendorId ? c.user_b : c.user_a);
+    const other = c.user_a === vendorId ? c.user_b : c.user_a;
+    if (!requested.has(other)) bump(other);
   }
   for (const r of (rfqRows ?? []) as { buyer_id: string }[]) bump(r.buyer_id);
 

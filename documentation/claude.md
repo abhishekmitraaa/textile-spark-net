@@ -1340,6 +1340,15 @@ undocumented. Deep technical rationale for each lives in
   body is in `external-strings.json` → `notifications`, with `{0}` where SQL joins text. Text a buyer wrote inside a
   title ("New requirement: …", "Follow-up due: …") renders in `data-no-translate` (`NoticeTitle`). A new `notify()`
   text adds its entry in the same change.
+- **Ad impressions are counted by `ad_impression()` alone, against its own daily counter** (2026-11-17, SH-099;
+  `20261117140000`): `ad_impression_daily`, 8 a day per viewer (account, else session, else one shared "unkeyed"), 5 s
+  apart, never the owner's own. The browser's `ad_impression` engagement event is analytics only and caps nothing.
+- **Review averages and breakdowns come from `vendor_review_stats()`** (2026-11-17, SH-108); review lists load
+  `REVIEW_PAGE` (100) at a time. A reply is at most 2,000 characters (the reply functions and a CHECK).
+- **A seller sees a buyer through `chat_buyer_card()` only** (Mitra, 2026-11-17, "Small buyer card"; SH-107): name,
+  company, city, member since, to the other person in a conversation, never while blocked. Buyers have no store page.
+- **The lead alert history leaves out a buyer with a block either way** (2026-11-17, SH-084), like every other way a
+  seller sees a buyer's requirements.
 - **Opening a chat writes nothing** (2026-11-17, SH-105): `useChatThread()` reads the conversation; the first message
   creates it (insert if missing, never rewritten). An id that isn't an account is `invalid`.
 - **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,

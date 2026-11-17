@@ -1,6 +1,7 @@
+import { useStepBack } from "@/hooks/useStepBack";
 import { useState, useMemo } from "react";
 import { faqText, useFaqs, groupFaqs } from "@/lib/queries/faqs";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Search, Phone, Mail, Flag,
@@ -75,7 +76,8 @@ const FAQ_CATEGORY_ICONS: Record<string, typeof HelpCircle> = {
 
 const Help = () => {
   const reduced = useReducedMotion();
-  const navigate = useNavigate();
+  // Opened from a link, Back goes home instead of leaving the app (SH-052 rule).
+  const back = useStepBack("/home");
   const { role } = useUserRole();
   const isSeller = role === "seller";
   const { user } = useAuth();
@@ -118,7 +120,11 @@ const Help = () => {
 
   const frame = (children: ReactNode) =>
     isSeller ? (
-      <DashboardLayout>{children}</DashboardLayout>
+      // The seller frame had no h1 (SH-109); the buyer frame's is in its header.
+      <DashboardLayout>
+        <h1 className="mx-auto mb-4 max-w-6xl text-lg font-bold text-gray-900">Help &amp; Support</h1>
+        {children}
+      </DashboardLayout>
     ) : (
       <div
         className="min-h-screen bg-gray-50"
@@ -127,7 +133,7 @@ const Help = () => {
         {/* ── Back header (no home tab strip in the profile section) ── */}
         <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
           <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-            <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
+            <button onClick={back} aria-label="Back" className="-ml-1 p-1">
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
             <h1 className="text-base font-bold text-gray-900">Help &amp; Support</h1>

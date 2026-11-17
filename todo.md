@@ -57,12 +57,9 @@ short list of things someone has to *decide*.
 
 ## Seller Home audit (2026-11-15) — what is still open
 
-Every High item, sections A–C (SH-001 to SH-033) and every Medium item of D–L (2026-11-17,
-`documentation/seller-home-medium-fixes-plan-2026-11-17.md`) are fixed, and the first 20 Low items are fixed on branch
-`seller-home/low-fixes` (`documentation/seller-home-low-fixes-plan-2026-11-17.md`). Still open: SH-083–085, 099, 107–109
-in `documentation/seller-home-audit-2026-11-15.md` (batch 2 of the same plan), and:
-- The local spec `audit-second` "a chat opens on its newest 40 messages and loads older ones" fails at "Load earlier
-  messages" (the button is re-rendered before it can be tapped), on main as well as the Medium branch (2026-11-17).
+Every High, Medium and Low item of the audit is fixed on a branch: High and Medium are live; the 27 Low items are on
+`seller-home/low-fixes` (`documentation/seller-home-low-fixes-plan-2026-11-17.md`), waiting for release. Left for
+Mitra: a per-campaign cap on signed-out ad impressions (SH-099), and the FAQ line that says ads can be stopped.
 
 ## Medium priority
 
