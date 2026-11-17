@@ -44,8 +44,21 @@ type Normalised = {
 
 const MAX_BODY = 64 * 1024;
 
-/** Only reports about our own pages are stored. */
-const OWN_HOST = /(^|\.)cosora\.in$|\.vercel\.app$/;
+/**
+ * Only reports about our own pages are stored: cosora.in, and the hosts Vercel gives THIS project (its production,
+ * branch and deployment URLs, which Vercel sets as system environment variables). It used to accept any *.vercel.app
+ * host, which is anyone's site (2026-10-13 review item 4, done 2026-11-18).
+ *
+ * The page URL in a report is whatever the sender wrote, so this keeps honest mistakes out; it authenticates nothing.
+ * csp_report_ingest() keeps a full table from dropping new reports.
+ */
+const COSORA_HOST = /(^|\.)cosora\.in$/;
+const DEPLOYMENT_HOSTS = new Set(
+  [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]
+    .filter((h): h is string => Boolean(h))
+    .map((h) => h.toLowerCase()),
+);
+const ownHost = (host: string) => COSORA_HOST.test(host) || DEPLOYMENT_HOSTS.has(host.toLowerCase());
 
 const KEYWORDS = new Set(["inline", "eval", "wasm-eval", "self", "data", "blob", "trusted-types-policy", "trusted-types-sink"]);
 
@@ -89,7 +102,7 @@ function sourceFile(value: unknown): string {
 
 function normalise(r: Record<string, unknown>): Normalised | null {
   const page = pagePath(r.documentURL ?? r["document-uri"]);
-  if (!page || !OWN_HOST.test(page.host)) return null;
+  if (!page || !ownHost(page.host)) return null;
   const directive = String(r.effectiveDirective ?? r["effective-directive"] ?? r["violated-directive"] ?? "")
     .trim()
     .split(/\s+/)[0];

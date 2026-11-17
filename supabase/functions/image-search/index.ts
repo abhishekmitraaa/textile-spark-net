@@ -1,3 +1,4 @@
+import { verifiedUserId } from "../_shared/auth.ts";
 // Supabase Edge Function: image-search
 //
 // Turns an uploaded product photo into a short text search query using a
@@ -62,17 +63,11 @@ async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
 // (whose token has no `sub`). The signature is NOT re-verified here: verify_jwt
 // is on for this function, so the platform has already rejected any request
 // whose token does not validate before this code runs.
-function jwtSubject(req: Request): string | null {
-  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
-    const claims = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, "=")));
-    return typeof claims?.sub === "string" && claims.sub ? claims.sub : null;
-  } catch {
-    return null;
-  }
+// Asks Supabase Auth who the caller is (_shared/auth.ts verifiedUserId): the token's signature and its session are
+// checked on every call, so a signed-out or banned account's token stops working at once, and a config slip that
+// drops verify_jwt can't let a hand-made token name anyone (2026-10-13 review item 5, done 2026-11-18).
+function jwtSubject(req: Request): Promise<string | null> {
+  return verifiedUserId(req, Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 }
 
 const PROMPT =
@@ -144,7 +139,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     const allowed = await rpc<boolean>("image_search_rate_check", {
       p_ip: ip,
-      p_user_id: jwtSubject(req),
+      p_user_id: (await jwtSubject(req)),
     });
     if (!allowed) return json({ error: "rate_limited" }, 200);
   } catch {

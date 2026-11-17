@@ -62,6 +62,7 @@ import { checkAdOrder } from "../_shared/adOrderChecks.ts";
 // Claiming the order and inserting its campaigns is one transaction now, shared with
 // razorpay-webhook: ../_shared/adPublish.ts (written 2026-10-13, released with the Seller Home fixes, SH-090).
 import { publishOrder } from "../_shared/adPublish.ts";
+import { verifiedUserId } from "../_shared/auth.ts";
 
 
 // Demo mode has no pre-recorded intent, so record the blocked attempt as its own
@@ -107,15 +108,11 @@ async function hmacHex(secret: string, data: string): Promise<string> {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-function vendorIdFromJwt(req: Request): string | null {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    return JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))).sub ?? null;
-  } catch {
-    return null;
-  }
+// Asks Supabase Auth who the caller is (_shared/auth.ts verifiedUserId): the token's signature and its session are
+// checked on every call, so a signed-out or banned account's token stops working at once, and a config slip that
+// drops verify_jwt can't let a hand-made token name anyone (2026-10-13 review item 5, done 2026-11-18).
+function vendorIdFromJwt(req: Request): Promise<string | null> {
+  return verifiedUserId(req, Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 }
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -141,7 +138,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // A code took this order to ₹0: create-order made no Razorpay order, so there
   // is no signature to check. The stored order is the proof instead.
   if (body.free) {
-    const vendorId = vendorIdFromJwt(req);
+    const vendorId = (await vendorIdFromJwt(req));
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
     const orderId = body.orderId;
     if (!orderId || !orderId.startsWith("free_")) return json({ ok: false, error: "not_free" }, 400);
@@ -164,7 +161,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // Demo mode — no gateway configured; publish from the client spec.
   if (!keySecret) {
-    const vendorId = vendorIdFromJwt(req);
+    const vendorId = (await vendorIdFromJwt(req));
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
     if (!body.spec) return json({ ok: false, error: "missing_spec" }, 400);
     // The same checks a live order passes before payment (SH-095, SH-096).

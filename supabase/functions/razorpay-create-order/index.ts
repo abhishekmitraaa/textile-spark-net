@@ -46,17 +46,13 @@ import { checkAdOrder } from "../_shared/adOrderChecks.ts";
 import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 import { adReach } from "../_shared/adReach.ts";
 import { razorpayApiBase } from "../_shared/razorpay.ts";
+import { verifiedUserId } from "../_shared/auth.ts";
 
-function vendorIdFromJwt(req: Request): string | null {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    const payload = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch {
-    return null;
-  }
+// Asks Supabase Auth who the caller is (_shared/auth.ts verifiedUserId): the token's signature and its session are
+// checked on every call, so a signed-out or banned account's token stops working at once, and a config slip that
+// drops verify_jwt can't let a hand-made token name anyone (2026-10-13 review item 5, done 2026-11-18).
+function vendorIdFromJwt(req: Request): Promise<string | null> {
+  return verifiedUserId(req, Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -74,7 +70,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json({ error: "server_misconfigured" }, 500);
 
-  const vendorId = vendorIdFromJwt(req);
+  const vendorId = (await vendorIdFromJwt(req));
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
 
   let payload: { spec?: AdSpec; discountCode?: string };
