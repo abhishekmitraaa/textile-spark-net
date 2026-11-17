@@ -1,5 +1,6 @@
 - 2026-11-16 (branch `seller-home/fixes`, admin branch `seller-home/high-fixes`; migrations `20261116110000`–`110300`;
-  **not live**: production migrations, three functions to deploy and the merges each need Mitra's yes)
+  **LIVE 2026-11-17**: migrations applied with the Supabase CLI (`db query --linked`, so not in the migration ledger),
+  `razorpay-verify-payment` and `razorpay-webhook` deployed, buyer main `a96cbd3`, admin main `f3db33a`)
   **Seller Home audit: the nine High items left after A–C (SH-068, 071, 075, 076, 086, 088, 089, 090, 100).**
   - Why: Mitra, 2026-11-16, "before the release, I want you to do more big fixes ... plan a fix for all the bugs which
     were in high priority and then fix them". Decisions: remove the catalogue's "Who can view" question; give paused ad
@@ -26,8 +27,8 @@
     Five minors deferred and the release pre-checks are in the plan's "Record of the build".
   - Left out, on purpose: the other five October review fixes (ToDo); refunds for rejected campaigns; the audit's
     Medium and Low items.
-- 2026-11-16 (branch `seller-home/fixes`; migrations `20261116100000`–`100400`; **not live**: production migrations, the
-  merge and the switch each need Mitra's yes) **Seller Home fixes, audit sections A–C (SH-001…SH-033).**
+- 2026-11-16 (branch `seller-home/fixes`; migrations `20261116100000`–`100400`; **LIVE 2026-11-17** with the High fixes
+  above, same release; `live_updates_hub` still off) **Seller Home fixes, audit sections A–C (SH-001…SH-033).**
   - Why: Mitra, 2026-11-15, "formulate a plan and fix this above issues"; decisions: vendor blue on all seller pages,
     Free plan 10 listings, leave the Buyer/Seller switch as is, everything now as an app-wide live-update hub, the
     unsigned-agreement prompt on Home + publishing pages, native execution. Audit

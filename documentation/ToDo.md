@@ -42,9 +42,9 @@ with no need to dictate format, context, or reference each time.
 - Status: Open
 
 ### Turn on the live-update hub — added 2026-11-16
-- Task: after the Seller Home fixes are released (both sets: migrations `20261116100000`–`100400` and `110000`–`110300`,
-  then `razorpay-verify-payment` and `razorpay-webhook`, then both apps), Mitra turns on `live_updates_hub` (Cosora-Admin › Feature switches,
-  with a reason), first for a few accounts, then everyone.
+- Task: the Seller Home fixes are live (2026-11-17: every migration, both payment functions and both apps), so this is
+  the last step. Mitra turns on `live_updates_hub` (Cosora-Admin › Feature switches, with a reason), first for a few
+  accounts, then everyone.
 - Context: one private Broadcast channel per account replaces each tab's per-page table subscriptions (SH-030,
   SH-031, SH-036). Off, nothing changes. Watch Realtime's connection count and the `realtime.messages` partitions
   after switching on; if hosted Realtime refuses the join, the app falls back to the old subscriptions by itself.
