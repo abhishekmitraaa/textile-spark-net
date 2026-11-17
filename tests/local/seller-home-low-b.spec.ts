@@ -91,7 +91,8 @@ test("every ad impression is recorded; the page says only what is true", async (
     insert into public.advertisements (vendor_id, title, placement, status, starts_at, ends_at)
     values ('${s.id}', 'LB ${tag} ad', 'openListing', 'active', now(), now() + interval '7 days') returning id;
     set session_replication_role = origin;`));
-  const impressions = () => Number(sql(`select impressions from public.advertisements where id = '${ad}'`));
+  // Impressions are queued and folded in every minute (20261118110000); fold now, then read.
+  const impressions = () => Number(sql(`select admin.ad_impressions_fold(); select impressions from public.advertisements where id = '${ad}'`).split("\n").pop());
   const anon = clientFor(null);
   // Every impression is recorded, with no daily cap (Mitra, 2026-11-18): 40 signed-out calls, 10 sessions, one signed in.
   for (let i = 0; i < 40; i++) await anon.rpc("ad_impression", { ad });
