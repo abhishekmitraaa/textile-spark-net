@@ -3,7 +3,7 @@
 Durable record of everything explicitly **deferred rather than built**, so it
 does not get lost the way the previous "still open" ledger nearly did.
 
-Last reviewed: 2026-11-17 (Seller Home fixes released; every feature switch on).
+Last reviewed: 2026-11-18 (checked against changelog.md; done items removed).
 Longer-form engineering notes live in `documentation/ToDo.md`; this file is the
 short list of things someone has to *decide*.
 
@@ -38,14 +38,6 @@ short list of things someone has to *decide*.
   footer that it is not a tax invoice. Blocked on the Razorpay item above —
   build invoicing on a live payment path, not a simulated one.
 
-- **5 unplaced ad types still purchasable with no delivery mechanism:**
-  Direct Broadcast, Web & Mobile Combo, Facebook & Instagram Ad, Google Product
-  Ad, Social Media Combo. Vendors can buy these today; nothing delivers on the
-  purchase. Needs either a build-out or a decision to stop selling them.
-  Reasons each is unplaced are in `src/lib/adSlots.ts` (`UNPLACED_AD_TYPES`),
-  and `scripts/ad-slot-map-check.mjs` fails if any type is neither placed nor
-  given a stated reason.
-
 - **Certificates are sellable to every vendor but deliverable to almost none.**
   Only **2 of 10** `vendor_profiles` rows carry both an address line and a
   postcode, and the one that does has zero live products.
@@ -58,8 +50,7 @@ short list of things someone has to *decide*.
 ## Seller Home audit (2026-11-15) — what is still open
 
 Every High, Medium and Low item of the audit is fixed on a branch: High and Medium are live; the 27 Low items are on
-`seller-home/low-fixes` (`documentation/seller-home-low-fixes-plan-2026-11-17.md`), waiting for release. Left for
-Mitra: a per-campaign cap on signed-out ad impressions (SH-099), and the FAQ line that says ads can be stopped.
+`seller-home/low-fixes` (`documentation/seller-home-low-fixes-plan-2026-11-17.md`), waiting for release.
 
 ## Medium priority
 
@@ -74,13 +65,6 @@ Mitra: a per-campaign cap on signed-out ad impressions (SH-099), and the FAQ lin
 - **Confirm the rights to the interest photos.** The 13 in `src/assets/Buyer/Preference/` came from Mitra with no
   source recorded; one shows a real brand's label (hobbytime.etsy.com) and one a child. claude.md says an image the
   project doesn't own is replaced, not kept. The 4 from Unsplash are recorded in `src/assets/interests/README.md`.
-
-
-- **City targeting reaches almost nobody.** Only 1 of the buyer profiles has a
-  city set, and `ad_targeting_matches()` fails closed by design (a viewer whose
-  city is unknown is not shown a city-targeted ad). A soft, dismissible nudge
-  was added to the buyer profile page on 2026-09-14; if uptake stays low,
-  decide whether to keep selling city targeting at all.
 
 ---
 
