@@ -7,32 +7,20 @@ with no need to dictate format, context, or reference each time.
 ## Open
 
 ### Buyer-side review 2026-11-18: the full bug list (13 High, 75 Medium, 104 Low) — added 2026-11-18
-- Task: fix every item below. High is being fixed on branch `fix/high-bugs-2026-11-18`
-  (plan: `documentation/high-bugs-fixes-plan-2026-11-18.md`); remove each line here once its fix is live.
+- Task: fix every item below; remove each line here once its fix is live. High H-01–H-11 and H-13 are LIVE (2026-11-18,
+  buyer main `33db067`, migrations `20261118140000`, `20261118160000`; plan `documentation/high-bugs-fixes-plan-2026-11-18.md`).
 - Context: review of the buyer home, seller home, post-registration nudges, Back navigation, every buyer route and the
   production database (main 2b02358). Evidence tags: live = reproduced in the browser on www.cosora.in; DB = production
   query; plausible = likely, not fully verified; no tag = confirmed in code. "known" = already in this file or
   securityflags.md. Route map with each route's tables, migrations and Back results: `documentation/sitemap.xml`.
   Screenshots: `cosora testing/.playwright-mcp/review-2026-11-18/`.
 - Mitra's decisions for High (2026-11-18): H-04 take the demo data off live; H-11 precomputed feed + a scheduled job;
-  H-12 make thumbnails at upload; H-13 keep Service Vendors / Freelancers but remove the fakes.
+  H-12 thumbnails, then server-made once a browser-made one was found to skip review; H-13 keep Service Vendors / Freelancers but remove the fakes.
 - Reference: 2026-11-18 review sessions (two passes), SESSION-CONTEXT.md.
-- Status: Open (High in progress)
+- Status: Open (H-12 server half next; then Medium and Low)
 
 **High**
-- H-01 live — New Arrivals pads its last row with a "-fill" clone linking to /product/<id>-fill0 ("Product not found"); saving it stores a fake id. NewArrivals.tsx:454
-- H-02 live — /requirement, /requirement/quick-rfq, /requirement/post-requirement/form, /requirement/post-requirement/success render the BuyerRouteShell developer card ("Route scaffold · Phase 1"). App.tsx:157-207
-- H-03 — Signed-out Post Requirement submit says "Use the dev switcher (bottom-left) to sign in as Demo Buyer", no Sign in action, answers lost. PostRequirement.tsx:272-275
-- H-04 live, DB — Demo catalogue live: 20/27 live listings are b0000000 seeds, "Demo Textiles Co." live, 26/27 hotlink Unsplash (Leather Belt broken), the only Video Close-Up is a test clip whose listing isn't live.
-- H-05 — Recently Viewed invents rating, gender and fabric (makeListingProduct fallback) and filters/sorts on them. recentlyViewedStore.ts:186, listingProducts.ts:49
-- H-06 live — Unfinished sign-up has no exit: "I am a…" has no Sign out / Help / Home, Back loops via Login's redirect. RoleSelection.tsx, Login.tsx:136-139
-- H-07 — A signed-out seller fills all 9 registration steps and loses them at sign-in ("your answers stay on this page" is false). Onboarding.tsx:825, 780
-- H-08 live — On-screen Back leaves Cosora when the page was opened directly: Search.tsx:330, SearchResults.tsx:935, VendorProfile.tsx:316/360/381, RecentlyViewed.tsx:192, FollowingViewAll.tsx:103, TermsConditions.tsx:18, PrivacyPolicy.tsx:146, VideoCloseUpsPage.tsx:102/108.
-- H-09 live — useStepBack treats a first-load redirect as in-app history (location.key !== "default"), so Back leaves the site (/profile/help/chat → /help). useStepBack.ts:14
-- H-10 live — Help's Back goes to /home, which inside the app is the 404 page. Help.tsx:80
-- H-11 DB — feed_products can't use an index for its top-N sort (~190 ms at 10,000 listings, 3–4 calls per Home view, 60 connections).
-- H-12 — Every product card downloads two full-size photos eagerly (no lazy loading, no thumbnails); 5 GB/month egress. NewArrivals.tsx:127-136, ListingProductCard, Sale, Trends
-- H-13 known — Service Vendors / Freelancers are seed providers shown as real: Call Now dials generated numbers, "4.9 (127 reviews)", invented review cards, in the SEO sitemap.
+- H-12 — Product cards: lazy loading and the hover-only second photo are LIVE (2026-11-18, `CardPhotos`); still to do: server-made 480 px thumbnails (Mitra, 2026-11-18: "Build server-made"; a browser-made thumbnail would be a seller-controlled file that review never sees): an edge function writes them from the approved photo into a service-only bucket, plus a backfill.
 
 **Medium — buyer home and browsing**
 - M-01 live — BuyerSignupGate renders the page, then null while the registration loads: double mount, ads counted twice. BuyerSignupGate.tsx:28

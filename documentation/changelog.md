@@ -1,5 +1,7 @@
-- 2026-11-18 (branch `fix/high-bugs-2026-11-18`; migrations `20261118140000`, `20261118160000`; **built and tested, NOT
-  released**)
+- 2026-11-18 (branch `fix/high-bugs-2026-11-18`; migrations `20261118140000`, `20261118160000`; **LIVE 2026-11-18**: buyer
+  main `33db067` (bundle `index-Cqdxj2J6.js`), both migrations applied with the CLI (not in the ledger), each self-check
+  passing; production after: 1 live listing, 26 seed listings + 1 video in `admin.demo_catalogue_offline`, feed_rank 1/1,
+  job `feed-rank-refresh` succeeding every minute in ~30 ms; 15 routes re-walked signed out, every Back stays on Cosora)
   **The buyer review's High bugs (H-01–H-13).** Plan `documentation/high-bugs-fixes-plan-2026-11-18.md`; the full list
   (13 High, 75 Medium, 104 Low) in `ToDo.md`; route map `documentation/sitemap.xml`.
   - Mitra: H-04 take the demo catalogue off live (26 seed listings and the test video to `draft`, recorded in
