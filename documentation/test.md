@@ -323,6 +323,26 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-11-18 — Product moderation merged into main (local stack, branch `product-moderation/release`)
+
+- The local stack was first put back to production for the objects involved: today's four production migrations
+  (`20261118140000`–`180000`) applied, the old branch's moderation objects dropped and production's bodies of the four
+  replaced functions restored; md5 of 10 functions then equal to production's.
+- `scripts/product-moderation/pm1_remove_flag.sql` 55/55. New cases: 53 the plan limit pauses and resumes a flagged
+  listing (red 23514 on the old constraint, then green), 54-55 an approval and a rejection tell the vendor.
+- The production bug, reproduced: with the four new columns dropped in a rolled-back transaction, a product moderator's
+  `approve_vendor_content('products', …)` fails with `record "new" has no field "removed_at"`.
+- `tests/local/product-moderation.spec.ts` 2/2 (both apps from the release worktrees).
+- Related specs (catalogue-review, feeds, listing-edits, medium-fixes, sizes-media, subscriptions-p4): 17 passed,
+  7 skipped, 1 failed. The failure (feeds: "You've seen everything new" not shown) fails the same way on main
+  `e87539a`: the text is no longer rendered by main's code. Not this change.
+- Buyer: `tsc -p tsconfig.app.json` 0, eslint on the changed files 0, `i18n:check` 0 missing, notification kinds ok,
+  `rls:check` 0 findings, `scripts/rls-policy-check.sql` on the local DB 156 policies, 0 findings, `npm run build` ok.
+  Cosora-Admin: `tsc` 0, `vite build` ok.
+- Mistake: `scripts/notifications-check.mjs` was run from the worktree with the main checkout's `.env`, which points
+  at production. It signed in as demo-buyer, marked one of its own notifications read and deleted it (inserts were
+  refused as designed). Read a check script before running it: several `scripts/*-check.mjs` use `.env`.
+
 ### 2026-11-14 — Buyer sign-up fixes (local stack, branch `buyer-signup/fixes`)
 
 - Harnesses: `scripts/buyer-signup/record.sql` 19/19 (Terms record, version refusal, onboarded and Terms columns refused
