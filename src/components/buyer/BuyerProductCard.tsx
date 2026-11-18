@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion } from "framer-motion";
+import { CardPhotos } from "@/components/buyer/CardPhotos";
 import { Bookmark, BookmarkCheck, MapPin, Phone, Star, BadgeCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -48,6 +50,7 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
   const callVendor = useCallVendor();
   const savedState = useSaved();
   const saved = Boolean(savedState.products[product.id]);
+  const [hovered, setHovered] = useState(false);
 
   return (
     <motion.article
@@ -55,14 +58,15 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.25 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       className={cn("group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg", className)}
     >
       <Link
         to={`/product/${product.id}`}
-        className="relative aspect-[4/5] overflow-hidden bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="relative block aspect-[4/5] overflow-hidden bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
-        <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0" />
-        <img src={product.secondaryImage} alt={`${product.name} alternate`} className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/25 via-transparent to-transparent" />
         <div className="absolute bottom-2 left-2 rounded-full bg-foreground/70 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-background backdrop-blur-sm">
           COSORA

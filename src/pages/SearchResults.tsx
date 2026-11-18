@@ -42,6 +42,7 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useT } from "@/lib/i18n";
 import { useStepBack } from "@/hooks/useStepBack";
+import { CardPhotos } from "@/components/buyer/CardPhotos";
 
 // Swatch colours for the Colour facet (names must match the facet options).
 const COLOUR_HEX: Record<string, string> = {
@@ -188,8 +189,7 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
         onClick={openFromSearch}
         className="relative aspect-[4/5] block bg-gray-100"
       >
-        <img src={p.image} alt={p.name} className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-0" : "opacity-100")} />
-        <img src={p.secondaryImage} alt="" className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-100" : "opacity-0")} />
+        <CardPhotos primary={p.image} secondary={p.secondaryImage} alt={p.name} hovered={hovered} />
         {p.verified && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-0 left-0 h-5 lg:h-6 w-auto" />}
         {/* Subscriptions P10: the seal's Gold and VIP variants, and the Featured tag. */}
         {tiers && (p.sealTier === "gold" || p.sealTier === "vip") && (

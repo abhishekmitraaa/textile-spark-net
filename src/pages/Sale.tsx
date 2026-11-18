@@ -23,6 +23,7 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import trustedSeal from "@/assets/Trustedseal.png";
+import { CardPhotos } from "@/components/buyer/CardPhotos";
 
 // ─────────────────────────────────────────────────────────────
 // Animation constants (project convention)
@@ -134,8 +135,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
       onMouseLeave={() => setHovered(false)}
     >
       <Link to={`/product/${product.id}`} className="relative aspect-[4/5] block bg-gray-100">
-        <img src={product.image} alt={product.name} className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-0" : "opacity-100")} />
-        <img src={product.secondaryImage} alt="" className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-100" : "opacity-0")} />
+        <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
 
         {/* Discount badge */}
         <span className="absolute top-0 left-0 rounded-br-xl bg-brand-buyer px-2 py-1 text-[10px] lg:text-xs font-extrabold text-white shadow-sm">
