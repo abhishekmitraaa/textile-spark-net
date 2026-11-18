@@ -1,5 +1,8 @@
-- 2026-11-18 (branch `fix/high-bugs-2026-11-18`, commit `2f12b0e`; migration `20261118170000`; function `product-thumbs`;
-  **built and tested, NOT released**)
+- 2026-11-18 (branch `fix/high-bugs-2026-11-18`, commits `2f12b0e`, `8cbed75`; migrations `20261118170000`, `20261118180000`;
+  function `product-thumbs`; **LIVE 2026-11-18**: migrations applied with the CLI (not in the ledger), function deployed
+  (401 without a token), the live listing's 4 photos thumbnailed on production (~17.6 KB each against ~120 KB), app pushed.
+  After the commit security review: a thumbnail is `<path>.jpg` with the source extension kept, matched on the exact
+  address in this Storage, and the queue is anchored to this project's host)
   **H-12, server half: card thumbnails made by the server.** Edge function `product-thumbs` (480 px JPEG of a live
   listing's photo, one per request) into the service-only public bucket `product-thumbs`; `trg_products_thumbs` queues a
   listing's photos when it goes live; cards ask for the thumbnail first and fall back to the full photo; listing and

@@ -1347,8 +1347,8 @@ undocumented. Deep technical rationale for each lives in
   as the fallback. A new card uses it.
   - **Thumbnails are made by the server, never the browser** (Mitra, 2026-11-18, "Build server-made"): a seller-made
     thumbnail is a second file the seller controls, shown on cards while review sees only the full photo. The edge
-    function `product-thumbs` (service role, one photo per request: ~2 s of CPU) writes `product-thumbs/<path>.jpg` from
-    a live listing's photo; `trg_products_thumbs` queues a listing's photos when it goes live
+    function `product-thumbs` (service role, one photo per request: ~2 s of CPU) writes `product-thumbs/<path>.jpg` (the
+    source extension kept, so no two photos share one) from a live listing's photo at its exact address in this Storage; `trg_products_thumbs` queues a listing's photos when it goes live
     (`admin.queue_product_thumbs`). Only the service role writes the bucket. It reads JPEG and PNG, so listing and
     registration photos are stored as JPEG (`shrinkImage(…, "jpeg")`); a WebP or HEIC photo keeps the full photo.
 - **A long form asks for sign-in before it starts** (2026-11-18 review, H-03, H-07): Post Requirement's detailed form

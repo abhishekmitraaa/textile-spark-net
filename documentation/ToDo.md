@@ -20,7 +20,7 @@ with no need to dictate format, context, or reference each time.
 - Status: Open (H-12 server half next; then Medium and Low)
 
 **High**
-- H-12 — Product cards: lazy loading and the hover-only second photo are LIVE (2026-11-18). Server-made thumbnails are built and tested on branch `fix/high-bugs-2026-11-18` (`2f12b0e`: function `product-thumbs`, migration `20261118170000`), waiting for Mitra's release go: apply the migration, deploy the function, queue the live listings' photos, check the thumbnails, then push the app.
+- H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
 
 **Medium — buyer home and browsing**
 - M-01 live — BuyerSignupGate renders the page, then null while the registration loads: double mount, ads counted twice. BuyerSignupGate.tsx:28
