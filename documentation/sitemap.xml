@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cosora buyer-side route map, from the review of 2026-11-18 (main 2b02358, www.cosora.in).
+
+  NOT the search-engine sitemap. That one is served at https://www.cosora.in/sitemap.xml by api/sitemap.ts
+  (a vercel.json rewrite) and lists only public, indexable pages. This file is a working map for people:
+  every buyer and shared route the app answers, what each one reads and writes in the database, and how its
+  Back controls behave. It uses the sitemaps.org format so tools can read it, plus a cosora: namespace for the
+  review data. Search engines must not be pointed at it.
+
+  How each route was checked:
+    - Every route was opened on production, signed out, in a 390 px wide browser. View and impression RPCs were
+      answered in the browser, so no seller's numbers moved.
+    - Two Back checks per route:
+        cosora:back-direct  = the page's own Back control when the page was opened directly (no in-app history);
+        cosora:back-browser = the browser's Back after arriving from /home/new-arrivals.
+      "LEAVES SITE" means the control went to about:blank, so the visitor left Cosora.
+    - DB objects come from the network log of that visit, plus a code trace for signed-in paths, plus a
+      production catalog check (all 63 RPCs and 46 tables exist).
+    - Migrations name the file that creates an object and the latest one that redefines it. "baseline" means a
+      table older than the first migration file, which no file creates.
+    - Graphify confirmed the page → hook → query edges. It has no table or migration nodes, so the DB mapping is
+      from grep and the production catalog.
+
+  Dynamic routes use one real example id, or a {placeholder} where no public example exists.
+  Finding ids (BH-*, BA-*, …) refer to the review report given in chat on 2026-11-18.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:cosora="https://www.cosora.in/schemas/route-review/2026-11-18">
+
+  <!-- ============================ Discovery ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/" component="src/pages/Landing.tsx" shell="own (marketing)" auth="none" clarity="no"/>
+    <cosora:reads>site-config/site.json snapshot</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Signed-in visitors still see Sign in / Get started; invented "₹500Cr+ / 50K+" stats (known, ToDo)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/home/new-arrivals</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/home/new-arrivals" component="src/pages/NewArrivals.tsx" shell="BuyerShell" auth="none" clarity="no"/>
+    <cosora:reads>rpc feed_products (20261014120000 → 20261113100400); table product_videos (baseline, limit 30); table pref_category_map (20260907160000); rpc top_vendors (20261019100000 → 20261115110000); rpc active_ads (20260717120000 → 20261117110000); rpc spotlight_listings, featured_listings_on (20261009194104); snapshot site-config (hero ids, category_images)</cosora:reads>
+    <cosora:writes>rpc ad_impression (queue, 20261118110000); rpc log_engagement_event (→ 20261020110000); saves; rfq_submissions via QuickRfqModal</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok; scroll restored</cosora:back-browser>
+    <cosora:findings>BH-1 last card is a "-fill0" clone → Product not found; BH-2 seed/demo catalogue; BM tab switch keeps scroll; BM gate double mount</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/home/trends</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/home/trends" component="src/pages/Trends.tsx" shell="BuyerTopBar only (not BuyerShell)" auth="none" clarity="no"/>
+    <cosora:reads>rpc feed_products (trending); table categories (baseline); rpc active_ads</cosora:reads>
+    <cosora:writes>ad_impression, log_engagement_event</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Skips BuyerShell (sign-up gate bypassed); sponsored rail titled "Trending in #…" on a curated page</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/home/sale</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/home/sale" component="src/pages/Sale.tsx" shell="BuyerShell" auth="none" clarity="no"/>
+    <cosora:reads>rpc feed_products (onSale, discount); rpc active_ads</cosora:reads>
+    <cosora:writes>ad_impression, log_engagement_event</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok; tier and sort reset (useState)</cosora:back-browser>
+    <cosora:findings>Duplicate dead scaffold entry in buyerShellRoutes; "MEGA SALE … verified manufacturers" (known decision)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/home/for-you</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/home/for-you" aliases="/for-you; /home/for-you/onboarding (redirect)" component="src/pages/ForYou.tsx" shell="BuyerShell" auth="optional (ranking needs sign-in)" clarity="no"/>
+    <cosora:reads>rpc for_you_products (20260907160200 → 20261017190000, signed in); rpc feed_products (p_ids); table pref_category_map; table buyer_profiles (preferences)</cosora:reads>
+    <cosora:writes>buyer_profiles.preferred_categories / preferred_locations; ad_impression</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok; first-run step not in URL</cosora:back-browser>
+    <cosora:findings>Signed-out first run hides the tab strip; location filter is client-side; "Reset preferences" without confirm</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/home/followings</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/home/followings" component="src/pages/Following.tsx" shell="BuyerShell" auth="optional" clarity="no"/>
+    <cosora:reads>table follows (baseline); table vendor_profiles; table products (vendor_id, live; per-row download to count); rpc new_brand_suggestions (20261014090100 → 20261115110000); rpc feed_products</cosora:reads>
+    <cosora:writes>follows insert/delete</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok; filters reset</cosora:back-browser>
+    <cosora:findings>Hide-brand not stored; TradeSEAL filter uses is_verified only; four states collapsed; follow toast before result</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/home/followings/view-all</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/home/followings/view-all" component="src/pages/FollowingViewAll.tsx" shell="none (not BuyerShell)" auth="optional" clarity="no"/>
+    <cosora:reads>rpc new_brand_suggestions; table follows; table vendor_profiles</cosora:reads>
+    <cosora:writes>follows</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), FollowingViewAll.tsx:103)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>"Following 0" shown while loading or signed out</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/video-closeups?v=35783726-439f-4e02-b2fe-3cd2eda8f707</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/video-closeups" component="src/pages/VideoCloseUpsPage.tsx (lazy)" shell="none (full screen)" auth="optional" clarity="no"/>
+    <cosora:reads>table product_videos (baseline; top 30 by views; production holds 1 row); table pref_category_map; rpc product_review_stats (20261016140000)</cosora:reads>
+    <cosora:writes>rpc increment_video_view (→ 20261020130000; video_view_daily); video_likes (20260905175044); saved_videos (20260905175109)</cosora:writes>
+    <cosora:back-direct>no control found in header (viewer uses useBackCloses)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Only reel is a test clip ("Buttons", "Yoyoyo") whose listing isn't live; paging and ranking on unwritten columns (known)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/search</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/search" aliases="/browse (redirect)" component="src/pages/Search.tsx" shell="MobileBottomNav only (not BuyerShell)" auth="none" clarity="no"/>
+    <cosora:reads>rpc feed_products; rpc live_category_counts (20261014120000); rpc search_suggestions (→ 20261115110000); rpc trending_searches (20261018120000 → 20261118100000, snapshot); table categories</cosora:reads>
+    <cosora:writes>edge function image-search (photo search)</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), Search.tsx:330)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Recent searches never survive (useState, page unmounts)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/search/results?q=shirt</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/search/results" component="src/pages/SearchResults.tsx" shell="none (not BuyerShell)" auth="none" clarity="no"/>
+    <cosora:reads>no query: tables products, vendor_profiles, subscription_plans, categories, attribute_definitions (20261031100000), product_videos via useBrowseCatalogue (96 a page); query: rpc search_products (20260906180000 → 20261019100000), edge function embed-query, rpc search_ads (20261013110000); rpc featured_listings, featured_listings_on</cosora:reads>
+    <cosora:writes>log_featured_impressions, ad_impression, log_engagement_event</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), SearchResults.tsx:935)</cosora:back-direct>
+    <cosora:back-browser>ok; filters, tab and sort reset</cosora:back-browser>
+    <cosora:findings>Sorts and filters only what has loaded; "Save search" saves nothing; filter sheet doesn't close on Back</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/categories</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/categories" component="src/pages/Categories.tsx" shell="BuyerShell" auth="none" clarity="no"/>
+    <cosora:reads>snapshot site-config (category_images, 20261014090000); taxonomy is static (lib/categoryTaxonomy.ts)</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Tiles search by label text, not category id</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/product/b0000000-0000-0000-0000-000000000015</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/product/:id" component="src/pages/ProductDetail.tsx" shell="BuyerShell" auth="optional" clarity="no (quote form unmasked)"/>
+    <cosora:reads>tables products, product_images, categories, vendor_profiles, subscription_plans, product_reviews (unbounded), reviews (100), product_documents (20261017130000; 0 rows), product_videos; rpc related_products (→ 20261017190000); rpc vendor_review_stats (20261117140000)</cosora:reads>
+    <cosora:writes>rpc increment_product_view (→ 20261115120000: product_view_daily, products.views_count, admin.seller_viewer_daily); log_engagement_event; recently_viewed upsert; product_reviews; rfqs + bucket rfq-attachments (20261118130000); follows; log_call</cosora:writes>
+    <cosora:back-direct>no on-screen Back</cosora:back-direct>
+    <cosora:back-browser>ok; opens at the top</cosora:back-browser>
+    <cosora:findings>About 18 requests per view; overlays don't close on Back; invalid id shows a clean "Product not found"</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/vendor/a0000004-0000-0000-0000-000000000004</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/vendor/:id" component="src/pages/VendorProfile.tsx" shell="none (not BuyerShell)" auth="optional (contact needs sign-in)" clarity="phone masked"/>
+    <cosora:reads>tables vendor_profiles (public columns), products (unbounded), product_videos (24), catalogues (0 rows), reviews, subscription_plans; rpc vendor_review_stats; rpc call_vendor_contact (on tap, 20260927184250 → 20261018160200)</cosora:reads>
+    <cosora:writes>log_engagement_event; reviews; follows; log_call</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), VendorProfile.tsx:316/360/381)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>A non-uuid id fires two 400s on catalogues; "Save vendor" saves nothing; listings unbounded</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/services</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/services" aliases="/service-vendors" component="src/pages/ServiceVendors.tsx" shell="BuyerShell" auth="none" clarity="no"/>
+    <cosora:reads>none: static seed data (lib/serviceVendorsData.ts)</cosora:reads>
+    <cosora:writes>none (Call Now dials demoPhone())</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Seed providers shown as real, listed in the SEO sitemap (Mitra: keep as is, 2026-10-18)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/services/printcraft-studios</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/services/:vendorId" component="src/pages/ServiceVendorProfile.tsx" shell="none" auth="optional (review needs sign-in)" clarity="no"/>
+    <cosora:reads>table service_reviews (baseline; 0 rows; read 2,736 times)</cosora:reads>
+    <cosora:writes>service_reviews upsert (keyed on a seed slug)</cosora:writes>
+    <cosora:back-direct>/services (push: Back then returns here)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Seed rating "4.9 (127 reviews)" and invented review cards; no Report button on reviews</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/freelancers</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/freelancers" component="src/pages/Freelancers.tsx" shell="BuyerShell" auth="none" clarity="no"/>
+    <cosora:reads>none: static seed data (lib/freelancersData.ts)</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Seed data shown as real (known)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/freelancers/priya-sharma</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/freelancers/:id" component="src/pages/FreelancerProfile.tsx" shell="none" auth="optional" clarity="no"/>
+    <cosora:reads>table service_reviews</cosora:reads>
+    <cosora:writes>service_reviews</cosora:writes>
+    <cosora:back-direct>/freelancers (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Same as /services/:vendorId</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/cosora-studio</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/cosora-studio" aliases="/cosora-studio/:id (redirect)" component="src/pages/CosoraStudio.tsx" shell="DashboardLayout (seller frame, buyer menu)" auth="none" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none (mailto links)</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Buyer visitors get the seller dashboard frame</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/recently-viewed</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/recently-viewed" component="src/pages/RecentlyViewed.tsx" shell="BuyerShell" auth="optional (local when signed out)" clarity="no"/>
+    <cosora:reads>table recently_viewed (baseline, limit 40) + product cards</cosora:reads>
+    <cosora:writes>recently_viewed delete</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), RecentlyViewed.tsx:192)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Invented ratings/gender via makeListingProduct fallback (recentlyViewedStore.ts:186)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/saved</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/saved" component="src/pages/SavedCollections.tsx" shell="BuyerShell" auth="optional (local when signed out)" clarity="no"/>
+    <cosora:reads>tables saved_items, saved_folders, saved_folder_items (baseline → 20261002072403), saved_videos + product_videos</cosora:reads>
+    <cosora:writes>saved_folders insert</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Read errors ignored (empty list); writes fire-and-forget; no loading/error/signed-out states</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/saved/%7BcollectionId%7D</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/saved/:collectionId" component="src/pages/SavedCollectionDetail.tsx" shell="BuyerShell" auth="optional" clarity="no"/>
+    <cosora:reads>same as /saved</cosora:reads>
+    <cosora:writes>saved_folder_items delete; saved_items delete</cosora:writes>
+    <cosora:back-direct>/saved (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Says "This collection no longer exists" while still loading</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/go/post-rfq</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/go/post-rfq" component="src/pages/GoPostRfq.tsx" shell="none (redirect)" auth="decides target" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>n/a (replace)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Signed out lands on "/" and the blog's "Post RFQ" intent is lost; not in sitemap.md or changelog</cosora:findings>
+  </url>
+
+  <!-- ============================ Requirements and quotes ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/requirement/post-requirement</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/requirement/post-requirement" aliases="/post-requirement" component="src/pages/PostRequirement.tsx" shell="BuyerShell" auth="checked only at submit" clarity="yes"/>
+    <cosora:reads>table attribute_definitions; table categories</cosora:reads>
+    <cosora:writes>table rfq_submissions insert (20261017140000 → 20261031100000); bucket product-images/&lt;buyer&gt;/rfq/</cosora:writes>
+    <cosora:back-direct>in-page arrows only; steps are not history entries</cosora:back-direct>
+    <cosora:back-browser>ok, but leaves the form and loses answers</cosora:back-browser>
+    <cosora:findings>Signed-out submit ends with developer text "Use the dev switcher" and no Sign in (PostRequirement.tsx:272-275)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/requirement/my-quotes</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/requirement/my-quotes" component="src/pages/MyQuotes.tsx" shell="BuyerShell" auth="required for data" clarity="yes"/>
+    <cosora:reads>tables rfqs (buyer_id), quotes (in rfq_id, unchunked), vendor_profiles, product_images, rfq_submissions (polled 30 s); rpc quote_order_for_rfq (20261115110000); signed links from bucket rfq-attachments</cosora:reads>
+    <cosora:writes>quotes.status (setQuoteStatusDb); rpc extend_rfq_deadline (20261019100000); log_call</cosora:writes>
+    <cosora:back-direct>views and modals are state only</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Signed out shows "0 Active RFQs" counters; Payment Terms field is thrown away; "Avg. response ~2 hours" invented; read errors become "0 quotes"</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/requirement</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/requirement" component="src/components/buyer/BuyerRouteShell.tsx (scaffold)" shell="none" auth="none" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>"Back to landing" → /</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Live developer card: "Route scaffold · Phase 1 · Current route"; nothing links here</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/requirement/quick-rfq</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/requirement/quick-rfq" component="BuyerRouteShell (scaffold)" shell="none" auth="none" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>→ /</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Scaffold; the real Quick RFQ is a modal (QuickRfqModal)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/requirement/post-requirement/form</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/requirement/post-requirement/form" component="BuyerRouteShell (scaffold)" shell="none" auth="none" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>→ /</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Scaffold</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/requirement/post-requirement/success</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/requirement/post-requirement/success" component="BuyerRouteShell (scaffold)" shell="none" auth="none" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>→ /</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Scaffold; the real success screen is inside PostRequirement</cosora:findings>
+  </url>
+
+  <!-- ============================ Chats and notifications ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/chats</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/chats" aliases="/chat" component="src/pages/Chat.tsx" shell="none for buyers (bottom bar); DashboardLayout for sellers" auth="required (sign-in prompt)" clarity="yes"/>
+    <cosora:reads>tables conversations (or user_a/user_b, unbounded), conversation_member_state (20261018160000), profiles, vendor_profiles, calls (last 200); rpc chat_unread_counts (20261014170000 → 20261116100300)</cosora:reads>
+    <cosora:writes>rpc log_call; rpc call_vendor_contact / call_buyer_contact</cosora:writes>
+    <cosora:back-direct>navigate(-1) or push home</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>List doesn't update live on a new chat (hub handler refreshes counts only); outside the sign-up gate</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/chats/a0000004-0000-0000-0000-000000000004</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/chats/:vendorId" component="src/pages/ChatThread.tsx" shell="frame by side" auth="required" clarity="yes"/>
+    <cosora:reads>tables messages (40 a page), conversations, conversation_member_state, profiles, vendor_profiles; rpc chat_block_state; realtime channel thread:&lt;conv&gt; (postgres_changes)</cosora:reads>
+    <cosora:writes>messages insert; conversations insert-if-missing; bucket chat-attachments (20261018160000); rpc mark_conversation_read (20261014170000), chat_set_block, chat_set_state, share_chat_contact, chat_contact_number, submit_report (→ 20261118120000)</cosora:writes>
+    <cosora:back-direct>navigate(-1) or replace inbox (correct)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>One postgres_changes channel per open thread (scale); menus don't close on Back</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/notifications</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/notifications" component="src/pages/Notifications.tsx" shell="BuyerShell or DashboardLayout by role" auth="required for data" clarity="yes"/>
+    <cosora:reads>table notifications (20260802130000 → 20261117130000; 100 a page)</cosora:reads>
+    <cosora:writes>notifications.read update; delete</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Buyer sees seller wording (known)</cosora:findings>
+  </url>
+
+  <!-- ============================ Profile ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/profile</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile" component="src/pages/Profile.tsx" shell="BuyerShell" auth="required (sign-in screen)" clarity="yes"/>
+    <cosora:reads>tables profiles, buyer_profiles, quotes (via rfqs!inner buyer_id), conversations, calls (buyer_id), account_deletion_requests (20260923115839); rpc my_contact_info (20260923171821)</cosora:reads>
+    <cosora:writes>rpc cancel_account_deletion</cosora:writes>
+    <cosora:back-direct>no control (tab root)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>"Add your state" nag after a pincode; stats show 0 on a failed read; Saved count leaves out saved_videos</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/edit</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/edit" component="src/pages/ProfileEdit.tsx" shell="ProfileSubpageHeader (not BuyerShell)" auth="required" clarity="yes"/>
+    <cosora:reads>profiles, buyer_profiles, my_contact_info</cosora:reads>
+    <cosora:writes>profiles.full_name / email / phone (free text) / avatar_url; buyer_profiles; bucket avatars (→ 20261021100000)</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok; Save pushes /profile so Back reopens the form</cosora:back-browser>
+    <cosora:findings>Phone is free text and is what sellers dial (call_buyer_contact); avatar uploads on pick (orphans); outside the gate</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/business-details</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/business-details" component="src/pages/ProfileBusinessDetails.tsx" shell="ProfileSubpageHeader" auth="required" clarity="yes"/>
+    <cosora:reads>buyer_profiles</cosora:reads>
+    <cosora:writes>buyer_profiles company … gstin, pan (checks 20261114100100)</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Dead duplicate scaffold entry in buyerShellRoutes</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/settings</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/settings" component="src/pages/Settings.tsx" shell="BuyerShell" auth="required" clarity="yes"/>
+    <cosora:reads>session; account_deletion_requests</cosora:reads>
+    <cosora:writes>edge function account-deletion; rpc confirm_account_deletion, cancel_account_deletion</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Deletion dialog doesn't close on Back; channels may be unconfigured (PLAUSIBLE)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/notifications</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/notifications" component="src/pages/ProfileNotifications.tsx" shell="none" auth="optional (saves locally when signed out)" clarity="no"/>
+    <cosora:reads>buyer_profiles.notifications</cosora:reads>
+    <cosora:writes>buyer_profiles.notifications (whole JSON) — stored, read by nothing</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Abandoned column by design ("Not live yet"); saves over a failed read with defaults</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/social-links</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/social-links" component="src/pages/ProfileSocialLinks.tsx" shell="none" auth="optional" clarity="yes"/>
+    <cosora:reads>buyer_profiles.social</cosora:reads>
+    <cosora:writes>buyer_profiles.social (whole JSON) — shown to nobody</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Copy promises "buyers and vendors can find and trust your brand"; no reader</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/regional-settings</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/regional-settings" aliases="/profile/data-export (same page)" component="src/pages/ProfileAccountPrefs.tsx" shell="none" auth="optional" clarity="yes"/>
+    <cosora:reads>buyer_profiles.regional; fx_rates (20260924161525); export: owner-filtered reads of rfqs, quotes, conversations, messages, reviews, product_reviews, calls, saved_*, recently_viewed, follows</cosora:reads>
+    <cosora:writes>buyer_profiles.regional incl. retired "language" key; auth user_metadata.ui_language</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Writes retired regional.language; timezone read by nothing; export omits rfq_submissions, saved_videos, support data</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/interest-preference</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/interest-preference" component="src/pages/InterestPreference.tsx" shell="none" auth="optional" clarity="no"/>
+    <cosora:reads>buyer_profiles.preferred_*; pref_category_map</cosora:reads>
+    <cosora:writes>buyer_profiles.preferred_categories / preferred_interest_other / preferred_locations (via interest_ids_translate trigger, 20261010232412)</cosora:writes>
+    <cosora:back-direct>/profile (useStepBack)</cosora:back-direct>
+    <cosora:back-browser>ok; Save pushes /profile</cosora:back-browser>
+    <cosora:findings>Bottom row hidden under the Save bar; off-topic interests (IT &amp; Software, Cosmetics)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/profile/reviews</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/profile/reviews" component="src/pages/MyReviews.tsx" shell="none" auth="required" clarity="no"/>
+    <cosora:reads>reviews, product_reviews, service_reviews (0 rows) — all on buyer_id</cosora:reads>
+    <cosora:writes>update/delete on the three review tables; bucket product-images (photos)</cosora:writes>
+    <cosora:back-direct>/profile (push)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Delete without confirm; edit modal doesn't close on Back</cosora:findings>
+  </url>
+
+  <!-- ============================ Legal ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/terms</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/terms" aliases="/profile/terms (buyer frame)" component="src/pages/TermsConditions.tsx" shell="shared" auth="none" clarity="no"/>
+    <cosora:reads>none (src/data/terms.ts)</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), TermsConditions.tsx:18)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>"Effective Date: 27th October 2025"; "India's premier" claim</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/privacy</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/privacy" component="src/pages/PrivacyPolicy.tsx" shell="own" auth="none" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>LEAVES SITE (navigate(-1), PrivacyPolicy.tsx:146)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Missing from sitemap.md and the SEO sitemap</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/grievance</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/grievance" component="src/pages/Grievance.tsx" shell="NotFound while hidden" auth="none" clarity="no" status="hidden by design (D-15)"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>n/a</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Shows 404 until the Grievance Officer is named (expected)</cosora:findings>
+  </url>
+
+  <!-- ============================ Help and Support ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/help</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/help" aliases="/profile/help (buyer frame); /profile/help/chat (redirect)" component="src/pages/Help.tsx" shell="frame by role" auth="none" clarity="yes"/>
+    <cosora:reads>rpc support_status (20260930213143); table help_guides (20260930212818); snapshot faq-snapshots/buyer_help.json → table faqs</cosora:reads>
+    <cosora:writes>account deletion (DeleteAccountCard)</cosora:writes>
+    <cosora:back-direct>/home → in-app 404 (useStepBack("/home"), Help.tsx:80); via /profile/help/chat redirect: LEAVES SITE</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Back lands on 404; useStepBack mistakes a redirect for in-app history</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/help/chat</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/help/chat" component="src/pages/SupportChatStart.tsx" shell="SupportFrame" auth="required (prompt)" clarity="yes"/>
+    <cosora:reads>rpc support_status, support_my_requests; table support_categories</cosora:reads>
+    <cosora:writes>rpc support_start_chat</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>A support_status error reads as "not available in the app yet"</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/help/requests</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/help/requests" component="src/pages/MyRequests.tsx" shell="SupportFrame" auth="required (prompt)" clarity="yes"/>
+    <cosora:reads>rpc support_my_requests (limit 100)</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>none</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/help/requests/CS-000001</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/help/requests/:ticketNo" component="src/pages/SupportThread.tsx" shell="SupportFrame" auth="required" clarity="yes"/>
+    <cosora:reads>rpc support_request_detail; realtime support_messages, support_tickets</cosora:reads>
+    <cosora:writes>rpc support_post_message, support_end_chat, support_reopen, support_mark_read, support_prepare_upload (→ 20261016100000); bucket support-attachments; edge function support-attachment-verify</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Signed out still calls support_request_detail → 401</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/help/callback</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/help/callback" component="src/pages/SupportCallback.tsx" shell="SupportFrame" auth="required (prompt)" clarity="yes"/>
+    <cosora:reads>rpc support_status, support_callback_slots, my_contact_info</cosora:reads>
+    <cosora:writes>rpc support_request_callback</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Phone not cleaned with cleanPhoneDigits (PLAUSIBLE)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/help/guides/%7Bslug%7D</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/help/guides/:slug" component="src/pages/HelpGuide.tsx" shell="SupportFrame" auth="none" clarity="no"/>
+    <cosora:reads>table help_guides (4 rows)</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Unknown slug: clean "This guide isn't available"; not in the SEO sitemap</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/feedback</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/feedback" component="src/pages/AppFeedback.tsx" shell="SupportFrame" auth="required (prompt)" clarity="yes"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>rpc support_submit_feedback (→ 20261016100000); edge function support-receipt</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>none</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/report-fraud</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/report-fraud" component="src/pages/ReportFraud.tsx" shell="SupportFrame" auth="required (prompt)" clarity="yes"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>rpc support_report_fraud (→ 20261016100000), support_prepare_upload; bucket support-attachments</cosora:writes>
+    <cosora:back-direct>/help</cosora:back-direct>
+    <cosora:back-browser>ok, but wizard steps aren't history entries</cosora:back-browser>
+    <cosora:findings>sitemap.md still says it "fills an email"</cosora:findings>
+  </url>
+
+  <!-- ============================ Sign-in and sign-up ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/login</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/login" aliases="/auth/login" component="src/pages/Login.tsx" shell="none" auth="redirects signed-in users" clarity="yes"/>
+    <cosora:reads>profiles (readProfileRow)</cosora:reads>
+    <cosora:writes>edge function otp-dev-verify; auth signInWithOtp / Google</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Not-onboarded signed-in user is bounced to role selection (Back loop); sign-in itself not reviewed</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/otp-verify</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/otp-verify" component="src/pages/OtpVerify.tsx" shell="none" auth="flow state" clarity="yes"/>
+    <cosora:reads>profiles</cosora:reads>
+    <cosora:writes>applyPendingSignupProfile: buyer_profiles.company / vendor_profiles.brand_name</cosora:writes>
+    <cosora:back-direct>"Previous" / "Not you?" push (should be useStepBack)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Screen only; sign-in mechanism out of scope</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/callback</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/callback" component="src/pages/AuthCallback.tsx" shell="none" auth="session (else /login)" clarity="no"/>
+    <cosora:reads>profiles</cosora:reads>
+    <cosora:writes>applyPendingSignupProfile</cosora:writes>
+    <cosora:back-direct>n/a (replace)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Google sign-up leaves a Back trap after Terms; page not masked (PLAUSIBLE token in URL)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/role-selection</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/role-selection" component="src/pages/RoleSelection.tsx" shell="RegisteredVendorGate + SignupStep" auth="required (else /auth/login)" clarity="no"/>
+    <cosora:reads>rpc my_seller_registration (20261113100000)</cosora:reads>
+    <cosora:writes>profiles.active_role (chooseRole)</cosora:writes>
+    <cosora:back-direct>no control, no sign-out, no help</cosora:back-direct>
+    <cosora:back-browser>bounces back to itself (gate/Login redirect)</cosora:back-browser>
+    <cosora:findings>Unfinished sign-up has no way out</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/sub-role</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/sub-role" component="src/pages/SubRole.tsx" shell="SignupStep" auth="required" clarity="no"/>
+    <cosora:reads>buyer_profiles.buyer_role</cosora:reads>
+    <cosora:writes>buyer_profiles.buyer_role (20261114100000)</cosora:writes>
+    <cosora:back-direct>/auth/role-selection (useStepBack); via Register: shows the empty Register form</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>No step counter</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/account-info</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/account-info" component="src/pages/AccountInfo.tsx" shell="SignupStep" auth="required" clarity="yes"/>
+    <cosora:reads>profiles, buyer_profiles, my_contact_info</cosora:reads>
+    <cosora:writes>changed fields only: profiles.full_name / email; buyer_profiles.display_name / company / postal_code / city / state (checks 20261114100100); BigDataCloud lookup</cosora:writes>
+    <cosora:back-direct>/auth/sub-role (useStepBack); answers kept</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Privacy copy false (sellers you message see name/company/city); pincode stores no state</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/interest-preference</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/interest-preference" component="src/pages/InterestPreference.tsx" shell="SignupStep" auth="required" clarity="no"/>
+    <cosora:reads>buyer_profiles.preferred_*</cosora:reads>
+    <cosora:writes>buyer_profiles.preferred_categories / preferred_interest_other / preferred_locations</cosora:writes>
+    <cosora:back-direct>/auth/account-info (useStepBack)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Bottom row covered by the Save bar</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/terms</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/terms" component="src/pages/Terms.tsx" shell="SignupStep" auth="required" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>rpc accept_buyer_terms (20261114100000 → 20261114100600) → terms_acceptances</cosora:writes>
+    <cosora:back-direct>/auth/interest-preference (useStepBack)</cosora:back-direct>
+    <cosora:back-browser>after finishing: stays on Home (no way back into Terms)</cosora:back-browser>
+    <cosora:findings>Version is presence-only; a row is added on every call</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/auth/welcome</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/auth/welcome" component="src/pages/Welcome.tsx" shell="none" auth="none (no guard)" clarity="no"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>n/a (replaces itself with Home after 2 s)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Usually skipped after sign-up; anyone can open it</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/register</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/register" component="src/pages/Register.tsx" shell="own (kept by Mitra)" auth="none (no signed-in redirect)" clarity="yes"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>auth sign-up metadata (handle_new_user, baseline)</cosora:writes>
+    <cosora:back-direct>step in URL (?step=2)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Role resets to Buyer on Back/refresh; signed-in users see the empty form</cosora:findings>
+  </url>
+
+  <!-- ============================ Entry points and redirects ============================ -->
+
+  <url>
+    <loc>https://www.cosora.in/seller</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/seller" component="src/pages/VendorLanding.tsx" shell="own" auth="none" clarity="no"/>
+    <cosora:reads>snapshot faq-snapshots/seller_registration.json → table faqs</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>no control</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>"Work with us" links to cosora.in/careers (404); signed-out "Get started" leads to a form that is lost at sign-in</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/onboarding</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/onboarding" component="src/pages/Onboarding.tsx" shell="RegisteredVendorGate" auth="checked at submit" clarity="yes" status="seller entry; reached from the buyer side's Buyer/Seller switch"/>
+    <cosora:reads>rpc my_seller_registration</cosora:reads>
+    <cosora:writes>rpc submit_vendor_registration (20261113100100); buckets business-docs, product-images</cosora:writes>
+    <cosora:back-direct>guarded ("Leave your registration?")</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>"0% commission" / "10 minutes" claims; first button reads "Edit details"</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/dashboard</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/dashboard" component="src/components/RoleHomeRedirect.tsx" shell="redirect" auth="none" clarity="no" status="redirect → /seller-home or /home/new-arrivals"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>n/a (replace)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>sitemap.md still names Index (deleted 2026-11-14)</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/blogs</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="/blogs" aliases="/blogs/:path*; /about, /about-the-team → /blogs/about; /home → /" component="cosora-blogs (vercel.json rewrite)" shell="blog app" auth="none" clarity="n/a" status="proxied"/>
+    <cosora:reads>cosora-blogs (blog_settings, posts)</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>n/a</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>Blog proxy launch has no changelog entry</cosora:findings>
+  </url>
+
+  <url>
+    <loc>https://www.cosora.in/no-such-page</loc>
+    <lastmod>2026-11-18</lastmod>
+    <cosora:route path="*" component="src/pages/NotFound.tsx" shell="none" auth="none" clarity="no" status="Vercel answers HTTP 404"/>
+    <cosora:reads>none</cosora:reads>
+    <cosora:writes>none</cosora:writes>
+    <cosora:back-direct>"Return to Home" (full reload to /)</cosora:back-direct>
+    <cosora:back-browser>ok</cosora:back-browser>
+    <cosora:findings>none</cosora:findings>
+  </url>
+
+</urlset>
