@@ -12,5 +12,6 @@ export function thumbUrl(photoUrl: string | null | undefined): string | null {
   if (!photoUrl || !SUPABASE_URL || !photoUrl.startsWith(SOURCE)) return null;
   const path = photoUrl.slice(SOURCE.length).split(/[?#]/)[0];
   if (!/\.(jpe?g|png)$/i.test(path)) return null; // WebP / HEIC photos aren't thumbnailed
-  return THUMBS + path.replace(/\.[A-Za-z0-9]+$/, "") + ".jpg";
+  // The source path plus ".jpg" (x.png -> x.png.jpg): one thumbnail per photo, never shared (security review, 2026-11-18).
+  return THUMBS + path + ".jpg";
 }

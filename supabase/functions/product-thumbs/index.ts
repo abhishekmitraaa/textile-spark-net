@@ -2,7 +2,7 @@
 // product-thumbs — makes a listing photo's card thumbnail (buyer review H-12, 2026-11-18; Mitra: "Build server-made").
 //
 // WHAT: one photo per request. It reads `product-images/<path>`, scales it to 480 px on the longer side and writes a
-// JPEG to the public `product-thumbs` bucket at the same path with `.jpg` (`<path without extension>.jpg`). Product
+// JPEG to the public `product-thumbs` bucket at `<path>.jpg` (the source extension kept: x.png -> x.png.jpg). Product
 // cards ask for the thumbnail first and fall back to the full photo (src/lib/thumbs.ts), so a photo with no thumbnail
 // still shows.
 //
@@ -47,8 +47,10 @@ function jwtRole(authHeader: string | null): string | null {
   }
 }
 
+// The source path plus ".jpg" (x.png -> x.png.jpg), so two photos never share a thumbnail: stripping the extension let
+// an approved x.png overwrite x.jpg's thumbnail on another listing's card (commit security review, 2026-11-18).
 export function thumbPathFor(path: string): string {
-  return path.replace(/\.[A-Za-z0-9]+$/, "") + ".jpg";
+  return path + ".jpg";
 }
 
 Deno.serve(async (req) => {
@@ -68,10 +70,11 @@ Deno.serve(async (req) => {
   }
   if (!PATH_RE.test(path) || path.includes("..")) return json({ error: "bad_path" }, 400);
 
-  // Only a photo of a live (approved) listing gets a thumbnail.
-  const like = encodeURIComponent(`*/${SOURCE_BUCKET}/${path}`);
+  // Only a photo of a live (approved) listing gets a thumbnail, matched on its exact address in this project's Storage
+  // (a listing's photo URL on another host that merely ends in the same path doesn't count).
+  const publicUrl = `${Deno.env.get("PUBLIC_SUPABASE_URL") ?? url}/storage/v1/object/public/${SOURCE_BUCKET}/${path}`;
   const check = await fetch(
-    `${url}/rest/v1/product_images?select=product_id,products!inner(status)&products.status=eq.live&url=like.${like}&limit=1`,
+    `${url}/rest/v1/product_images?select=product_id,products!inner(status)&products.status=eq.live&url=eq.${encodeURIComponent(publicUrl)}&limit=1`,
     { headers: auth },
   );
   if (!check.ok) return json({ error: "lookup_failed", status: check.status }, 502);
