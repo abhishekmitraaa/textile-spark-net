@@ -8,6 +8,8 @@ batch of 20".
 is still open"). There are 27 open Low items; SH-063 was fixed with the Medium batch. The local spec `audit-second`
 ("loads older" chat messages) also fails on main and is taken with batch 2.
 
+**Status:** LIVE 2026-11-18 with the manual ad types (buyer main `26383e7`, admin main `37ecb85`).
+
 **Branch:** `seller-home/low-fixes` (worktree `.worktrees/sh-low`). It is stacked on `ads/manual-types`, because both
 change `Advertisements.tsx` (SH-099).
 

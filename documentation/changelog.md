@@ -1,4 +1,5 @@
-- 2026-11-18 (branch `fix/leftovers-2026-11-18`; migrations `20261118100000`–`130000`; built and tested locally)
+- 2026-11-18 (branch `fix/leftovers-2026-11-18`; migrations `20261118100000`–`130000`; **LIVE 2026-11-18**, released with the
+  manual ad types and the Low fixes: buyer main `26383e7`, admin main `37ecb85`)
   **What was left from the Seller Home review.** Record `documentation/leftovers-2026-11-18.md`.
   - Mitra: trending terms count signed-in searches only (`20261118100000`); ad impressions are queued and folded in by
     a job every minute (`20261118110000`).
@@ -6,7 +7,7 @@
     chat reports and the CSP table (`20261118120000`), private reference images on a direct request (`20261118130000`),
     nine functions asking Auth who the caller is, the CSP endpoint taking only our own hosts.
   - The overseas harness's check 19 follows the 2026-10-17 rule; a Video Closeup upload is tested end to end.
-- 2026-11-17 (branch `seller-home/low-fixes`; migration `20261117140000`; built and tested locally, **not released**)
+- 2026-11-17 (branch `seller-home/low-fixes`; migration `20261117140000`; **LIVE 2026-11-18**)
   **Seller Home audit, Low items batch 2 (7): SH-083, 084, 085, 099, 107, 108, 109**, and the `audit-second` flake.
   - Decision: SH-107 "Small buyer card". Record `documentation/seller-home-low-fixes-plan-2026-11-17.md`.
   - Database: lead alert history leaves out blocked buyers; `ad_impression` records every impression, no daily cap
@@ -19,7 +20,7 @@
     headings on Reviews and Help; Help's Back stays in the app.
   - Checks: `tests/local/seller-home-low-b.spec.ts` (5); `audit-second` fixed (the test, not the app).
 - 2026-11-17 (branch `seller-home/low-fixes`, stacked on `ads/manual-types`; migrations `20261117130000`, `130100`;
-  built and tested locally, **not released**)
+  **LIVE 2026-11-18**)
   **Seller Home audit, Low items batch 1 (20): SH-037–040, 047–053, 064–067, 069, 070, 074, 081, 082.**
   - Why: Mitra, 2026-11-17, "plan a fix for all the bugs which were in low priority and then fix them ... do it in the
     batch of 20". Decision: SH-082 "View only". Plan and record `documentation/seller-home-low-fixes-plan-2026-11-17.md`.
@@ -33,8 +34,7 @@
     figures on Upload Video and Upload Catalogue; deletes ask first; Back stays in the app; quote prices checked; "View
     quote" opens the quote and its request.
   - Checks: `tests/local/seller-home-low.spec.ts` (7), related local specs 67/67.
-- 2026-11-17 (branch `ads/manual-types`, admin branch `ads/manual-types`; migration `20261117120000`; built and tested
-  locally, **not released**)
+- 2026-11-17 (branch `ads/manual-types`, admin branch `ads/manual-types`; migration `20261117120000`; **LIVE 2026-11-18**)
   **Ad types done by hand.** Facebook & Instagram, Google Product, Social Media Combo and Direct Broadcast are sold again.
   The Cosora team carries them out after approval.
   - Why: Mitra, 2026-11-17, "bring back all the ad type except the mobile banner and the website banner and create a

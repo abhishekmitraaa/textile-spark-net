@@ -49,8 +49,8 @@ short list of things someone has to *decide*.
 
 ## Seller Home audit (2026-11-15) — what is still open
 
-Every High, Medium and Low item of the audit is fixed on a branch: High and Medium are live; the 27 Low items are on
-`seller-home/low-fixes` (`documentation/seller-home-low-fixes-plan-2026-11-17.md`), waiting for release.
+Every High, Medium and Low item of the audit is fixed and live (Low on 2026-11-18). Left: a 10,000-user load test
+(SH-112) needs Mitra's call on where to run it: production, or a paid staging copy (`documentation/leftovers-2026-11-18.md`).
 
 ## Medium priority
 

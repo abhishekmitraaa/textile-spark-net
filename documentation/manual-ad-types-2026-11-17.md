@@ -3,8 +3,7 @@
 **Request (Mitra, 2026-11-17):** "bring back all the ad type except the mobile banner and the website banner and create
 a banner for the other ad types that those ads will go to the admin dashboard as they will be done manually".
 
-**Status:** built and tested locally on branch `ads/manual-types` (buyer) and `ads/manual-types` (Cosora-Admin). Not on
-production: the release waits for Mitra's yes.
+**Status:** LIVE 2026-11-18 (buyer main `26383e7`, admin main `37ecb85`), released with the Seller Home Low fixes.
 
 ## What changed
 

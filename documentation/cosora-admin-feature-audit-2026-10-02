@@ -1,0 +1,114 @@
+# Cosora Admin Panel — Feature Audit
+
+Date: 2026-10-02
+Scope: `Cosora-Admin` (`main` @ `5997705`) and `textile-spark-net` (`main` @ `66876b2`), same Supabase project (`vxdhhgdfubqedfpwfyrb`). This supersedes the 2026-09-27 findings doc in full — almost every gap logged there has since been closed. Read `documentation/claude.md` and `CHANGELOG.md` in both repos before touching either codebase; this audit draws heavily on both rather than re-deriving everything from scratch.
+
+Everything below is either: (a) read from the current committed source and the live migration ledger, (b) taken from a changelog entry that documents its own verification, or (c) independently re-checked live this session (noted inline as "confirmed live" where it matters — a vendor-PII check and the semantic-matching check in particular contradicted the written docs and needed a direct test). Nothing here was exercised by clicking through the actual browser UI; there is still no admin login available to this session.
+
+## How the two repos relate
+
+`Cosora-Admin` is the admin panel (separate Vercel deployment). `textile-spark-net` is the buyer/vendor app. They share one Supabase project, and a change that affects both gets an entry in both changelogs. `textile-spark-net/documentation/claude.md` is the authoritative running memory for business rules and platform facts — read it first in any new session on this project, before the 600KB-plus `changelog.md`.
+
+**Branches merged into `Cosora-Admin` main**, in order: admin-schema separation (Phase 5b/5c), FAQs, Admin Log + Manager role, manager-team-roles, cron-job removal, admin completion Phases 1–12 (role separation, vendor PII, payments ledger, customers, leads, live activity, site content, discounts, blog CMS, least-privilege reads, RLS performance), Help & Support P4 (admin console).
+
+**Not yet merged to `Cosora-Admin` main** (live as a feature branch only): `admin-staff/registration`, `help-support/p5-content`, `help-support/p6-background`. The corresponding database migrations for all three (`admin_staff_registry`, `faqs_seller_help_and_translations`, `help_content_p5`, `registration_documents`, `plan_changes_and_refund_guarantee`, `help_content_documents_plans`) are already applied live, 2026-10-02 — so the schema and RPCs exist in the database today with **no admin UI yet pointed at them**. Don't assume "the migration is live" means "the panel can act on it."
+
+## Database shape at a glance
+
+- `public` — the buyer/vendor app's tables (products, rfqs, quotes, conversations, messages, advertisements, subscriptions, vendor_profiles/buyer_profiles, blog tables, site_banners/site_theme, discount_codes, csp_violation_reports, etc).
+- `admin` — walled off from `public`, reachable only through RPCs: `admin_users`, `audit_log`, `account_suspensions`, `conversation_reviews`, `chat_block_reasons`, `keyword_blocklist`, `flag_patterns`, `ad_review_log`, `ad_reason_codes`, `admin_flags`, `engagement_event_failures`, `vendor_contact_reveals`, `customer_summary_meta`, `customer_tags`, `profile_tags`, `discount_codes`/`discount_redemptions`/`discount_attempts`, `payment_entries`, `lead_rows` (a view), `staff_members` (schema live, no reader yet — see Admin Staff below).
+- `support` — new schema for the Help & Support feature (three migrations, `support_schema`/`support_requester_rpcs`/`support_admin_rpcs`), applied and deployed, rollout flag currently **Off**.
+- 251 migrations total on the live ledger, 112 of them dated 2026-09-27 or later. This project moves fast; re-check `list_migrations` at the start of any new session rather than trusting a prior audit's row counts.
+
+---
+
+## Feature-by-feature
+
+### Products — moderation queue
+**Status: working.** Three tabs by status (under review / live / rejected). Approve/reject writes `products.status` + `rejection_reason` directly; `trg_products_moderation` (BEFORE trigger) enforces `product_moderator`/`super_admin` only, and — since admin completion Phase 1 (2026-09-27) — a rejection without a reason is now refused **in the database**, not just the UI textarea. Confirmed in the migration ledger (`20260927150304_moderation_and_campaign_guards`).
+
+### Video Closeups — moderation queue
+**Status: working.** Mirrors Products on `product_videos`. The old vendor-wide bulk-approve RPC (which silently also approved that vendor's pending products and catalogues) was replaced in Phase 3 (2026-09-27) with `approve_vendor_videos_bulk()`, scoped to videos only, returning the actual count moved.
+
+### Ads — review queue + legacy screen + monitoring
+**Status: working, bypass closed.** The 2026-09-27 finding (an `ads_moderator`/`super_admin` could `UPDATE advertisements SET status='active'` directly, skipping the review RPCs and the `admin.ad_review_log` entirely) is fixed: `admin_rpc_guards` and `moderation_and_campaign_guards` (both `20260927150...`) close the direct-write path — admins now change a campaign only through the review RPCs, confirmed by `documentation/claude.md`'s own rule: *"Admins change a campaign only through the review RPCs. `advertisements` has no admin write arm... Nobody deletes a reviewed campaign through the API, admins included."* The two ad-reason-code vocabularies (legacy free text vs. the fixed 8-code list) were unified in Phase 3: both screens now read `admin_ad_reason_codes()` from one table, `admin.ad_reason_codes`, and Phase 3's `after_panel_deploy_drop_bulk_and_enforce_reason_codes` migration makes a reason **mandatory** at the database level, not just in the form.
+
+### Chat Review, Keywords, Patterns, Reasons
+**Status: working.** `ChatReview.tsx`'s block flow is now one RPC call (`block_account_from_review()`), replacing the old two-call sequence that could leave a user suspended with their triggering review still stuck "pending" — that specific race is gone. The 2026-09-27 finding that `admin_flag_pattern_add('.*', ...)` would be silently accepted and lock every chat on the platform is fixed: a chat flag pattern that matches ordinary messages is now refused with a reason, shown verbatim in `ChatPatterns.tsx`.
+
+### Vendors + Vendor Detail
+**Status: working.** KYC review (`set_vendor_document_verified`) unchanged: support/super_admin only, rejection reason mandatory in the database. **Vendor PII is now genuinely private** — this was the single highest-severity finding from 2026-09-27 (anon and authenticated could read every vendor's PAN, owner email, phone, address straight off `vendor_profiles`). Fixed 2026-09-27/28: eight columns (`pan`, `owner_email`, `phone`, `whatsapp`, `address_line`, `area`, `landmark`, `postal_code`) are revoked from client access and read only through `admin_vendor_private()` (super_admin, vendor_ops, support, finance_admin) on the admin side, and `my_vendor_private()` / `call_vendor_contact()` on the buyer/vendor side. **Confirmed live this session**, not just from the changelog: `information_schema.column_privileges` still lists stale-looking grant rows for `authenticated` on these columns (an artifact of Supabase registering grants from both the `postgres` and `supabase_admin` grantors — the same quirk `documentation/claude.md` documents for function EXECUTE grants), but an actual impersonated `SELECT pan, owner_email, phone, whatsapp, address_line FROM vendor_profiles` as `authenticated` returns **"permission denied for table vendor_profiles."** The real enforcement holds; only the informational catalog view looks out of date. Worth remembering: don't trust `information_schema` alone on this project for a privacy check — always confirm with a live impersonated read.
+
+### Accounts (suspension)
+**Status: working**, same behaviour as before: new-content creation blocked on suspension, existing live content untouched, KYC/reason requirements vary by RPC. No change logged here since 2026-09-27.
+
+### Subscriptions & billing
+**Status: working, now with reasons.** Plan change and cancel go through `admin_subscription_change_plan()` / `admin_subscription_cancel()`, both requiring a reason that's recorded into the Admin Log (`cosora.audit_reason` → `admin.audit_log.reason`). The direct `vendor_subscriptions` UPDATE this panel used to make is gone. The 2026-09-27 finding that **every** admin role (not just finance_admin/super_admin) could reprice or delete any `subscription_plans` row via direct table access is fixed: that write policy's admin arm now names `super_admin, finance_admin` specifically (`admin_write_role_separation`, `20260927145549`).
+
+### Certificates
+**Status: working.** `certificate_dispatch()` now checks the caller's role before its business-rule checks (Phase 1, 2026-09-27) — the 2026-09-27 finding that an unauthorized caller learned an operational fact (no delivery address on file) before being told they lacked permission is resolved by that reordering.
+
+### Payments — real ledger (admin completion Phase 5)
+**Status: working, real data.** The dev-seed fixture is gone. `admin.payment_entries` is a unified ledger (subscription payments, refunds as negative rows, unfinished checkouts, ad and certificate orders), read through `admin_payments_ledger()` / `admin_payments_summary()`, all amounts normalised to paise. Filtering, search and keyset paging run server-side. Rows with no Razorpay payment id (demo-mode activations) are totalled separately and flagged, matching Reports' convention. This closes the old "all revenue is simulated and the UI doesn't say so" gap — it now says so, on every affected row.
+
+### Customers — real segments (admin completion Phase 6)
+**Status: working, real data.** `admin.customer_summary` (materialized view, refreshed on page open at most once every 10 minutes — deliberately not a scheduled job) backs one row per customer account, with segment chips computed server-side. Super_admin and support can tag customers; tags are logged to the Admin Log. Cosora staff accounts are excluded from the customer list.
+
+### Leads — the RFQ pipeline (admin completion Phase 7)
+**Status: working, read-only.** New `/leads` page. See the dedicated write-up in the chat response for the full mechanism; in short, it reads `admin.lead_rows` (a view over `rfqs` + `quotes`) through `admin_leads_list()`, `admin_leads_summary()`, `admin_lead_detail()`. Six stages (new / unanswered / overdue / quoted / won / closed), an audience filter (open marketplace vs. direct-to-one-vendor), and timing figures (median time to first quote, % answered within 24h). Readable by super_admin, vendor_ops, product_moderator, support; writable by nobody — it's a reporting surface, not a moderation one. **Confirmed live**: 4 real RFQs exist today, 3 in "quoted" stage, 1 "unanswered" and already flagged "overdue" (the view's own threshold: active, zero quotes, more than 48 hours old).
+
+### Live Activity (admin completion Phase 8)
+**Status: working, real data.** No longer just a Clarity link. `admin_live_activity()` now reports real-time and windowed visitor counts, an hourly events chart, top products/sellers, and searches with at least 3 distinct searchers (same privacy floor as the vendor-facing buyer-geography feature). Clarity links still show when `VITE_CLARITY_PROJECT_ID` is configured.
+
+### Site Content (admin completion Phase 9)
+**Status: working, real data.** Dev-seed fixture gone. Vendor-dashboard banners (add/edit/reorder/schedule/on-off/delete) and site theme (5 colours + 2 fonts, contrast-checked against WCAG floors before Save is allowed) are both real, backed by `public.site_banners` / `public.site_theme` and the `admin_site_*` RPCs, propagated to the buyer app via a CDN snapshot (`site-config-snapshot` edge function). Banners are vendor-dashboard only — Mitra's explicit call, none on the buyer side.
+
+### Discounts (admin completion Phase 10)
+**Status: working, real data.** Dev-seed fixture gone. Codes apply to a plan, an ad campaign, or the Verified Certificate line, via `admin_discount_*` RPCs on `admin.discount_codes` / `admin.discount_redemptions`. Once a code has a confirmed use, its text/discount/target lock — you make a new code rather than edit a used one. The discount amount is always computed server-side (`discount-quote` edge function + `discount_check`/`discount_reserve` in the database); the browser only ever sends the code string.
+
+### Blog / Cosora Journal (admin completion Phase 10)
+**Status: new, working.** Not in the 2026-09-27 audit at all — built 2026-09-29/30. Three tabs (Articles, Categories, Landing page) write through `admin_blog_*` RPCs to a dedicated schema. Block-based article editor (text/heading/list/image/table/FAQ/quote/CTA/divider), full SEO fields with live title/description previews against the blog's real rendering rules (including the trailing " · The Cosora Journal" suffix, which an earlier version of the character counter forgot to account for), author picked from a real `public.authors` table rather than free text. Gated to super_admin only.
+
+### FAQs / Quick Guides
+**Status: working.** Unchanged mechanism (support + super_admin write via `admin_faq_*` RPCs, changes propagate to a CDN snapshot within about a minute). Quick Guides (Hindi/English/Gujarati) were added as part of the Support rollout (see below) and live under the same `/faqs` page.
+
+### Support (new, admin completion / Help & Support P4)
+**Status: built and deployed, rollout Off.** A full Support section: Inbox with view filters (waiting on us / open / mine / unassigned / resolved / closed / all), Callbacks, Fraud reports, App feedback, Support settings. Ticket view handles photos/audio/PDFs, masked phone reveals (logged to the Admin Log), take/assign/resolve/reopen/close with a reason. This is merged into `Cosora-Admin` main and the three underlying migrations are applied — **but the rollout flag is Off**, so the public-facing inbox receives nothing from real users yet. Manager role is read-only here by design (Andy's decision D-08); only super_admin and support act on tickets.
+
+### Admin Staff Registration
+**Status: schema-only, not in production.** `admin.staff_members` exists live (0 rows) with a comment confirming intent — "Staff registered from Cosora-Admin (admin-staff edge function): employee ID, work email, personal contact, temporary-password state" — but the UI branch (`admin-staff/registration`) is not merged into `Cosora-Admin` main. Don't report this as a working feature; it's mid-build.
+
+### Admins + Admin Log
+**Status: working**, unchanged since 2026-09-27: manager role can add/change/remove teammates in the five team roles only, last-super-admin protection confirmed, every admin write is append-only logged.
+
+### Geography, Reports, System Health
+**Status: working**, no material change logged since 2026-09-27 beyond System Health gaining a "Scheduled jobs" panel (see below) and a staleness warning on the embedding-health history.
+
+### Scheduled jobs
+All 12 Postgres cron jobs were deleted 2026-09-26 on Mitra's instruction, then the essential 7 were restored 2026-09-27 with a new 14-day history-prune job added: `account-deletion-sweep` + its alarm, `subscription-expiry-sweep`, `ads-schedule-sweep` (every 5 min), `faq-snapshots-refresh` (hourly), `embedding-health-log` (every 10 min), `fx-rates-refresh` (daily), `cron-history-prune`. **Deliberately still off:** `embedding-worker` and `vendor-catalog-recompute` (the two every-minute jobs — this matters for the Leads/lead-ranking discussion below), the embedding-health alarm, and two cache/rate-limit prune jobs. System Health's new "Scheduled jobs" panel (`admin_cron_status()`) shows every job's schedule, last run, 24h run/failure counts, and flags a job "overdue" if it's gone past twice its interval.
+
+---
+
+## What's confirmed fixed since the 2026-09-27 audit
+
+1. Vendor PAN/GSTIN/phone/email world-readable via `vendor_profiles` → **fixed**, confirmed live by impersonated read.
+2. Every admin role (not just the intended ones) could reprice/delete subscription plans, write `quotes`, bulk-approve across tables, read all KYC/contracts/invoices regardless of role → **fixed**, database write/read policies now name their roles explicitly (admin completion Phases 1 and 11).
+3. Ad review bypassable by direct `UPDATE advertisements` → **fixed**, no admin write arm exists on that table any more.
+4. Product/video rejection reasons not enforced server-side → **fixed** for both.
+5. Chat flag patterns with no breadth guard (`.*` could lock every conversation) → **fixed**, refused with a reason.
+6. Chat-review block flow was two non-atomic RPC calls → **fixed**, now one call.
+7. Scheduled jobs silently deleted with no visibility → **fixed**, essential jobs restored and a status panel added.
+8. All four dev-seed stub pages (Content, Payments, Customers, Discounts) → **all four are now real**, plus two entirely new real features (Blog, Leads) that didn't exist in any form before.
+
+## New things worth flagging, found this session
+
+1. **The RFQ form's "7-day deadline" is fiction.** `PostRequirement.tsx` tells every buyer: *"Every quote has an automatic 7-day deadline. Once it's reached, you'll get an option to extend it."* There is no `deadline` or `expires_at` column on `rfqs` or `quotes`, no job that closes an RFQ after 7 days, and no "extend" mechanism anywhere in the code or the schema. This is exactly the category of claim the project's own documented principle forbids ("the app never claims to have verified something it cannot verify" / no fabricated signals) — it should either be built or the line should come out.
+2. **Semantic lead-matching is wired but currently benefits nobody.** The infrastructure is real: 33 of 34 products, all 4 RFQs, and 6 of 11 vendor catalogues have real OpenAI embeddings (confirmed live), and `match_vendor_rfqs` will score real similarity when both sides exist. But the feature is gated on an **active paid plan**, and right now exactly **1 vendor** on the whole platform has an active plan — and that one vendor's catalogue is not among the 6 with an embedding (vendor-catalogue embedding depends on the `vendor_catalog_recompute` job, which is deliberately left off, per the cron list above). So today, every vendor who opens their lead pool — paid or not — sees the same plain chronological list; the ranking code path exists but has zero live vendors who actually trigger it. This is a real product gap, not a bug: once `vendor_catalog_recompute` runs (or a one-off backfill is done) for that one paid vendor, ranking turns on for them specifically.
+3. **`information_schema.column_privileges` is not reliable evidence of access on this project.** The vendor-PII check above is the second time (after the function-EXECUTE case `documentation/claude.md` already documents) that Supabase's dual-grantor behavior makes the catalog view show privileges that an actual impersonated query refuses. Any future security check on this schema should confirm with a live `SET LOCAL ROLE` test, not a grants query alone.
+
+## Suggested next steps
+
+1. Fix or remove the fake 7-day deadline claim in `PostRequirement.tsx` — cheapest possible fix, and it's a trust-eroding claim sitting on the buyer's primary conversion screen.
+2. Decide whether to run `vendor_catalog_recompute` as a one-off for the single paid vendor (cheap, proves the ranking path end to end) versus turning the job back on generally (an ongoing OpenAI cost decision Mitra should make explicitly, not something to flip quietly).
+3. Admin Staff Registration and Help-Support P5/P6 are mid-build on branches — worth explicitly deciding their priority rather than letting live, unused schema accumulate.
+4. Support's rollout flag is the one lever standing between the built Support section and real traffic — flip it only once the "dummy OTP sign-in" bypass is retired (both are flagged in `textile-spark-net/documentation/securityflags.md`), since Help & Support's own launch checklist names that as a blocker.

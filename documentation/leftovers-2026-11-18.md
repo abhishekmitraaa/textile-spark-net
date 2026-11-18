@@ -3,6 +3,8 @@
 **Request (Mitra, 2026-11-18):** "finish all the unfinished work and ask me for the things which need my guidance and
 take the decisions on your behalf for the things which are obvious."
 
+**Status:** LIVE 2026-11-18 (buyer main `26383e7`, admin main `37ecb85`).
+
 **Branch:** `fix/leftovers-2026-11-18` (worktree `.worktrees/sh-low`). It is stacked on `seller-home/low-fixes`, which is
 stacked on `ads/manual-types`, so the three go out together.
 
@@ -50,6 +52,16 @@ stacked on `ads/manual-types`, so the three go out together.
 - `tests/local/seller-home-low-b.spec.ts`: impressions through the fold; the seller sees a signed reference image; the
   video upload.
 - The nine functions: a forged token refused locally; the paid paths 3/3 through them.
+
+## Released 2026-11-18
+
+All of it is live. Migrations applied with the Supabase CLI (`db query --linked`, so not in the migration ledger), each
+self-check passing: `20261117120000`, `130000`, `140000`, `20261118100000`, `110000`, `120000`; before replacing
+`my_lead_alerts`, production's body was checked against the one the migration starts from (md5 equal). Production's
+policy check 156/0/0. The eleven functions deployed (a call with the public key alone answers 401). Pushed Cosora-Admin
+main `f3db33a..37ecb85` and buyer main `6850930..26383e7`; the live buyer bundle `index-DYGnHWuE.js` has the new code and
+selects `profile_score` nowhere. Then `20261118130000` and `20261117130100`. Checked after: browsers can't read
+`profile_score`, `rfq-attachments` is private with its path guard, and `ad-impressions-fold` runs every minute.
 
 ## Release order (Mitra: "Yes, release all"; each production step still checked as it goes)
 
