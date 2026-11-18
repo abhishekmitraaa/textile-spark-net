@@ -430,7 +430,8 @@ const Upload = () => {
       let body: Blob = file;
       let ext = fileExt(file.name, "jpg");
       try {
-        const shrunk = await shrinkImage(file, LISTING_PHOTO_MAX_SIDE);
+        // JPEG, so the server can make the card thumbnail (product-thumbs reads JPEG and PNG, not WebP; review H-12).
+        const shrunk = await shrinkImage(file, LISTING_PHOTO_MAX_SIDE, "jpeg");
         body = shrunk.blob;
         ext = shrunk.ext;
       } catch {

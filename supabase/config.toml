@@ -148,3 +148,6 @@ verify_jwt = true
 # cancel). Browser-called; the caller is confirmed by Auth.
 [functions.subscription-autopay]
 verify_jwt = true
+
+[functions.product-thumbs]
+verify_jwt = true

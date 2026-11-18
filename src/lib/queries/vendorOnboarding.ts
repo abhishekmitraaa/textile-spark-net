@@ -350,7 +350,8 @@ export async function uploadRegistrationFiles(uid: string, files: RegistrationFi
     return path;
   };
   const publicImage = async (f: File, folder: "office" | "onboarding-product"): Promise<string> => {
-    const { blob, ext } = await shrinkImage(f, 1600);
+    // JPEG, so the server can make the card thumbnail (product-thumbs reads JPEG and PNG, not WebP; review H-12).
+    const { blob, ext } = await shrinkImage(f, 1600, "jpeg");
     const path = `${uid}/${folder}/${uploadSuffix()}.${ext}`;
     const { error } = await supabase.storage.from("product-images").upload(path, blob, { upsert: false, contentType: blob.type || undefined });
     if (error) throw error;
