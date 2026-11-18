@@ -219,9 +219,10 @@ begin
     if found then continue; end if;
 
     if v_count >= 5000 then
-      -- Full: the new report takes over a row seen only once, the longest ago. A row seen twice or more (real traffic
-      -- keeps hitting it) is never taken, so a flood of made-up reports, which the anon key can send, only recycles
-      -- its own once-seen rows (commit security review, 2026-11-18). With none left to take, the report is dropped.
+      -- Full: the new report takes over the row seen least and longest ago, always. The anon caller controls the hit
+      -- counts, so they can't be trusted to protect rows: protecting rows seen twice let a flood of doubled made-up
+      -- reports lock the table against every new one (commit security review, 2026-11-18). Always recycling means a
+      -- new violation is always recorded; at worst a flood pushes out rarely seen rows.
       update public.csp_violations v
          set directive = v_directive, blocked = v_blocked,
              document_path = v_path, source = v_source,
@@ -230,8 +231,7 @@ begin
              hits = 1, first_seen = now(), last_seen = now()
        where v.id = (
                select o.id from public.csp_violations o
-                where o.hits < 2
-                order by o.last_seen asc
+                order by o.hits asc, o.last_seen asc
                 limit 1
                 for update skip locked
              );
@@ -254,8 +254,6 @@ $fn$;
 -- Finding the row to recycle must not scan 5,000 rows on every new report.
 create index if not exists csp_violations_least_seen_idx
   on public.csp_violations (hits, last_seen);
-create index if not exists csp_violations_once_seen_idx
-  on public.csp_violations (last_seen) where hits < 2;
 
 revoke execute on function public.csp_report_ingest(jsonb) from public;
 grant execute on function public.csp_report_ingest(jsonb) to anon, authenticated;

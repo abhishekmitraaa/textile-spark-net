@@ -253,12 +253,12 @@ test.describe("CSP reports", () => {
     const total = (await db.from("csp_violations").select("id", { count: "exact", head: true })).count ?? 0;
     expect(total).toBeLessThanOrEqual(5000);
 
-    // A flood can only recycle once-seen rows: with every row seen twice, a new report is dropped and nothing goes.
-    await db.from("csp_violations").update({ hits: 2 }).like("document_path", `${tag}%`);
-    const flood = { directive: "connect-src", blocked: "https://flood.example", document_path: `${tag}/flood`, source: "" };
-    expect((await anon.rpc("csp_report_ingest", { p_reports: [flood] })).error).toBeNull();
-    expect((await db.from("csp_violations").select("hits").match(flood)).data).toHaveLength(0);
-    expect((await db.from("csp_violations").select("hits").match(fresh)).data).toHaveLength(1);
+    // However the hit counts were inflated, a new report is still recorded, and the row seen most stays.
+    await db.from("csp_violations").update({ hits: 2 }).like("document_path", `${tag}/1%`);
+    const late = { directive: "connect-src", blocked: "https://late.example", document_path: `${tag}/late`, source: "" };
+    expect((await anon.rpc("csp_report_ingest", { p_reports: [late] })).error).toBeNull();
+    expect((await db.from("csp_violations").select("hits").match(late)).data).toHaveLength(1);
+    expect((await db.from("csp_violations").select("hits").match(real)).data).toHaveLength(1);
 
     await db.from("csp_violations").delete().like("document_path", `${tag}%`);
   });

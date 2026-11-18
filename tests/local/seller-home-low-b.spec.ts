@@ -25,6 +25,7 @@ test.afterEach(() => {
          set session_replication_role = origin;
          delete from public.products where vendor_id = '${id}';
          delete from public.buyer_profiles where id = '${id}';
+         delete from public.vendor_contracts where vendor_id = '${id}';
          delete from public.vendor_profiles where id = '${id}';
          delete from public.profiles where id = '${id}';
          delete from auth.users where id = '${id}';`);
@@ -220,4 +221,45 @@ test("a direct request's reference image is private and shows for the seller it 
   await p.context().close();
   sql(`delete from public.rfqs where buyer_id = '${b.id}'`);
   await service().storage.from("rfq-attachments").remove([path]);
+});
+
+// ── Seller Home audit SH-113: a Video Closeup uploads end to end (the audit couldn't: no encoder) ──
+// tests/fixtures/clip-2s.webm is a real 2-second VP8 clip, made with Playwright's own ffmpeg from 48 JPEG frames.
+test("a seller uploads a Video Closeup end to end, and it waits for review", async ({ browser }) => {
+  const s = await account("lbvid");
+  // A registered seller (claude.md: registration + a signed Supplier Agreement), so publishing isn't held.
+  sql(`insert into public.vendor_contracts (vendor_id, signed_name, agreement_version) values ('${s.id}', 'LB owner', '2026-09-v1')`);
+  const product = firstId(sql(`insert into public.products (vendor_id, name, status, price_value, moq)
+      values ('${s.id}', 'LB ${tag} video listing', 'live', 100, '10') returning id`));
+  const p = await open(browser, s.session, "/upload-video");
+  // bunny-upload-url runs in the edge runtime on :8099 (the stack's own serves a fixed list); with no Bunny keys it
+  // answers not_configured and the clip goes to Supabase Storage, as on production today.
+  await p.context().route(/\/functions\/v1\/bunny-upload-url$/, async (route) => {
+    const req = route.request();
+    if (req.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*",
+        "access-control-allow-headers": "authorization, x-client-info, apikey, content-type", "access-control-allow-methods": "POST, OPTIONS" } });
+      return;
+    }
+    const res = await route.fetch({ url: `${process.env.LOCAL_EDGE_URL ?? "http://localhost:8099"}/bunny-upload-url` });
+    await route.fulfill({ response: res, headers: { ...res.headers(), "access-control-allow-origin": "*" } });
+  });
+  await p.reload();
+  const errors = watchErrors(p);
+  await p.locator('input[type="file"][accept="video/mp4,video/webm"]').setInputFiles("tests/fixtures/clip-2s.webm");
+  await p.getByPlaceholder(/Describe your product video closeup/).fill(`LB ${tag} close look at the weave`);
+  await p.getByRole("button", { name: /Select a product/ }).click();
+  await p.getByText(`LB ${tag} video listing`).last().click();
+  await p.getByRole("button", { name: /Publish Video Closeup/ }).click();
+  await expect.poll(() => sql(`select status || '|' || coalesce(product_id::text, '') from public.product_videos where vendor_id = '${s.id}'`),
+    { timeout: 60_000 }).toBe(`under_review|${product}`);
+  const url = sql(`select video_url from public.product_videos where vendor_id = '${s.id}'`).trim();
+  const objects = sql(`select count(*) from storage.objects where bucket_id = 'product-videos' and name like '${s.id}/%'`);
+  expect(Number(objects)).toBeGreaterThan(0);
+  expect((await fetch(url)).ok).toBe(true);
+  expect(errors).toEqual([]);
+  await p.context().close();
+  const files = sql(`select name from storage.objects where bucket_id = 'product-videos' and name like '${s.id}/%'`).split("\n").map((l) => l.trim()).filter(Boolean);
+  if (files.length) await service().storage.from("product-videos").remove(files);
+  sql(`delete from public.product_videos where vendor_id = '${s.id}'`);
 });
