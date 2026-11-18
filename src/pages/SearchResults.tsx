@@ -41,6 +41,7 @@ import { useVocabulary } from "@/lib/queries/attributeDefinitions";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useT } from "@/lib/i18n";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // Swatch colours for the Colour facet (names must match the facet options).
 const COLOUR_HEX: Record<string, string> = {
@@ -562,6 +563,7 @@ type Menu = "gender" | "sort" | null;
 const SearchResults = () => {
   const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
+  const goBack = useStepBack("/search");
   const reduced = useReducedMotion();
   const t = useT();
   const [params] = useSearchParams();
@@ -932,7 +934,7 @@ const SearchResults = () => {
           </button>
 
           <div className="flex items-center gap-2 pb-2">
-            <button onClick={() => navigate(-1)} aria-label="Go back" className="shrink-0 p-1 -ml-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+            <button onClick={goBack} aria-label="Go back" className="shrink-0 p-1 -ml-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
             <button onClick={() => navigate("/search")} className="flex-1 lg:max-w-2xl flex items-center gap-2 bg-gray-100 rounded-full px-3.5 py-2 lg:py-2.5 text-left">
               <span className={cn("flex-1 truncate text-sm", query ? "text-gray-900" : "text-gray-400")}>{query || "Search for items or brands"}</span>
               {query && <span onClick={(e) => { e.stopPropagation(); navigate("/search"); }} aria-label="Clear"><X className="w-4 h-4 text-gray-400" /></span>}

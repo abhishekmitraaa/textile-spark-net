@@ -1,74 +1,55 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { SampleProfilesNotice, SampleTag } from "@/components/buyer/SampleProfile";
 import { getFreelancer } from "@/lib/freelancersData";
-import { placeCall, demoPhone } from "@/lib/queries/calls";
-import { useServiceReviews, useReviewMutations } from "@/lib/queries/reviews";
-import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
+import { useStepBack } from "@/hooks/useStepBack";
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Star, MapPin, Bookmark, BookmarkCheck, Share2,
-  MessageCircle, Phone, Clock, Briefcase, GraduationCap, Wallet, Timer, X, ThumbsUp,
+  ArrowLeft, ChevronLeft, ChevronRight, MapPin, Share2, Briefcase, GraduationCap, Wallet, Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
-type Tab = "services" | "portfolio" | "reviews";
+type Tab = "services" | "portfolio";
 
+/**
+ * A sample freelancer (Mitra, 2026-11-18, "Keep, remove fakes"; review H-13). There is no account behind it, so the
+ * page has no rating, reviews, Save, Chat or Call (Call dialled a generated real-format number; Chat opened a thread
+ * with no account; reviews written here attached real buyers' words to a made-up person).
+ */
 const FreelancerProfile = () => {
-  const navigate = useNavigate();
   const reduced = useReducedMotion();
   const { id } = useParams();
   const f = getFreelancer(id ?? "");
+  const goBack = useStepBack("/freelancers");
 
   const [slide, setSlide] = useState(0);
   const [tab, setTab] = useState<Tab>("services");
-  const [saved, setSaved] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
-
-  // Real reviews for this freelancer (falls back to the mock aggregate/list).
-  const { data: svcReviews } = useServiceReviews("freelancer", id);
-  const { submitServiceReview } = useReviewMutations();
-  const hasRealReviews = (svcReviews?.count ?? 0) > 0;
 
   if (!f) {
     return (
       <div className="min-h-screen bg-white grid place-items-center px-6 text-center">
         <div>
           <p className="text-sm text-gray-500">This freelancer no longer exists.</p>
-          <button onClick={() => navigate("/freelancers")} className="mt-3 text-sm font-semibold text-brand-buyer">Back to Freelancers</button>
+          <button onClick={goBack} className="mt-3 text-sm font-semibold text-brand-buyer">Back to Freelancers</button>
         </div>
       </div>
     );
   }
 
-  const chat = () => navigate(`/chats/${f.id}`);
   const card = "rounded-2xl border border-gray-200 bg-white p-4";
   const total = f.cover.length;
-
-  const displayRating = hasRealReviews ? svcReviews!.avg : f.rating;
-  const displayCount = hasRealReviews ? svcReviews!.count : f.reviewsCount;
-  const reviewCards = hasRealReviews
-    ? svcReviews!.reviews.map((r) => ({
-        id: r.id, name: r.reviewerName, project: "",
-        timeAgo: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-        rating: r.rating, text: r.body ?? "", helpful: 0,
-      }))
-    : f.reviews.map((r) => ({ id: String(r.id), name: r.client, project: r.project, timeAgo: r.timeAgo, rating: r.rating, text: r.text, helpful: r.helpful }));
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Back header */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-3">
-          <button onClick={() => navigate("/freelancers")} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700">
+          <button onClick={goBack} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700">
             <ArrowLeft className="w-4 h-4" /> Back to Freelancers
           </button>
           <div className="ml-auto flex items-center gap-1">
-            <button onClick={() => setSaved((s) => !s)} aria-label="Save" className="p-1.5 rounded-full hover:bg-gray-100">
-              {saved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-600" />}
-            </button>
             <button onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} aria-label="Share" className="p-1.5 rounded-full hover:bg-gray-100">
               <Share2 className="w-5 h-5 text-gray-600" />
             </button>
@@ -77,6 +58,8 @@ const FreelancerProfile = () => {
       </div>
 
       <motion.div className="max-w-2xl mx-auto px-4 pt-3 pb-24 space-y-3" initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <SampleProfilesNotice />
+
         {/* Cover carousel */}
         <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[16/10]">
           <AnimatePresence mode="wait">
@@ -103,9 +86,9 @@ const FreelancerProfile = () => {
               <p className="text-sm text-brand-buyer font-medium">{f.title}</p>
               <p className="text-xs text-gray-500">{f.specialty}</p>
             </div>
+            <SampleTag />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
-            <span className="inline-flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" /> <span className="font-bold text-gray-800">{f.rating}</span> <span className="text-gray-400">({f.reviewsCount} reviews)</span></span>
             <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {f.location}</span>
           </div>
           {/* Rate cards */}
@@ -123,7 +106,7 @@ const FreelancerProfile = () => {
 
         {/* Tabs */}
         <div className="flex rounded-xl border border-gray-200 p-1">
-          {(["services", "portfolio", "reviews"] as Tab[]).map((t) => (
+          {(["services", "portfolio"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className="relative flex-1 rounded-lg py-2 text-sm font-semibold capitalize">
               {tab === t && <motion.span layoutId="fp-tab" className="absolute inset-0 rounded-lg bg-brand-buyer" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
               <span className={cn("relative z-10", tab === t ? "text-white" : "text-gray-500")}>{t}</span>
@@ -186,7 +169,7 @@ const FreelancerProfile = () => {
             <div className="grid grid-cols-2 gap-3">
               {f.portfolio.map((p) => (
                 <div key={p.title} className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 group">
-                  <img src={p.image} alt={p.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <img src={p.image} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   <div className="absolute bottom-2 left-2.5 right-2.5">
                     <p className="text-xs font-bold text-white leading-tight">{p.title}</p>
@@ -197,61 +180,8 @@ const FreelancerProfile = () => {
             </div>
           </motion.div>
         )}
-
-        {/* ── REVIEWS ── */}
-        {tab === "reviews" && (
-          <motion.div initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <div className={cn(card, "flex items-center justify-between")}>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-3xl font-extrabold text-gray-900">{displayRating}</span>
-                  <div>
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3.5 h-3.5", s <= Math.round(displayRating) ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />)}
-                    </div>
-                    <p className="text-[11px] text-gray-400">{displayCount} reviews</p>
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => setReviewOpen(true)} className="rounded-full bg-brand-buyer px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-buyer/90">Write a Review</button>
-            </div>
-            <div className="space-y-3">
-              {reviewCards.map((r) => (
-                <div key={r.id} className={card}>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-gray-900">{r.name}</p>
-                    <span className="text-[11px] text-gray-400">{r.timeAgo}</span>
-                  </div>
-                  {r.project && <p className="text-[11px] text-brand-buyer font-medium">{r.project}</p>}
-                  <div className="flex items-center gap-0.5 mt-1">
-                    {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3 h-3", s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />)}
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-1.5">{r.text}</p>
-                  {!hasRealReviews && <button className="mt-2 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"><ThumbsUp className="w-3.5 h-3.5" /> Helpful ({r.helpful})</button>}
-                </div>
-              ))}
-              {reviewCards.length === 0 && <p className="py-6 text-center text-sm text-gray-400">No reviews yet. Be the first to review {f.name}.</p>}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Contact */}
-        <div className={card}>
-          <div className="flex items-center gap-2">
-            <button onClick={chat} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-brand-buyer text-brand-buyer py-3 text-sm font-bold hover:bg-brand-buyer/5 transition-colors"><MessageCircle className="w-4 h-4" /> Chat</button>
-            <button onClick={() => placeCall(f.name, demoPhone(f.id))} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer text-white py-3 text-sm font-bold hover:bg-brand-buyer/90 transition-colors"><Phone className="w-4 h-4" /> Call Now</button>
-          </div>
-          <p className="mt-2 text-center text-[11px] text-gray-400 inline-flex items-center justify-center gap-1 w-full"><Clock className="w-3 h-3" /> Usually responds within 24 hours</p>
-        </div>
       </motion.div>
 
-      <WriteReviewModal
-        open={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-        subjectName={f.name}
-        placeholder="Share details about the work quality, communication and delivery…"
-        onSubmit={(rating, text) => submitServiceReview("freelancer", id ?? "", f.name, rating, text)}
-      />
       <MobileBottomNav />
     </div>
   );

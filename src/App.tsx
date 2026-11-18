@@ -113,7 +113,6 @@ import AppFeedback from "./pages/AppFeedback";
 import HelpGuide from "./pages/HelpGuide";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
-import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
 import GoPostRfq from "./pages/GoPostRfq";
 import SaveToFolderModal from "./components/buyer/SaveToFolderModal";
 import CallNumberModal from "./components/buyer/CallNumberModal";
@@ -145,66 +144,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-type BuyerShellRoute = {
-  path: string;
-  title: string;
-  description: string;
-  relatedHref?: string;
-  relatedLabel?: string;
-};
-
-const buyerShellRoutes: BuyerShellRoute[] = [
-  {
-    path: "/home/sale",
-    title: "Sale",
-    description: "Discounted products feed for sale-priced inventory.",
-    relatedHref: "/home/new-arrivals",
-    relatedLabel: "Open New Arrivals",
-  },
-  {
-    path: "/requirement",
-    title: "Requirement Hub",
-    description: "Central landing page for Quick RFQ, detailed RFQ, and My Quotes.",
-    relatedHref: "/requirement/my-quotes",
-    relatedLabel: "Open My Quotes",
-  },
-  {
-    path: "/requirement/quick-rfq",
-    title: "Quick RFQ",
-    description: "Fast quote entry shell for uploading a product image and quantity.",
-    relatedHref: "/requirement",
-    relatedLabel: "Open Requirement Hub",
-  },
-  {
-    path: "/requirement/post-requirement/form",
-    title: "Detailed Requirement Form",
-    description: "Full form step for structured quote requests.",
-    relatedHref: "/requirement/post-requirement",
-    relatedLabel: "Open Detailed RFQ",
-  },
-  {
-    path: "/requirement/post-requirement/success",
-    title: "Requirement Submitted",
-    description: "Success screen shown after a detailed RFQ is submitted.",
-    relatedHref: "/requirement/my-quotes",
-    relatedLabel: "Open My Quotes",
-  },
-  {
-    path: "/profile/edit",
-    title: "Edit Profile",
-    description: "Personal, business, and photo editing flow.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/business-details",
-    title: "Business Details",
-    description: "Expanded business profile management page.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -345,20 +284,13 @@ const App = () => (
             <Route path="/seller/blogs/:blogId" element={<VendorBlogArticle />} />
             {/* For You's first run is part of /home/for-you itself; this address showed a developer scaffold card. */}
             <Route path="/home/for-you/onboarding" element={<Navigate to="/home/for-you" replace />} />
-            {buyerShellRoutes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={
-                  <BuyerRouteShell
-                    title={route.title}
-                    description={route.description}
-                    relatedHref={route.relatedHref}
-                    relatedLabel={route.relatedLabel}
-                  />
-                }
-              />
-            ))}
+            {/* These four were BuyerRouteShell developer scaffolds ("Route scaffold · Phase 1"), live and reachable by address
+                (2026-11-18 review, H-02). The real pages are Post Requirement (its category step, form and success screen,
+                and the Quick Quote sheet) and My Quotes. */}
+            <Route path="/requirement" element={<Navigate to="/requirement/post-requirement" replace />} />
+            <Route path="/requirement/quick-rfq" element={<Navigate to="/requirement/post-requirement" replace />} />
+            <Route path="/requirement/post-requirement/form" element={<Navigate to="/requirement/post-requirement" replace />} />
+            <Route path="/requirement/post-requirement/success" element={<Navigate to="/requirement/my-quotes" replace />} />
             <Route path="/add-social-links" element={<AddSocialLinks />} />
             <Route path="/advertisement-slideshow" element={<AdvertisementSlideshow />} />
             <Route path="/upload-catalogue" element={<UploadCatalogue />} />

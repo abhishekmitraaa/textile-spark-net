@@ -172,7 +172,7 @@ function KycDocumentUpload({
 export default function Onboarding() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { setRole, setVendorRegistered } = useUserRole();
   // Set only from the history entry (the effect below); move with goToStep() / goPrev().
   const [currentStep, setCurrentStep] = useState(1);
@@ -1075,6 +1075,38 @@ export default function Onboarding() {
   const canFinishProducts = hasProduct || (catalogueFiles.length > 0 && !productStarted);
 
   if (showPendingResult) return <RegistrationPending />;
+
+  // A registration is saved to the seller's account, so it starts signed in: a signed-out visitor used to fill all nine
+  // steps, read "your answers stay on this page", and lose every one of them on the way to sign in (2026-11-18 review,
+  // H-07). Sign-in itself is unchanged; this only asks first.
+  if (!authLoading && !user) {
+    return (
+      <div className="vendor-shell flex min-h-screen flex-col bg-white">
+        <header className="border-b border-brand-border">
+          <div className="mx-auto flex max-w-2xl items-center px-4 py-3">
+            <Link to="/" className="block">
+              <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="block h-9 w-auto object-contain sm:h-10" draggable={false} />
+            </Link>
+          </div>
+        </header>
+        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-vendor/10">
+            <Building2 className="h-8 w-8 text-brand-vendor" />
+          </div>
+          <h1 className="text-xl font-semibold text-brand-ink">Sign in to register your business</h1>
+          <p className="text-sm text-muted-foreground">
+            Your registration is saved to your Cosora account. Sign in, or create an account, and then fill it in.
+          </p>
+          <Button asChild className="h-11 w-full rounded-full bg-brand-vendor text-white hover:bg-brand-vendor/90">
+            <Link to="/register">Create an account</Link>
+          </Button>
+          <Button asChild variant="outline" className="h-11 w-full rounded-full border-brand-border text-brand-ink">
+            <Link to="/login">Sign in</Link>
+          </Button>
+        </main>
+      </div>
+    );
+  }
 
   if (showWelcome) {
     // A screen with no button and no hint used to stand here until tapped anywhere (SH-001): now it says what happens

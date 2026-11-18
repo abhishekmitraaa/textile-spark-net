@@ -40,6 +40,7 @@ import { categoryTileSlot } from "@/lib/categoryImageSlots";
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -78,6 +79,7 @@ type GenderFilter = "Men" | "Women" | "Unisex";
 const VendorProfile = () => {
   const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
+  const goBack = useStepBack("/home/new-arrivals");
   const { id } = useParams();
   const reduced = useReducedMotion();
   const saved = useSaved();
@@ -313,7 +315,7 @@ const VendorProfile = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-2xl lg:max-w-5xl mx-auto px-3 lg:px-4 pt-3 pb-24 space-y-3">
-          <button onClick={() => navigate(-1)} aria-label="Back"
+          <button onClick={goBack} aria-label="Back"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm hover:bg-gray-100 transition-colors">
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -357,7 +359,7 @@ const VendorProfile = () => {
             className="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100"
           >
             <div className="max-w-2xl lg:max-w-5xl mx-auto flex items-center gap-3 px-4 py-2.5">
-              <button onClick={() => navigate(-1)} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+              <button onClick={goBack} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
               <h2 className="flex-1 text-base font-extrabold tracking-wide text-gray-900 truncate">{brandName}</h2>
               <button onClick={() => setPageSaved((s) => !s)} aria-label="Save vendor" className="p-1">
                 {pageSaved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-500" />}
@@ -378,7 +380,7 @@ const VendorProfile = () => {
             <StoreHeroBackground bannerUrl={vendor.bannerUrl} brandName={brandName} tone="buyer" />
 
             {/* Back button — top left */}
-            <button onClick={() => navigate(-1)} aria-label="Back"
+            <button onClick={goBack} aria-label="Back"
               className="absolute left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur hover:bg-black/45 transition-colors">
               <ArrowLeft className="h-4 w-4" />
             </button>

@@ -1,5 +1,5 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import BuyerShell from "@/components/buyer/BuyerShell";
@@ -38,6 +38,7 @@ import {
   useRecentlyViewed,
   useRecentlyViewedHydrating,
   useRecentlyViewedOwner,
+  refreshRecentCards,
   removeRecent,
   clearRecent,
   relativeTime,
@@ -49,6 +50,7 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay from "@/components/buyer/CardLinkOverlay";
 import type { Gender } from "@/lib/listingProducts";
 import { cn } from "@/lib/utils";
+import { useStepBack } from "@/hooks/useStepBack";
 
 type GenderFilter = "all" | Gender;
 type SortKey = "recent" | "price-asc" | "price-desc" | "rating";
@@ -102,11 +104,12 @@ function RecentRow({ p }: { p: RecentProduct }) {
           <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-500">
             <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{p.location}</span>
           </div>
-          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-600">
-            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-            <span className="font-bold">{p.rating.toFixed(1)}</span>
-            <span className="text-gray-400">({p.reviews} reviews)</span>
-          </div>
+          {p.rating > 0 && (
+            <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-600">
+              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+              <span className="font-bold">{p.rating.toFixed(1)}</span>
+            </div>
+          )}
           <div className="flex items-end justify-between gap-2 mt-1">
             <div>
               <p className="text-sm font-bold text-gray-900">{showText(p.price)}</p>
@@ -141,6 +144,7 @@ function RecentRow({ p }: { p: RecentProduct }) {
 
 const RecentlyViewed = () => {
   const navigate = useNavigate();
+  const goBack = useStepBack("/home/new-arrivals");
   const reduced = useReducedMotion();
   const recent = useRecentlyViewed();
   const hydrating = useRecentlyViewedHydrating();
@@ -164,6 +168,12 @@ const RecentlyViewed = () => {
   //     yet know whose history this is, so do not claim it is empty.
   const signedInPending = Boolean(user) && (syncedFor !== user?.id || hydrating);
   const loading = signedInPending || (authLoading && recent.length === 0);
+
+  // Show each listing's real card, never what a view guessed (2026-11-18 review, H-05): once the right history is in
+  // the store (this account's, or this browser's when signed out), re-read the cards for its ids.
+  useEffect(() => {
+    if (!authLoading && !signedInPending) void refreshRecentCards();
+  }, [authLoading, signedInPending]);
   const hasItems = !loading && recent.length > 0;
 
   const [gender, setGender] = useState<GenderFilter>("all");
@@ -189,7 +199,7 @@ const RecentlyViewed = () => {
       <div className="max-w-2xl mx-auto px-4 pt-3 pb-24">
         {/* Title row */}
         <div className="flex items-center gap-2 mb-3">
-          <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
+          <button onClick={goBack} aria-label="Back" className="-ml-1 p-1">
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <div className="flex-1 min-w-0">

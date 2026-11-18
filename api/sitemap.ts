@@ -49,8 +49,7 @@ const STATIC_ROUTES: { path: string; priority: string; changefreq: string }[] = 
   { path: "/blogs/about", priority: "0.7", changefreq: "monthly" },
   { path: "/seller", priority: "0.9", changefreq: "weekly" },
   { path: "/categories", priority: "0.8", changefreq: "weekly" },
-  { path: "/services", priority: "0.8", changefreq: "weekly" },
-  { path: "/freelancers", priority: "0.8", changefreq: "weekly" },
+  // /services and /freelancers are left out: they show sample profiles, not real providers (2026-11-18 review, H-13).
   { path: "/cosora-studio", priority: "0.7", changefreq: "weekly" },
   { path: "/video-closeups", priority: "0.7", changefreq: "daily" },
   { path: "/help", priority: "0.5", changefreq: "monthly" },

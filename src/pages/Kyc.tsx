@@ -29,6 +29,7 @@ import {
   useMyVendorDocuments, DOC_TYPE_LABELS, signedKycUrl, isRejected,
   KYC_URL_TTL_SECONDS, type VendorDocumentRow,
 } from "@/lib/queries/vendorDocuments";
+import { useStepBack } from "@/hooks/useStepBack";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -436,6 +437,7 @@ function SignAgreementCard({ onSigned }: { onSigned: () => void }) {
 
 const Kyc = () => {
   const navigate = useNavigate();
+  const goBack = useStepBack("/seller-home");
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const { data: store } = useMyVendorProfile(user?.id);
@@ -481,7 +483,7 @@ const Kyc = () => {
       >
         {/* Header */}
         <motion.div variants={section} className="flex items-center gap-3">
-          <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate(-1)}
+          <motion.button whileTap={TAP} transition={TAP_T} onClick={goBack}
             className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1">
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </motion.button>

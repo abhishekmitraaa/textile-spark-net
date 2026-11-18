@@ -1,9 +1,11 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Mail, MapPin } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { GRIEVANCE_OFFICER } from "@/lib/grievance";
 import NotFound from "./NotFound";
+import { useStepBack } from "@/hooks/useStepBack";
+import { useHomePath } from "@/hooks/useHomePath";
 
 /**
  * /grievance (Help & Support P6c, D-15): who Cosora's Grievance Officer is and how to reach
@@ -11,7 +13,8 @@ import NotFound from "./NotFound";
  * ordinary not-found page, so nothing half-finished is ever public.
  */
 export default function Grievance() {
-  const navigate = useNavigate();
+  const homePath = useHomePath();
+  const goBack = useStepBack(homePath);
   const officer = GRIEVANCE_OFFICER;
   if (!officer) return <NotFound />;
 
@@ -20,7 +23,7 @@ export default function Grievance() {
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}>
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
+          <button onClick={goBack} aria-label="Back" className="-ml-1 p-1">
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="text-base font-bold text-gray-900">Grievance Officer</h1>

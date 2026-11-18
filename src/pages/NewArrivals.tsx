@@ -441,20 +441,10 @@ const NewArrivals = () => {
   const cols = viewMode === "2-col" ? 2 : 3;
   const desktopCols = cols * 2; // 4 (2-col) or 6 (3-col)
 
-  // Pad the feed so the final desktop row is always complete — otherwise a count
-  // like 6 leaves a half-empty row on wide screens. We top up to the next
-  // multiple of desktopCols by cycling the existing products (unique ids/keys).
-  // desktopCols is a multiple of the mobile column count, so mobile stays full too.
-  const displayProducts = useMemo(() => {
-    if (products.length === 0 || feed.hasNextPage) return products;
-    const remainder = products.length % desktopCols;
-    if (remainder === 0) return products;
-    const fillers = Array.from({ length: desktopCols - remainder }, (_, i) => {
-      const src = products[i % products.length];
-      return { ...src, id: `${src.id}-fill${i}` };
-    });
-    return [...products, ...fillers];
-  }, [products, desktopCols, feed.hasNextPage]);
+  // The feed as it is. The last row may be short: it used to be topped up with copies of the first listings under
+  // made-up ids ("<id>-fill0"), whose links opened "Product not found" and whose Save stored a fake id
+  // (2026-11-18 review, H-01).
+  const displayProducts = products;
 
   // Interleave a Submit Requirement card every 5 rows. A row is `cols` cards on
   // mobile but `desktopCols` on desktop, so the insert positions differ per

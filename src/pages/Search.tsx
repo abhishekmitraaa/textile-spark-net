@@ -21,6 +21,7 @@ import CosoraLogo from "@/components/CosoraLogo";
 import { useSpeechSearch } from "@/hooks/useSpeechSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useStepBack } from "@/hooks/useStepBack";
 
 function toListing(p: ProductCardData): ListingProduct {
   return makeListingProduct(p.id, {
@@ -104,6 +105,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 // ─────────────────────────────────────────────────────────────
 const Search = () => {
   const navigate = useNavigate();
+  const goBack = useStepBack("/home/new-arrivals");
   const reduced = useReducedMotion();
   const inputRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -327,7 +329,7 @@ const Search = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} aria-label="Go back" className="shrink-0 p-1 -ml-1">
+            <button onClick={goBack} aria-label="Go back" className="shrink-0 p-1 -ml-1">
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
             <div className="flex-1 flex items-center gap-2 bg-gray-100 rounded-full px-3.5 py-2 lg:py-2.5">

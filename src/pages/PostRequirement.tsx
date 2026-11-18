@@ -259,6 +259,17 @@ const PostRequirement = () => {
   };
   const removeFile = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
 
+  // A requirement is saved to the buyer's account, so the detailed form asks for sign-in before it starts, as Quick
+  // Quote does: a signed-out buyer used to fill every step and then hit "Use the dev switcher" with no way to sign in
+  // and nothing kept (2026-11-18 review, H-03). Sign-in itself is unchanged.
+  const signedInOrPrompt = (): boolean => {
+    if (user) return true;
+    toast.error("Sign in to post a requirement", {
+      action: { label: "Sign in", onClick: () => navigate("/login") },
+    });
+    return false;
+  };
+
   const submit = async () => {
     if (submitting) return;
     for (const section of sections) {
@@ -270,10 +281,8 @@ const PostRequirement = () => {
       }
     }
 
-    if (!user) {
-      toast.error("Sign in as a buyer to submit", { description: "Use the dev switcher (bottom-left) to sign in as Demo Buyer." });
-      return;
-    }
+    // Signed out by now only if the session ended mid-form: the form can't be started signed out.
+    if (!signedInOrPrompt()) return;
 
     // Best-effort extraction of a title / quantity / budget from the
     // category-specific values (field keys differ per category schema).
@@ -561,7 +570,7 @@ const PostRequirement = () => {
 
               {/* Create New Requirement */}
               <button
-                onClick={() => setStep("category")}
+                onClick={() => { if (signedInOrPrompt()) setStep("category"); }}
                 className="w-full text-left rounded-2xl border border-gray-200 bg-white p-4 mb-4 hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-start gap-3">

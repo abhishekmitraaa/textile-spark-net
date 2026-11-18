@@ -1,21 +1,24 @@
-import { useNavigate } from "react-router-dom";
+
 import { ArrowLeft } from "lucide-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { CLARITY_ENABLED } from "@/lib/analytics/clarity";
 import { TERMS_ANALYTICS_NOTICE as ANALYTICS_NOTICE, TERMS_EFFECTIVE_DATE as EFFECTIVE_DATE, TERMS_INTRO as INTRO } from "@/data/terms";
 import TermsClauses from "@/components/TermsClauses";
+import { useStepBack } from "@/hooks/useStepBack";
+import { useHomePath } from "@/hooks/useHomePath";
 
 // Cosora Terms & Conditions (buyer-facing, linked from My Profile and the sign-up Terms card).
 // The text is src/data/terms.ts; rendered as a readable legal document.
 
 const TermsConditions = () => {
-  const navigate = useNavigate();
+  const homePath = useHomePath();
+  const goBack = useStepBack(homePath);
 
   return (
     <div className="min-h-screen bg-white">
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
+          <button onClick={goBack} aria-label="Back" className="-ml-1 p-1">
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="text-base font-bold text-gray-900">Terms &amp; Conditions</h1>

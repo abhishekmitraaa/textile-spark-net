@@ -14,6 +14,7 @@ import {
 import { type Brand } from "@/lib/followingStore";
 import { useFollowing, useNewBrandSuggestions } from "@/lib/queries/follows";
 import { ArrowLeft, BadgeCheck, Bookmark, Check, Flag, MoreVertical, Search, UserMinus } from "lucide-react";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // ─────────────────────────────────────────────────────────────
 // Following → View All
@@ -76,6 +77,7 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
 
 const FollowingViewAll = () => {
   const navigate = useNavigate();
+  const goBack = useStepBack("/home/followings");
   const { brands, follow, unfollow } = useFollowing();
   const [query, setQuery] = useState("");
 
@@ -100,7 +102,7 @@ const FollowingViewAll = () => {
       {/* Header: logo + bookmark */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} aria-label="Go back" className="-ml-1 p-1">
+          <button onClick={goBack} aria-label="Go back" className="-ml-1 p-1">
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <button onClick={() => navigate("/home/followings")} className="flex-1 text-left">

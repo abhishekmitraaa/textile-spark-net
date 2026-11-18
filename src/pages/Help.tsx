@@ -1,4 +1,5 @@
 import { useStepBack } from "@/hooks/useStepBack";
+import { useHomePath } from "@/hooks/useHomePath";
 import { useState, useMemo } from "react";
 import { faqText, useFaqs, groupFaqs } from "@/lib/queries/faqs";
 import { Link } from "react-router-dom";
@@ -76,8 +77,9 @@ const FAQ_CATEGORY_ICONS: Record<string, typeof HelpCircle> = {
 
 const Help = () => {
   const reduced = useReducedMotion();
-  // Opened from a link, Back goes home instead of leaving the app (SH-052 rule).
-  const back = useStepBack("/home");
+  // Opened from a link, Back goes to the side's home instead of leaving the app (SH-052 rule). It was "/home", which
+  // is only a Vercel redirect: inside the app it is the 404 page (2026-11-18 review, H-10).
+  const back = useStepBack(useHomePath());
   const { role } = useUserRole();
   const isSeller = role === "seller";
   const { user } = useAuth();

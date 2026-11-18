@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
+import { type Gender, type ListingProduct } from "@/lib/listingProducts";
 import { supabase } from "@/lib/supabase";
 import { fetchProductCardsByIds } from "@/lib/queries/products";
 
@@ -135,7 +135,11 @@ async function hydrateRecent(uidValue: string): Promise<RecentProduct[]> {
   // history, and treating it as one would wipe the list and show the buyer
   // "No recently viewed products" for history they do have.
   if (error) throw error;
-  const rows = data ?? [];
+  return cardsFor(data ?? []);
+}
+
+/** The real cards for these product ids, in the given order; listings that are no longer live drop out. */
+async function cardsFor(rows: { product_id: string; viewed_at: string }[]): Promise<RecentProduct[]> {
   const cards = await fetchProductCardsByIds(rows.map((r) => r.product_id));
   const out: RecentProduct[] = [];
   for (const r of rows) {
@@ -176,14 +180,46 @@ export async function setRecentUser(nextUserId: string | null) {
   else emit();
 }
 
+/**
+ * Re-read the real cards for the listed ids, keeping when each was viewed (2026-11-18 review, H-05). Signed out, the
+ * list lives in this browser and may hold what an older build invented (a rating, a gender, "Cotton", "5.6k"); views
+ * recorded this session carry only what the product page passed. Reads only: nothing is written. A failed read keeps
+ * the list as it is. The Recently Viewed page calls it on opening.
+ */
+export async function refreshRecentCards(): Promise<void> {
+  if (items.length === 0 || hydrating) return;
+  const forUser = userId;
+  const asked = new Set(items.map((i) => i.id));
+  let fresh: RecentProduct[];
+  try {
+    fresh = await cardsFor(items.map((i) => ({ product_id: i.id, viewed_at: new Date(i.viewedAt).toISOString() })));
+  } catch {
+    return;
+  }
+  if (userId !== forUser || hydrating) return; // the account changed meanwhile: its own list wins
+  // Views recorded while the read was in flight stay on top; an id that was read but isn't live any more drops out.
+  const newer = items.filter((i) => !asked.has(i.id));
+  commit([...newer, ...fresh].slice(0, MAX_ITEMS));
+}
+
+/** What a view knows before the real card is read: nothing is made up (no rating, no fabric, no gender guess). */
+function blankRecent(id: string): RecentProduct {
+  return {
+    id, vendorId: "", name: "", manufacturer: "", location: "", price: "", priceValue: 0, moq: "", views: null,
+    enquiries: "", rating: 0, fabric: "", gsm: "", fitType: "", image: "", secondaryImage: "", gender: "unisex",
+    reviews: 0, verified: false, viewedAt: 0,
+  };
+}
+
 // Normalize any product-ish object to a full RecentProduct, preserving known
-// fields from a prior view (base) and filling gaps with sensible defaults.
+// fields from a prior view (base) and leaving the rest blank. It used to fill the gaps from makeListingProduct(), a
+// mock helper that invented a 3.7–4.9 rating, a gender and "Cotton" for every view (2026-11-18 review, H-05).
 function normalize(p: Partial<RecentProduct> & { id: string }, now: number, base?: RecentProduct): RecentProduct {
   const priceValue =
     p.priceValue ??
     base?.priceValue ??
     (typeof p.price === "string" ? parseInt(p.price.replace(/[^\d]/g, ""), 10) || 0 : 0);
-  const fallback = base ?? makeListingProduct(p.id);
+  const fallback = base ?? blankRecent(p.id);
   const defined = Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined));
   return {
     ...fallback,

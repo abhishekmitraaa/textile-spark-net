@@ -1,5 +1,6 @@
-import { useRef, type ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { useRef, useState, type ReactNode } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { HelpCircle, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Decision = "open" | "login" | "home";
@@ -14,6 +15,10 @@ type Decision = "open" | "login" | "home";
  *
  * It decides once, on arrival, from the database's profile: accepting the Terms updates the profile while the Terms
  * screen is still showing, and that must not jump away before the screen moves on.
+ *
+ * Every step shows Help and Sign out (2026-11-18 review, H-06): the sign-up gate sends an unfinished account back here
+ * from every buyer page, and the steps had no way out, so a wrong number or a shared phone was stuck until sign-up was
+ * finished. Signing out does not change how anyone signs in.
  */
 export default function SignupStep({ children }: { children: ReactNode }) {
   const { session, profile, profileError, loading } = useAuth();
@@ -36,5 +41,46 @@ export default function SignupStep({ children }: { children: ReactNode }) {
   if (onArrival.current === "home") {
     return <Navigate to={profile?.active_role === "seller" ? "/seller-home" : "/home/new-arrivals"} replace />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <SignupExits />
+    </>
+  );
+}
+
+/** Help and Sign out, pinned to the top-right corner, above every step's own header. */
+function SignupExits() {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const leave = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      navigate("/login", { replace: true });
+    }
+  };
+
+  return (
+    <nav
+      aria-label="Account"
+      className="fixed right-3 top-3 z-[60] flex items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1 text-xs font-medium text-gray-700 shadow-sm backdrop-blur"
+    >
+      <Link to="/help" className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 hover:bg-gray-100">
+        <HelpCircle className="h-3.5 w-3.5" aria-hidden /> Help
+      </Link>
+      <button
+        type="button"
+        onClick={leave}
+        disabled={signingOut}
+        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 hover:bg-gray-100 disabled:opacity-60"
+      >
+        <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
+      </button>
+    </nav>
+  );
 }

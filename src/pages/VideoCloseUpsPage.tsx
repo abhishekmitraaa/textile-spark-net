@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clapperboard, Loader2 } from "lucide-react";
 import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { useVideoCloseUp, useVideoCloseUps } from "@/lib/queries/videos";
 import { usePreferences } from "@/lib/preferencesStore";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // ─────────────────────────────────────────────────────────────
 // /video-closeups — dedicated route
@@ -27,7 +28,6 @@ import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 // ─────────────────────────────────────────────────────────────
 
 export default function VideoCloseUpsPage() {
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
 
@@ -96,17 +96,13 @@ export default function VideoCloseUpsPage() {
     }
   }, [isOpen, openList.length, rankedVideoCloseUps, snapshotFromDev, usingDevFallback, waitingForShared]);
 
+  // `window.history.length` counts other sites' entries too, so opened from a shared link it went back off Cosora
+  // (2026-11-18 review, H-08). useStepBack asks this app's own history.
+  const goBack = useStepBack("/home/new-arrivals");
+
   const handleClose = () => {
     setIsOpen(false);
-    setTimeout(() => {
-      if (window.history.length > 1) navigate(-1);
-      else navigate("/home/new-arrivals");
-    }, 200);
-  };
-
-  const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate("/home/new-arrivals");
+    setTimeout(goBack, 200);
   };
 
   // Nothing to show: either still fetching, or genuinely no live videos. The
