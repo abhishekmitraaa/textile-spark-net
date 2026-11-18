@@ -1,6 +1,9 @@
 - 2026-11-18 (branch `product-moderation/release`, merge `d56351f` of `product-moderation/removal` into main `e87539a`,
   with Cosora-Admin merge `468c8e2`; migration `20261118190000_product_moderation.sql`, renumbered from `20261007160000`;
-  **MERGED, NOT RELEASED**: applying the migration to production was refused by auto mode, so nothing is pushed yet)
+  **LIVE 2026-11-19**: migration applied with the CLI (not in the ledger) after the four replaced functions' md5 were
+  re-checked; production then had the 4 columns, 10 functions, 8 active reasons and the guard trigger, anon can't run
+  the RPCs, clients can't read the two tables, `rls-policy-check` 156/0/0; buyer main `1a1691d` (bundle
+  `index-CzaKcRsu.js`), admin main `1f0d7f7` (bundle `index-DxG0TmSY.js`), both Ready)
   **Product moderation: remove, flag and reinstate a listing with a reason** (Mitra: "merge this to main and push").
   - Checked against production's function bodies first: `enforce_products_moderation`, `approve_vendor_content` and
     `reject_vendor_content` hadn't changed there since the branch, and `admin_flag_add` keeps R3's lead clause.
@@ -14,7 +17,6 @@
   - My Products keeps main's `rejected` status and reason; the boxed notice is for a removal or a flag. Cosora-Admin's
     Products page has both sides: Remove, Flag, Reinstate, the Removed tab and paging, with main's Paused tab, "edited
     after review" notice, Review details and the stale-status check.
-  - Release order once allowed: the migration (it self-checks), then both mains, then the live bundles.
 - 2026-11-18 (branch `fix/high-bugs-2026-11-18`, commits `2f12b0e`, `8cbed75`; migrations `20261118170000`, `20261118180000`;
   function `product-thumbs`; **LIVE 2026-11-18**: migrations applied with the CLI (not in the ledger), function deployed
   (401 without a token), the live listing's 4 photos thumbnailed on production (~17.6 KB each against ~120 KB), app pushed.
