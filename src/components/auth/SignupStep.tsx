@@ -70,16 +70,18 @@ function SignupExits() {
       aria-label="Account"
       className="fixed right-3 top-3 z-[60] flex items-center gap-1 rounded-full border border-gray-200 bg-white/95 p-1 text-xs font-medium text-gray-700 shadow-sm backdrop-blur"
     >
-      <Link to="/help" className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 hover:bg-gray-100">
-        <HelpCircle className="h-3.5 w-3.5" aria-hidden /> Help
+      {/* Icons only on a phone, so the pill clears the steps' centred logo; the words stay for screen readers. */}
+      <Link to="/help" aria-label="Help" className="inline-flex items-center gap-1 rounded-full p-1.5 hover:bg-gray-100 sm:px-2.5">
+        <HelpCircle className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden /> <span className="hidden sm:inline">Help</span>
       </Link>
       <button
         type="button"
         onClick={leave}
         disabled={signingOut}
-        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 hover:bg-gray-100 disabled:opacity-60"
+        aria-label="Sign out"
+        className="inline-flex items-center gap-1 rounded-full p-1.5 hover:bg-gray-100 disabled:opacity-60 sm:px-2.5"
       >
-        <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
+        <LogOut className="h-4 w-4 sm:h-3.5 sm:w-3.5" aria-hidden /> <span className="hidden sm:inline">Sign out</span>
       </button>
     </nav>
   );
