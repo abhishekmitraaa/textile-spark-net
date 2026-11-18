@@ -1,3 +1,17 @@
+- 2026-11-18 (branch `fix/high-bugs-2026-11-18`; migrations `20261118140000`, `20261118160000`; **built and tested, NOT
+  released**)
+  **The buyer review's High bugs (H-01–H-13).** Plan `documentation/high-bugs-fixes-plan-2026-11-18.md`; the full list
+  (13 High, 75 Medium, 104 Low) in `ToDo.md`; route map `documentation/sitemap.xml`.
+  - Mitra: H-04 take the demo catalogue off live (26 seed listings and the test video to `draft`, recorded in
+    `admin.demo_catalogue_offline`; `20261118140000`); H-11 a precomputed feed and a one-minute job (`admin.feed_rank`,
+    `20261118160000`; harness 93/93 identical to the old body, newest 46 → 0.9 ms, trending 68 → 1.0 ms over 100,055
+    listings); H-12 thumbnails (browser half done: lazy photos, hover photo on hover; server-made thumbnails wait for
+    his call); H-13 Service Vendors / Freelancers kept as labelled sample profiles without ratings, reviews or contact.
+  - Back stays on Cosora: `useStepBack` reads React Router's history index; every `navigate(-1)` Back uses it, with the
+    side's home (`useHomePath()`); Help's Back no longer lands on the 404 (H-08–H-10).
+  - The four `/requirement*` scaffold addresses redirect to the real pages (H-02); no "-fill" clone cards (H-01);
+    Post Requirement and seller registration ask for sign-in first (H-03, H-07); sign-up steps have Help and Sign out
+    (H-06); Recently Viewed shows only real card data (H-05).
 - 2026-11-18 (branch `fix/leftovers-2026-11-18`; migrations `20261118100000`–`130000`; **LIVE 2026-11-18**, released with the
   manual ad types and the Low fixes: buyer main `26383e7`, admin main `37ecb85`)
   **What was left from the Seller Home review.** Record `documentation/leftovers-2026-11-18.md`.

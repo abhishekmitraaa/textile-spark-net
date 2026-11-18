@@ -42,22 +42,22 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 |---|---|---|
 | `/product/:id` | `ProductDetail` | |
 | `/vendor/:id` | `VendorProfile` | Contact details are gated |
-| `/services` | `ServiceVendors` | Printers, logistics, other service providers |
+| `/services` | `ServiceVendors` | Printers, logistics, other service providers. **Sample profiles** (2026-11-18): no contact, ratings or reviews |
 | `/service-vendors` | `ServiceVendors` | Alias of `/services` |
-| `/services/:vendorId` | `ServiceVendorProfile` | Seed data, no `profiles` row |
-| `/freelancers` | `Freelancers` | Pattern makers, CLO 3D artists, trend researchers |
-| `/freelancers/:id` | `FreelancerProfile` | Seed data, no `profiles` row |
+| `/services/:vendorId` | `ServiceVendorProfile` | Sample profile from app data, no `profiles` row |
+| `/freelancers` | `Freelancers` | Pattern makers, CLO 3D artists, trend researchers. **Sample profiles** (2026-11-18) |
+| `/freelancers/:id` | `FreelancerProfile` | Sample profile from app data, no `profiles` row |
 | `/cosora-studio` | `CosoraStudio` | Photographers. **Listed in both buyer and seller nav**; styled vendor-blue |
 | `/cosora-studio/:id` | `PhotographerProfile` | |
 
 ### Requirements (RFQ) & quotes
 | Route | Component | Notes |
 |---|---|---|
-| `/requirement` **(shell)** | — | Hub: Quick RFQ, detailed RFQ, My Quotes |
-| `/requirement/quick-rfq` **(shell)** | — | Image + quantity, <30 seconds |
-| `/requirement/post-requirement` | `PostRequirement` | Category select → schema-driven form |
-| `/requirement/post-requirement/form` **(shell)** | — | Structured form step |
-| `/requirement/post-requirement/success` **(shell)** | — | Coral success screen |
+| `/requirement` | redirect | → `/requirement/post-requirement` (2026-11-18: it showed a developer scaffold card) |
+| `/requirement/quick-rfq` | redirect | → `/requirement/post-requirement` (Quick Quote is a sheet there) |
+| `/requirement/post-requirement` | `PostRequirement` | Category select → schema-driven form → success, all inside the page; asks for sign-in before the form |
+| `/requirement/post-requirement/form` | redirect | → `/requirement/post-requirement` |
+| `/requirement/post-requirement/success` | redirect | → `/requirement/my-quotes` |
 | `/requirement/my-quotes` | `MyQuotes` | Also the target of "Track Orders" |
 | `/post-requirement` | `PostRequirement` | Legacy alias |
 

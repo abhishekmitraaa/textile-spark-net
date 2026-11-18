@@ -206,6 +206,16 @@ lift (Mitra, 2026-11-13):
 
 One function serves every grid of listings: New Arrivals, Trends, Sale, categories and a store's listings.
 
+- **Precomputed keys (2026-11-18, review H-11; migration `20261118160000_feed_rank.sql`).** The sort keys live in
+  `admin.feed_rank`, one row per live listing: the boost tier while the plan runs, recent demand (log2, `-infinity`
+  with none), rating, date, and whether the seller is a registered international one. `trg_products_feed_rank` and
+  `trg_vendor_profiles_feed_rank` update a row at once when a listing goes live or comes down, its rating or date
+  changes, or the seller's plan or registration changes; the job `feed-rank-refresh` re-reads everything every minute
+  (recent demand and plan expiry move without a write). So demand and a plan running out reach the order within a
+  minute. `newest`, and `trending` for everyone but trade buyers, read the indexes in order; the order itself is
+  unchanged, and `scripts/high-bugs/feed_rank_harness.sql` holds the function to the previous body, sort by sort.
+  A new sort key is a column of `admin.feed_rank` and of `admin.feed_rank_refresh()`.
+
 - **Filters:** category ids, gender, sellers, on sale, discount bands, a name/brand search (60 characters), excluded or
   exact ids, and supplier location (India or international).
 - **Page size:** up to 96 per page (200 for an id list); offset up to 960.

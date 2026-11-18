@@ -1332,6 +1332,22 @@ undocumented. Deep technical rationale for each lives in
   (stored by `razorpay-create-order`, read by `admin.ad_broadcast_messages()`).
 - **On-screen Back is `useStepBack(fallback)`, never `navigate(-1)`** (2026-11-17, SH-052, SH-070, SH-074): opened from
   a link or a new tab there is no in-app history, and `navigate(-1)` left the site.
+  - It decides by React Router's history index (`history.state.idx > 0`), never the location key or
+    `window.history.length` (2026-11-18 review, H-08/H-09): a `<Navigate replace>` on the first page gives the entry a
+    real key while it is still the first, and `history.length` counts other sites' entries. A shared page's fallback is
+    the side's home, `useHomePath()` (`/seller-home` or `/home/new-arrivals`); `/home` is only a Vercel redirect, and
+    inside the app it is the 404 page.
+- **Service Vendors and Freelancers are sample profiles** (Mitra, 2026-11-18, "Keep, remove fakes"; review H-13). They are
+  data in the app (`serviceVendorsData.ts`, `freelancersData.ts`), not accounts: no rating, review count, review form,
+  "online" dot, Save, Chat or Call (Call dialled a generated real-format number). `<SampleProfilesNotice>` and
+  `<SampleTag>` say so on every list and profile, and the pages stay out of the search-engine sitemap. A real provider is
+  an account with a store page, not a row in those files.
+- **A product card's photos go through `<CardPhotos>`** (2026-11-18 review, H-12): lazy, and the second (hover) photo
+  fetched only after the first hover. A new card uses it.
+- **A long form asks for sign-in before it starts** (2026-11-18 review, H-03, H-07): Post Requirement's detailed form
+  and seller registration save to the account, so a signed-out visitor is asked first ("Sign in to post a
+  requirement"; `/onboarding`'s "Sign in to register your business"), never at the end with nothing kept. Sign-in itself
+  is unchanged. Every buyer sign-up step shows Help and Sign out (`SignupStep`, H-06).
 - **Deleting something the seller made asks first** (`<ConfirmDialog>`, 2026-11-17, SH-070, SH-074).
 - **Every edit sheet is a dialog** (`EditSheet`, a Radix dialog since 2026-11-17, SH-053): role, focus trap, Escape, a
   labelled Close. A new sheet uses it, not a fixed `div`.
