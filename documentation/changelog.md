@@ -1,3 +1,10 @@
+- 2026-11-18 (branch `fix/high-bugs-2026-11-18`, commit `2f12b0e`; migration `20261118170000`; function `product-thumbs`;
+  **built and tested, NOT released**)
+  **H-12, server half: card thumbnails made by the server.** Edge function `product-thumbs` (480 px JPEG of a live
+  listing's photo, one per request) into the service-only public bucket `product-thumbs`; `trg_products_thumbs` queues a
+  listing's photos when it goes live; cards ask for the thumbnail first and fall back to the full photo; listing and
+  registration photos stored as JPEG. Local stack: thumbnail written and served; anon, a bad path and a non-live
+  listing's photo refused. Probe: ImageScript can't read WebP; a 1280 × 1600 JPEG takes ~1.6 s.
 - 2026-11-18 (branch `fix/high-bugs-2026-11-18`; migrations `20261118140000`, `20261118160000`; **LIVE 2026-11-18**: buyer
   main `33db067` (bundle `index-Cqdxj2J6.js`), both migrations applied with the CLI (not in the ledger), each self-check
   passing; production after: 1 live listing, 26 seed listings + 1 video in `admin.demo_catalogue_offline`, feed_rank 1/1,

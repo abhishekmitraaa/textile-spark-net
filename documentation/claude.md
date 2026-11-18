@@ -1342,8 +1342,15 @@ undocumented. Deep technical rationale for each lives in
   "online" dot, Save, Chat or Call (Call dialled a generated real-format number). `<SampleProfilesNotice>` and
   `<SampleTag>` say so on every list and profile, and the pages stay out of the search-engine sitemap. A real provider is
   an account with a store page, not a row in those files.
-- **A product card's photos go through `<CardPhotos>`** (2026-11-18 review, H-12): lazy, and the second (hover) photo
-  fetched only after the first hover. A new card uses it.
+- **A product card's photos go through `<CardPhotos>`** (2026-11-18 review, H-12): lazy, the second (hover) photo fetched
+  only after the first hover, and each the 480 px thumbnail first (`thumbUrl()`, `src/lib/thumbs.ts`) with the full photo
+  as the fallback. A new card uses it.
+  - **Thumbnails are made by the server, never the browser** (Mitra, 2026-11-18, "Build server-made"): a seller-made
+    thumbnail is a second file the seller controls, shown on cards while review sees only the full photo. The edge
+    function `product-thumbs` (service role, one photo per request: ~2 s of CPU) writes `product-thumbs/<path>.jpg` from
+    a live listing's photo; `trg_products_thumbs` queues a listing's photos when it goes live
+    (`admin.queue_product_thumbs`). Only the service role writes the bucket. It reads JPEG and PNG, so listing and
+    registration photos are stored as JPEG (`shrinkImage(…, "jpeg")`); a WebP or HEIC photo keeps the full photo.
 - **A long form asks for sign-in before it starts** (2026-11-18 review, H-03, H-07): Post Requirement's detailed form
   and seller registration save to the account, so a signed-out visitor is asked first ("Sign in to post a
   requirement"; `/onboarding`'s "Sign in to register your business"), never at the end with nothing kept. Sign-in itself

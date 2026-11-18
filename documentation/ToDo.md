@@ -20,7 +20,7 @@ with no need to dictate format, context, or reference each time.
 - Status: Open (H-12 server half next; then Medium and Low)
 
 **High**
-- H-12 — Product cards: lazy loading and the hover-only second photo are LIVE (2026-11-18, `CardPhotos`); still to do: server-made 480 px thumbnails (Mitra, 2026-11-18: "Build server-made"; a browser-made thumbnail would be a seller-controlled file that review never sees): an edge function writes them from the approved photo into a service-only bucket, plus a backfill.
+- H-12 — Product cards: lazy loading and the hover-only second photo are LIVE (2026-11-18). Server-made thumbnails are built and tested on branch `fix/high-bugs-2026-11-18` (`2f12b0e`: function `product-thumbs`, migration `20261118170000`), waiting for Mitra's release go: apply the migration, deploy the function, queue the live listings' photos, check the thumbnails, then push the app.
 
 **Medium — buyer home and browsing**
 - M-01 live — BuyerSignupGate renders the page, then null while the registration loads: double mount, ads counted twice. BuyerSignupGate.tsx:28
