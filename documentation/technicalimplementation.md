@@ -3409,6 +3409,31 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - **Apps.** Buyer: `RFQ_COLUMNS` reads `removed_at, removed_reason`; `Rfq.removedReason`; the My Quotes card. Cosora-Admin: `useRemoveLead()`, the Leads detail's Remove panel and `FlagLog entityType="rfq"` (`canAdd` for the two roles), `roles.ts` `leads` write list.
 - Tests: `scripts/rfq-leads/r3_oversight.sql` (27 cases), `tests/local/rfq-leads.spec.ts` (R3 blocks).
 
+## Product moderation: remove and flag with managed reasons (2026-10-07, `documentation/product-moderation-design-2026-10-07.md`)
+
+- **Tables (admin schema, no client grant):** `product_moderation_reasons` (label 1–80, unique case-insensitively;
+  `vendor_message` 1–500; `applies_to` within {remove, flag}; active; sort; `trg_admin_audit`; eight seeded) and
+  `product_moderation_actions` (product `on delete set null`, vendor, name, action, reason, message, note, actor, role, time).
+- **`products` columns:** `removed_at` / `removed_reason` (`products_removal_shape`: both or neither, only on `rejected`),
+  `flagged_at` / `flag_reason` (`products_flag_shape`: only on `under_review` or `draft`). Table-level SELECT already
+  covers them; buyers reach only `live` rows, where they are always null.
+- **Guard `trg_products_moderation_guard`** (BEFORE INSERT OR UPDATE, invoker): for `authenticated`, the four columns can't
+  be set or changed and a removed row can't be updated; for everyone, a move to `live` or `rejected` clears the flag.
+  `enforce_products_moderation` leaves the flag columns out of its moderator comparison, so trigger order doesn't matter.
+- **RPCs** (definer, `search_path ''`, authenticated only): `admin_product_remove`, `_flag`, `_reinstate`,
+  `_reason_save`, `_reasons(include_inactive)`, `_moderation_history`. Gates `admin.product_moderation_can_act()`
+  (super_admin, product_moderator, manager), `admin.product_reasons_can_edit()` (super_admin, manager),
+  `admin.product_moderation_can_read()` (those plus support). Errors: 42501 role, 22023 reason or note, P0002 unknown,
+  55000 wrong state (already removed, not live, not removed). Each sets `cosora.audit_reason` around its update.
+- **Manager** joins `products_update`, `enforce_products_moderation` and the products branch of
+  `approve_vendor_content` / `reject_vendor_content` (the latter no longer touches a removed listing).
+  `admin_flag_add` refuses a `'product'` note from any other role.
+- **Apps:** Cosora-Admin `lib/productModeration.ts`, `ProductModerationDialog` (reason required in the dialog, preview of
+  the vendor's text), `Products.tsx` (Removed tab, keyset paging 50 at a time, Flag / Remove / Reinstate, history),
+  `ModerationReasons.tsx`. Buyer app: `VendorProductRow.moderation` (`moderationOf()` in `lib/queries/products.ts`) and
+  the My Products notice; three kinds in `notificationsStore.ts`; strings in `external-strings.json` ("product_moderation").
+- **Tests:** `scripts/product-moderation/pm1_remove_flag.sql` (52 cases), `tests/local/product-moderation.spec.ts` (2).
+
 ## Personalised ranking (2026-10-07, `documentation/ranking-foundations-design-2026-10-07.md`)
 
 Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (vendors ranked for buyers).

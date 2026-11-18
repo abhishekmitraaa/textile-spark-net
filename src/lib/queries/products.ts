@@ -580,6 +580,11 @@ export interface VendorProductRow {
   status: "active" | "draft" | "pending" | "paused" | "rejected";
   /** Cosora's reason, on a rejected listing (shown on Products; the seller is also notified). */
   rejectionReason: string | null;
+  /**
+   * Cosora's takedown or flag, when there is one (product moderation, released 2026-11-18): removed for good, or a
+   * live listing flagged back into review. A plain rejection is `status: "rejected"` with `rejectionReason`.
+   */
+  moderation: VendorProductModeration | null;
   /** Denormalised category label off the product row. Drives the real
    *  "Views by Category" breakdown on Analytics; null when uncategorised. */
   categoryName: string | null;
@@ -602,11 +607,17 @@ export interface VendorProductRow {
   createdAt: string;
 }
 
+export interface VendorProductModeration {
+  state: "removed" | "flagged";
+  reason: string;
+}
+
 interface RawMyProduct {
   id: string; name: string; price_value: number | null; status: string;
+  rejection_reason: string | null; removed_at: string | null; removed_reason: string | null;
+  flagged_at: string | null; flag_reason: string | null;
   enquiries_count: number; views_count: number; description: string | null; fabric: string | null;
   category_name: string | null; unit: string | null; currency: string | null; moq: string | null;
-  rejection_reason: string | null;
   gsm: string | null; fit_type: string | null; gender: string | null; location: string | null;
   sold_count: number | null; rating_avg: number | null; reviews_count: number | null; created_at: string;
   product_images: RawImage[] | null;
@@ -621,6 +632,14 @@ function toUiStatus(s: string): VendorProductRow["status"] {
   // turned the listing down, or why.
   if (s === "rejected") return "rejected";
   return "draft";
+}
+
+// Cosora's takedown or flag. A removal is a rejected row with removed_at; the guard trigger keeps it frozen, so the
+// page offers no Edit. A plain rejection is the "rejected" status with its reason (rejectionReason).
+function moderationOf(p: RawMyProduct): VendorProductModeration | null {
+  if (p.removed_at && p.removed_reason) return { state: "removed", reason: p.removed_reason };
+  if (p.flagged_at && p.flag_reason) return { state: "flagged", reason: p.flag_reason };
+  return null;
 }
 
 // Rough listing-completeness score (mirrors the "Profile Score" idea) so the
@@ -649,7 +668,7 @@ export function sellingUnit(unit: string | null | undefined): string {
 async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, price_value, status, enquiries_count, views_count, description, fabric, category_name, unit, currency, moq, gsm, fit_type, gender, location, sold_count, rating_avg, reviews_count, created_at, rejection_reason, product_images ( url, position )")
+    .select("id, name, price_value, status, rejection_reason, removed_at, removed_reason, flagged_at, flag_reason, enquiries_count, views_count, description, fabric, category_name, unit, currency, moq, gsm, fit_type, gender, location, sold_count, rating_avg, reviews_count, created_at, product_images ( url, position )")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -666,6 +685,7 @@ async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
       image: img,
       status: toUiStatus(p.status),
       rejectionReason: p.status === "rejected" ? p.rejection_reason : null,
+      moderation: moderationOf(p),
       categoryName: p.category_name,
       views: p.views_count ?? 0,
       inquiries: p.enquiries_count,

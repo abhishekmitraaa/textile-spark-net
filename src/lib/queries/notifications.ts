@@ -39,7 +39,11 @@ export type NotificationKind =
   | "kyc_approved"
   | "kyc_rejected"
   // Written by admin_review_report_decide() when Cosora removes a review (2026-10-13).
-  | "review_removed";
+  | "review_removed"
+  // Product moderation (2026-10-07, released 2026-11-18): admin_product_remove / _flag / _reinstate.
+  | "product_removed"
+  | "product_flagged"
+  | "product_reinstated";
 
 export interface NotificationRow {
   id: string;

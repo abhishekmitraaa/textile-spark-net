@@ -9086,5 +9086,19 @@
  "These providers show the kind of services coming to Cosora. They aren't Cosora accounts yet, so they can't be called, messaged or reviewed.": "ये प्रदाता दिखाते हैं कि Cosora पर किस तरह की सेवाएँ आने वाली हैं। ये अभी Cosora खाते नहीं हैं, इसलिए इन्हें कॉल, मैसेज या रिव्यू नहीं किया जा सकता।",
  "Sample": "नमूना",
  "Sign in to register your business": "अपना व्यवसाय रजिस्टर करने के लिए साइन इन करें",
- "Your registration is saved to your Cosora account. Sign in, or create an account, and then fill it in.": "आपका रजिस्ट्रेशन आपके Cosora खाते में सेव होता है। साइन इन करें या खाता बनाएँ, फिर इसे भरें।"
+ "Your registration is saved to your Cosora account. Sign in, or create an account, and then fill it in.": "आपका रजिस्ट्रेशन आपके Cosora खाते में सेव होता है। साइन इन करें या खाता बनाएँ, फिर इसे भरें।",
+ "Cosora removed this listing. It can't be edited or resubmitted.": "कोसोरा ने यह लिस्टिंग हटा दी है। इसे न तो बदला जा सकता है, न दोबारा जमा किया जा सकता है।",
+ "Under review: flagged": "समीक्षाधीन: फ़्लैग की गई",
+ "Hidden from buyers while Cosora reviews it.": "जब तक कोसोरा इसकी समीक्षा कर रहा है, यह खरीदारों से छिपी है।",
+ "Fix the listing and submit it again.": "लिस्टिंग ठीक करें और उसे फिर से जमा करें।",
+ "{0}: removed by Cosora": "{0}: कोसोरा ने हटाया",
+ "This listing appears to use another brand's name, logo or design without permission. Cosora doesn't allow counterfeit or infringing products.": "यह लिस्टिंग बिना अनुमति किसी दूसरे ब्रांड का नाम, लोगो या डिज़ाइन इस्तेमाल करती लगती है। कोसोरा नकली या अधिकारों का उल्लंघन करने वाले प्रोडक्ट की अनुमति नहीं देता।",
+ "This product isn't allowed on Cosora under our listing rules.": "हमारे लिस्टिंग नियमों के तहत यह प्रोडक्ट कोसोरा पर अनुमत नहीं है।",
+ "The listing's details (price, MOQ, fabric, GSM or specifications) look misleading or don't match the product.": "लिस्टिंग का विवरण (कीमत, MOQ, फ़ैब्रिक, GSM या स्पेसिफ़िकेशन) भ्रामक लगता है या प्रोडक्ट से मेल नहीं खाता।",
+ "This listing is in a category that doesn't match the product. Move it to the right category and submit it again.": "यह लिस्टिंग ऐसी श्रेणी में है जो प्रोडक्ट से मेल नहीं खाती। इसे सही श्रेणी में रखें और फिर से जमा करें।",
+ "The photos are low quality, copied from elsewhere, or show content that isn't allowed.": "फ़ोटो कम गुणवत्ता की हैं, कहीं और से कॉपी की गई हैं, या उनमें ऐसी सामग्री है जिसकी अनुमति नहीं है।",
+ "This product is already listed in your catalogue. Keep one listing per product.": "यह प्रोडक्ट आपके कैटलॉग में पहले से लिस्टेड है। हर प्रोडक्ट की एक ही लिस्टिंग रखें।",
+ "The listing shows a phone number, email address or outside link. Buyers reach you through Cosora.": "लिस्टिंग में फ़ोन नंबर, ईमेल पता या बाहरी लिंक दिख रहा है। खरीदार आपसे कोसोरा के ज़रिए संपर्क करते हैं।",
+ "Buyers reported a problem with this listing, and Cosora is checking it.": "खरीदारों ने इस लिस्टिंग में समस्या बताई है, और कोसोरा इसकी जाँच कर रहा है।",
+ "\"{0}\": {1}": "\"{0}\": {1}"
 }

@@ -1341,6 +1341,21 @@ file was created; they record real runs, but only those the changelog captured.
   admin `npm run build` ok. `npm run i18n:check` 7,283/7,283 in Hindi and Gujarati.
 - **Not run:** `scripts/gst-check.mjs` needs a `.env` with live credentials (it fails the same way on origin/main);
   nothing in P0 touches GST arithmetic.
+### 2026-10-07 — Product moderation: remove and flag with managed reasons (local stack: harness 52/52; mutation 8 fail; browser 2/2; typecheck 0 in both apps; i18n 7,289/7,289; builds)
+
+- **Data:** the local stack (production's schema, F2 included) plus `20261118190000_product_moderation`; demo vendor
+  `2222…`, buyer `1111…`, admin `3333…` switched through every admin role; local `moderator` and `manager` accounts.
+- **Harness `scripts/product-moderation/pm1_remove_flag.sql` 52/52**, each case on fresh listings and rolled back: the role
+  matrix for remove, flag, reinstate and reason save (three allowed, six refused); inactive, wrong-action and blank inputs;
+  remove twice (one ledger row); a removed listing frozen for the vendor and an admin's direct write, deletable by the
+  vendor with the ledger kept; flag survives draft and resubmit, cleared by approve, reject or removal; reinstate to draft
+  and the plan cap on resubmit (P0001); Admin Log reasons; notifications; the admin tables unreadable by clients; manager
+  can't insert or hard-delete. **Mutation:** a guard that does nothing fails 8 cases.
+- **Browser `tests/local/product-moderation.spec.ts` 2/2** (apps on :8091 and :5185): the moderator's dialog (confirm
+  disabled until a reason; flag-only reasons not offered; preview), server state, Removed tab, Reinstate disabled for a
+  moderator; the vendor's My Products (`screenshots/product-moderation-vendor-removed.png`); a manager adds a flag-only
+  reason, flags with it, reinstates (Admin Log reason checked).
+- **Not run on production yet:** the migration isn't applied.
 
 ### 2026-10-02 — Help & Support release check: synthetic data and a manual pass (local stack = production + P6; SQL suites all pass; flow checks 65/65; browser 18/18; load 60 VUs 0 errors)
 

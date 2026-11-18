@@ -118,6 +118,7 @@
   "Your refund is on its way",
   "We refunded ₹{0} under the 7-day money-back guarantee, and your plan has ended. A refund usually reaches your account in 5–7 working days.",
   "Cosora removed your listing",
+  "\"{0}\": {1}",
   "Your listing is back under review",
   "\"{0}\" is hidden from buyers while Cosora reviews it. {1}",
   "Your listing is back in your drafts",
@@ -650,5 +651,19 @@
   "Pick each listing to promote once.",
   "Pick listings from your products.",
   "About Us saved. It counts toward your profile score from {0} characters."
+ ],
+ "product_moderation_source": "Product moderation (2026-10-07, migration 20261118190000_product_moderation): the notification titles admin_product_remove / _flag / _reinstate pass to notify(), and the messages of the eight seeded admin.product_moderation_reasons, which a vendor reads on My Products and in a notice. A reason added or reworded in Cosora-Admin shows in English until it is added here and translated, as with banners.",
+ "product_moderation": [
+  "Cosora removed your listing",
+  "Your listing is back under review",
+  "Your listing is back in your drafts",
+  "This listing appears to use another brand's name, logo or design without permission. Cosora doesn't allow counterfeit or infringing products.",
+  "This product isn't allowed on Cosora under our listing rules.",
+  "The listing's details (price, MOQ, fabric, GSM or specifications) look misleading or don't match the product.",
+  "This listing is in a category that doesn't match the product. Move it to the right category and submit it again.",
+  "The photos are low quality, copied from elsewhere, or show content that isn't allowed.",
+  "This product is already listed in your catalogue. Keep one listing per product.",
+  "The listing shows a phone number, email address or outside link. Buyers reach you through Cosora.",
+  "Buyers reported a problem with this listing, and Cosora is checking it."
  ]
 }

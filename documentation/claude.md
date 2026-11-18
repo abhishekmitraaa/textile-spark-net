@@ -1157,7 +1157,8 @@ undocumented. Deep technical rationale for each lives in
     manages the team: it adds, changes and removes teammates in the five **team roles**
     (`admin.is_team_role()`: product_moderator, vendor_ops, ads_moderator, finance_admin,
     support). It never grants Super admin or Manager, and never changes a super admin, another
-    manager or itself. It sees no moderation or commerce section. A super admin grants
+    manager or itself. Since 2026-10-07 (Mitra) it moderates **products** in full and edits the
+    product moderation reasons; it sees no other moderation or commerce section. A super admin grants
     Manager on the Admins page.
     - The rule is in the database (migration `20260925210601`): `admin_set_role`,
       `admin_grant`, `admin_revoke` and `admin_search_candidates` admit a manager on those
@@ -1603,6 +1604,28 @@ undocumented. Deep technical rationale for each lives in
   quote, accepted ones included. Admins may flag a lead (`admin_flags` entity `'rfq'`, same
   two roles). Admin changes to `rfqs` reach the Admin Log. Migration `20261003090200_rfq_admin_oversight.sql` (applied
   2026-10-03 in the SQL editor, so not in the migration ledger); harness `scripts/rfq-leads/r3_oversight.sql`.
+- **Cosora removes or flags a listing with a reason from managed templates; nobody hard-deletes it for moderation**
+  (Mitra, 2026-10-07; `documentation/product-moderation-design-2026-10-07.md`; released 2026-11-18, Mitra: "merge this
+  to main and push").
+  - **Remove** (`admin_product_remove`: super_admin, product_moderator, manager) is a final takedown: `rejected` plus
+    `removed_at` / `removed_reason`, frozen for every browser client by `trg_products_moderation_guard`. The vendor
+    reads "Removed by Cosora" and the reason on My Products and may delete the listing, never edit or resubmit it.
+    **Reinstate** (super_admin, manager, a note required) returns it to the vendor's **drafts**, so resubmitting runs the
+    plan cap as the vendor; a definer function never puts a listing straight back into review.
+  - **Flag** (`admin_product_flag`, same three roles, live listings only) hides it: `under_review` plus
+    `flagged_at` / `flag_reason`. Approving or rejecting clears the flag; a vendor withdrawing to draft keeps it, and so
+    does the plan's pausing (`products_flag_shape` allows `paused`; resuming returns it to review, still flagged).
+  - **A plain rejection is not a moderation state on My Products**: it is the `rejected` status with its reason under
+    the name (`rejectionReason`); the boxed notice is for a removal or a flag only (`moderation`).
+  - **The reason is picked in the action's dialog** from `admin.product_moderation_reasons` (active, and marked for that
+    action), which super_admin and manager edit on `/moderation-reasons`. Never a UI constant; never deleted, only
+    switched off. The vendor reads its message plus the moderator's optional details.
+  - Each action: a row in `admin.product_moderation_actions` (who and when stay off `products`, which vendors read),
+    the Admin Log reason through `cosora.audit_reason`, and a `product_removed` / `product_flagged` /
+    `product_reinstated` notification.
+  - **Manager moderates products** (UPDATE only; insert and delete keep super_admin and product_moderator). A
+    `'product'` flag note needs one of the three moderation roles. Migration `20261118190000_product_moderation.sql`;
+    harness `scripts/product-moderation/pm1_remove_flag.sql`; spec `tests/local/product-moderation.spec.ts`.
 - **The buyer decides a quote's status; the vendor sets its terms** (MPF-18, 2026-09-25,
   `trg_quotes_update_roles`).
   - The RFQ's owner may change only `status`.
