@@ -168,11 +168,11 @@ undocumented. Deep technical rationale for each lives in
     rule, so changing it is a policy decision). Staff don't count; after NFKC, more than 4 digits of any script, a dot, an "@", "http" or "www" never appear.
     These filters only keep the obvious out (free text is always written round a filter): staff take-down is the control.
     Categories are Cosora's names and need no floor. Staff hide a term with a reason (`admin_search_trend_hide`).
-  - **Typed terms are off for now; only categories are public** (Mitra, 2026-10-18, "Categories only for now",
-    migration `20261018150000`). A guest is counted by the session id its browser sends and `log_engagement_event` is
-    open by design, so a script can pose as 3 visitors. Mitra switched `search_trending_terms` on for everyone on
-    2026-11-17 before terms need staff approval or only signed-in searches count (ToDo.md); staff take-down is the
-    only control until then.
+  - **Only signed-in searches make a typed term trend** (Mitra, 2026-11-18, "Signed-in only"; migration
+    `20261118100000`). A guest is a session id a script can invent, so 3 guests could publish any words. The 3 must be
+    different signed-in accounts, never Cosora staff or a registered seller; guests' searches still work, they just
+    don't count. Typed terms have been on for everyone since 2026-11-17 (Mitra). Accounts are cheap while the dummy
+    sign-in code is on, so staff take-down (`admin_search_trend_hide`) stays the backstop. Categories count everyone.
   - The public gets words only (`trending_searches()`), never counts. They ride in `site-config/site.json` when the
     `search_trending` switch is on for everyone; listed accounts read the function. A list not for yesterday isn't
     shown (`isShowable`). Google Trends or another source can feed the same tables later.
@@ -218,6 +218,7 @@ undocumented. Deep technical rationale for each lives in
   - Visitors read the picks (ids only) from `site-config/site.json` and the listings through `feed_products(p_ids)`, so a pick that stops being live drops out by itself. Changing who may pick means `admin.require_hero_slides_admin()` and `SECTION_READ` / `SECTION_WRITE["hero-slides"]` in Cosora-Admin together.
 - **A requirement's pictures are photos, uploaded before it's written** (Mitra, 2026-10-14). The full form and Quick Quote take up to 5 photos (`RFQ_MAX_IMAGES`), shrunk in the browser (`shrinkImage()`) and uploaded with `uploadRfqImages()` to `product-images/<buyer>/rfq/<batch>/`; `rfqs.images` holds them all and `rfqs.image` the first (the cover every list shows). Before 2026-10-14 neither form uploaded anything, and Quick Quote saved nothing at all while saying it had. Videos and PDFs are not offered: they have no storage path yet.
   - A picture URL the buyer's browser wrote is shown only when it is this project's Storage (`src/lib/storageUrl.ts`, applied where rows are mapped); a requirement without one shows `<RfqThumb>`'s placeholder, and a request about a listing shows the listing's picture.
+  - **A request sent to one seller keeps its reference images private** (2026-11-18, the 2026-10-13 review's item 3; migration `20261118130000`). They go to the private `rfq-attachments` bucket under the buyer's folder, `rfqs.customization_images` holds object paths, and the buyer, the seller it went to and staff open them through signed links (`<RfqReferenceImages>`, `rfqAttachmentUrls()`); `trg_rfq_attachment_paths` lets a browser list only its own buyer's paths. Requirement photos (`rfqs.images`) stay public: every seller is meant to see them.
 - **A chat badge counts real unread messages** (Mitra, 2026-10-14; migration `20261014170000_chat_unread.sql`). Unread = messages from the other person after the person's line in `conversation_reads`; only `mark_conversation_read()` moves it, when the chat is open and on screen. Read counts through `useChatUnread()` (`src/lib/queries/chatUnread.ts`) only, so the bottom bar and the chat list can't disagree; a new surface showing a count uses it. A new chat screen that shows messages must mark them read (see `useChatThread`).
 - **Cosora's Instagram is https://www.instagram.com/cosora.in/** (Mitra, 2026-10-14). One constant, `SUPPORT_INSTAGRAM` in `src/lib/supportContact.ts`; every link to it (Help, the seller landing page's footer) reads that. The blog repo has its own copy in `cosora-blogs/src/lib/site.ts`.
 - **A page's own bar pinned above the phone's bottom bar uses the measured heights** (2026-10-14). `MobileBottomNav` publishes `--bottom-nav-h` and a pinned bar publishes `--pinned-bar-h` (`usePublishedHeight()`); the To-top button sits above both. A fixed bar inside an animated step is rendered into `<body>` (a transformed parent moves a fixed child). Post Your Requirement's category step is the first user.
@@ -274,6 +275,9 @@ undocumented. Deep technical rationale for each lives in
   `subscription_checkout_gate()` (service role) decides before anything is created: `not_vendor`, `suspended`,
   `deleted` or `payments_not_open` (the `subscription_checkout` switch). The payment functions confirm the caller
   with Supabase Auth (`_shared/auth.ts`), never by reading the token. A new payment path asks the same gate.
+  Since 2026-11-18 every function that acts for a signed-in user does (`verifiedUserId`), not only the payment ones: a
+  signed-out or banned account's token stops working at once. Reading `role` from a gateway-verified token for a
+  service-role-only job is fine.
 - **A GSTIN is checked with its checksum, the same way in the browser and the database** (subscriptions P0).
   `gstin_is_valid()` and `src/lib/taxIds.ts` (`scripts/tax-id-check.mjs` compares them); `india_states.gst_code`
   is the two-digit state code a GSTIN starts with. Cosora's own GSTIN, legal name, address and SAC code are
@@ -1340,10 +1344,13 @@ undocumented. Deep technical rationale for each lives in
   body is in `external-strings.json` → `notifications`, with `{0}` where SQL joins text. Text a buyer wrote inside a
   title ("New requirement: …", "Follow-up due: …") renders in `data-no-translate` (`NoticeTitle`). A new `notify()`
   text adds its entry in the same change.
-- **Every ad impression is recorded, with no daily cap** (Mitra, 2026-11-18: "there should be no daily cap and all the
-  impressions should be recorded"; SH-099, `20261117140000`). `ad_impression()` adds one to a running campaign on every
-  call, whoever calls; nothing caps or spaces it. Don't add a cap without asking. The browser's `ad_impression`
-  engagement event is analytics only.
+- **Every ad impression is recorded, with no daily cap, and counted in batches** (Mitra, 2026-11-18: "there should be no
+  daily cap and all the impressions should be recorded", then "Build the job now"; SH-098/099, `20261117140000`,
+  `20261118110000`). `ad_impression()` queues a row in `admin.ad_impression_queue` for a running campaign on every call,
+  whoever calls; the job `ad-impressions-fold` adds the queue into `advertisements.impressions` every minute, so the
+  count on screen lags by up to a minute and busy pages never wait on a campaign's row. Don't add a cap without asking.
+  A test that reads impressions runs `admin.ad_impressions_fold()` first. The browser's `ad_impression` engagement event
+  is analytics only.
 - **Review averages and breakdowns come from `vendor_review_stats()`** (2026-11-17, SH-108); review lists load
   `REVIEW_PAGE` (100) at a time. A reply is at most 2,000 characters (the reply functions and a CHECK).
 - **A seller sees a buyer through `chat_buyer_card()` only** (Mitra, 2026-11-17, "Small buyer card"; SH-107): name,

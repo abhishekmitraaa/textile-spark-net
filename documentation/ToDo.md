@@ -6,23 +6,6 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
-### Bring the five unreleased October review fixes up to date — added 2026-11-16
-- Task: re-check, re-test and release the five fixes still sitting on branch `fix/review-2026-10-13` (commit `0330b78`,
-  worktree `.worktrees/review-fixes`, base `f1e3775`), or decide each is no longer needed.
-- Context: the 2026-10-13 buyer-side code review fixed six findings on that branch and it was never released. Mitra
-  brought only the ad payment fix into the Seller Home release (2026-11-16, "Only the ad payment fix"). Still there:
-  (1) a chat participant can rewrite the participants, the preview and the dates of a conversation
-  (`20261013100000_conversation_columns_are_server_owned`); (2) `submit_report` is unthrottled and doesn't check the
-  message belongs to the conversation (`…100100_submit_report_limits`); (3) quote-request reference images sit in the
-  public `product-images` bucket (`…100200_rfq_attachments_private_bucket`, plus app changes); (4) the CSP report
-  endpoint accepts any `*.vercel.app` host and its table stops at 5,000 rows (`…100300`, `api/csp-report.ts`);
-  (5) eight edge functions read the caller from the token without asking Auth (`verifiedUserId`), the two ad payment
-  functions among them. The branch is a month behind `main`, its migration numbers are taken by other files, and the
-  security fixes released on 2026-11-13 (F02–F07) may already cover some of it: each needs checking against today's code.
-- Reference: `subscription-session/SESSION-CONTEXT.md` (2026-10-13 entries); `documentation/securityflags.md` on that
-  branch; Seller Home high-priority fixes plan, 2026-11-16.
-- Status: Open
-
 ### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
 - Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.
 - Context: Mitra raised Free to 10 ("allow 10 lisitng for free plan", other plans unchanged; migration
@@ -41,13 +24,6 @@ with no need to dictate format, context, or reference each time.
 - Context: `overseas_seller_registration` went on before the CA item below was answered, so sellers outside India
   can now register and buy plans invoiced with IGST and "Outside India" as the place of supply.
 - Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5); migration `20261113100000`.
-- Status: Open
-
-### Count ad impressions in batches — added 2026-11-17
-- Task: decide whether to add a scheduled job that rolls up ad impressions (Mitra's call: new jobs are).
-- Context: Seller Home audit SH-098. `ad_impression()` adds 1 to the same newest campaigns' `impressions` on every
-  view, so busy pages contend on a few rows. The serving half (scanning every campaign) is fixed (2026-11-17,
-  `advertisements_running_idx`); spreading the counter needs a tally table and a job that folds it in every minute.
 - Status: Open
 
 ### CA: GST on plans and ads sold to sellers outside India — added 2026-11-13
@@ -135,16 +111,6 @@ with no need to dictate format, context, or reference each time.
   that may belong to a stranger, and the providers, ratings and reviews are seed data shown as real. Mitra chose
   "Keep them as is" on 2026-10-18; the risk is logged in securityflags.md.
 - Reference: 2026-10-18 audit "fix first" list, AskUserQuestion on Service Vendors/Freelancers.
-- Status: Open
-
-### Let typed search terms into Trending once they can't be faked — added 2026-11-01
-- Task: make typed terms safe: staff approval of each term, or count signed-in searches only. `search_trending_terms`
-  was switched on for everyone on 2026-11-17 (Mitra) before this was done, so typed terms are public now; until then,
-  staff take down a bad term in Cosora-Admin (`admin_search_trend_hide`), or the switch goes off again.
-- Context: a script posing as 3 guest sessions can publish any filter-passing words (push security review,
-  2026-10-18); since then only categories are public (Mitra: "Categories only for now"). Securityflags.md row
-  "Trending searches publish what people typed".
-- Reference: 2026-10-18 trending searches release.
 - Status: Open
 
 ### Make the local stack's snapshot trigger call itself, not production — added 2026-11-01

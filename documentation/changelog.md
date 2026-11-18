@@ -1,3 +1,11 @@
+- 2026-11-18 (branch `fix/leftovers-2026-11-18`; migrations `20261118100000`–`130000`; built and tested locally)
+  **What was left from the Seller Home review.** Record `documentation/leftovers-2026-11-18.md`.
+  - Mitra: trending terms count signed-in searches only (`20261118100000`); ad impressions are queued and folded in by
+    a job every minute (`20261118110000`).
+  - The 2026-10-13 review's unreleased fixes, found missing on production by a read-only comparison: conversations,
+    chat reports and the CSP table (`20261118120000`), private reference images on a direct request (`20261118130000`),
+    nine functions asking Auth who the caller is, the CSP endpoint taking only our own hosts.
+  - The overseas harness's check 19 follows the 2026-10-17 rule; a Video Closeup upload is tested end to end.
 - 2026-11-17 (branch `seller-home/low-fixes`; migration `20261117140000`; built and tested locally, **not released**)
   **Seller Home audit, Low items batch 2 (7): SH-083, 084, 085, 099, 107, 108, 109**, and the `audit-second` flake.
   - Decision: SH-107 "Small buyer card". Record `documentation/seller-home-low-fixes-plan-2026-11-17.md`.
