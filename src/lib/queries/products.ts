@@ -4,6 +4,7 @@ import { viewerKey } from "@/lib/viewerKey";
 import type { Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { sealTierFromParts, trustSealFromParts, type SealTier } from "@/lib/plan";
+import { chunks } from "@/lib/chunks";
 
 // ─────────────────────────────────────────────────────────────
 // Products data access (React Query over Supabase)
@@ -177,19 +178,14 @@ function vendorBoost(boosts: Map<string, number>, planId?: string | null, planEx
 // "nothing saved". Every read's error is thrown.
 export async function fetchProductCardsByIds(ids: string[]): Promise<Record<string, ProductCardData>> {
   if (!ids.length) return {};
-  const groupsOf = (xs: string[]) => {
-    const out: string[][] = [];
-    for (let i = 0; i < xs.length; i += 100) out.push(xs.slice(i, i + 100));
-    return out;
-  };
   const rows: RawProduct[] = [];
-  await Promise.all(groupsOf(ids).map(async (group) => {
+  await Promise.all(chunks(ids).map(async (group) => {
     const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).in("id", group);
     if (error) throw error;
     rows.push(...((data ?? []) as unknown as RawProduct[]));
   }));
   const vendorMap = new Map<string, RawVendor>();
-  await Promise.all(groupsOf(Array.from(new Set(rows.map((r) => r.vendor_id)))).map(async (group) => {
+  await Promise.all(chunks(Array.from(new Set(rows.map((r) => r.vendor_id)))).map(async (group) => {
     const { data: vendors, error } = await supabase
       .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, country_code, onboarding_complete").in("id", group);
     if (error) throw error;

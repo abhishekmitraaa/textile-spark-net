@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260906150000_schedule_embedding_worker_sql", "label": "20260906150000_schedule_embedding_worker.sql", "file_type": "code", "source_file": "supabase/migrations/20260906150000_schedule_embedding_worker.sql", "source_location": null}], "edges": []}

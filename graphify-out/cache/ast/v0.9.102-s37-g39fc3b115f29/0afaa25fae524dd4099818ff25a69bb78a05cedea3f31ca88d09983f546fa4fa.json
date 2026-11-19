@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260923150408_faqs_hide_created_by_from_clients_sql", "label": "20260923150408_faqs_hide_created_by_from_clients.sql", "file_type": "code", "source_file": "supabase/migrations/20260923150408_faqs_hide_created_by_from_clients.sql", "source_location": null}], "edges": []}

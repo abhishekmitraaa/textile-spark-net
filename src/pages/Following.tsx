@@ -272,9 +272,10 @@ const Following = () => {
   // now, so a slide followed from the carousel stays put and shows "Following".
   const { data: suggestions = [] } = useNewBrandSuggestions();
   const discoverable = useMemo(() => {
-    const following = new Set(followed.map((b) => b.id));
+    // Hidden follows are still follows: the slide says "Following" (review finding).
+    const following = new Set(allBrands.map((b) => b.id));
     return suggestions.map((b) => ({ ...b, isFollowing: following.has(b.id) }));
-  }, [suggestions, followed]);
+  }, [suggestions, allBrands]);
 
   // Feed controls
   // In the address, so Back to this page keeps them (review M-30).

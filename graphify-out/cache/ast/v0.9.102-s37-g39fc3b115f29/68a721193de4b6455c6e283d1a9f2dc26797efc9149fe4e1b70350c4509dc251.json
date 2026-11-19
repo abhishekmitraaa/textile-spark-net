@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20261114100500_profiles_signed_out_columns_sql", "label": "20261114100500_profiles_signed_out_columns.sql", "file_type": "code", "source_file": "supabase/migrations/20261114100500_profiles_signed_out_columns.sql", "source_location": null}], "edges": []}

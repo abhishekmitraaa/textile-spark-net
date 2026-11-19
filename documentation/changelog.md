@@ -1,3 +1,20 @@
+- 2026-11-19 (branch `fix/medium-batch1-2026-11-19`; migration `20261119100000_follows_hidden_saved_vendors.sql`;
+  plan `documentation/medium-bugs-batch1-plan-2026-11-19.md`; **built and checked on the local stack, not released**)
+  **Buyer review, Medium batch 1 of 4: Following, For You, Search, Saves** (M-02–M-11, M-15–M-20, M-26, M-27, M-30, M-38).
+  - Mitra's calls: Hide on Following is a saved mute (`follows.hidden_at`, Unhide in View All); the seller page's bookmark
+    saves the seller (`saved_vendors`, My Saves › Sellers, data export, account deletion); Save search removed.
+  - Following reads `my_followed_brands()` (one call: live counts, seal parts, hidden flag); toasts after the write;
+    signed out / loading / error apart from "not following anyone"; Most Popular offers gender and sort only.
+  - Saves: a sync state with Retry, ids read 100 at a time, every write waits and is undone on refusal (Recently Viewed
+    removal and clear too); /saved and /saved/:id no longer say "no longer exists" while loading.
+  - For You: Home tabs on every screen, the place filter keeps reading pages, city aliases (Tiruppur, Bengaluru, NCR),
+    Reset asks first; `for_you_products` searches 200 index candidates.
+  - Search Results: browsing asks `feed_products` for its order; facets keep reading pages; tab, sort and facet picks in
+    the address. Recent searches kept on the device per account.
+  - A new page opens at its top; feeds don't refetch every loaded page within 5 minutes; "verified manufacturers",
+    "quotes in minutes", "Top-rated verified suppliers" and Trends' "Trending in #" ad label replaced.
+  - Local stack: hide, the follows column grant, saved sellers (own rows only, anon refused), refused writes undone,
+    failed read → Retry, filters back after Back. A code review's 10 findings fixed before release.
 - 2026-11-18 (branch `product-moderation/release`, merge `d56351f` of `product-moderation/removal` into main `e87539a`,
   with Cosora-Admin merge `468c8e2`; migration `20261118190000_product_moderation.sql`, renumbered from `20261007160000`;
   **LIVE 2026-11-19**: migration applied with the CLI (not in the ledger) after the four replaced functions' md5 were

@@ -14,6 +14,7 @@ import {
   useSavedSync,
   retrySaved,
   createFolder,
+  folderSaved,
   renameFolder,
   deleteFolder,
   folderCover,
@@ -35,7 +36,8 @@ import { onThumbError, useSavedVideoCloseUps } from "@/lib/queries/videos";
 export function SavedSyncGate({ children }: { children: React.ReactNode }) {
   const sync = useSavedSync();
   const { user, loading } = useAuth();
-  if (loading || (user && sync === "loading")) {
+  // "local" while signed in is the moment before StoreSync hands the store this account: still loading.
+  if (loading || (user && (sync === "loading" || sync === "local"))) {
     return <p className="py-16 text-center text-sm text-gray-400" role="status" aria-busy="true">Loading your saves…</p>;
   }
   if (user && sync === "error") {
@@ -147,7 +149,7 @@ function FolderCard({ folder }: { folder: Folder }) {
                 <Pencil className="w-4 h-4" /> Rename Folder
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => deleteFolder(folder.id)}
+                onClick={() => void deleteFolder(folder.id).then((ok) => { if (ok) toast(`Deleted "${folder.name}"`); })}
                 className="gap-2 text-sm text-brand-buyer focus:text-brand-buyer"
               >
                 <Trash2 className="w-4 h-4" /> Delete Folder
@@ -171,13 +173,13 @@ function FolderCard({ folder }: { folder: Folder }) {
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { renameFolder(folder.id, name); setRenaming(false); } }}
+            onKeyDown={(e) => { if (e.key === "Enter") { void renameFolder(folder.id, name).then((ok) => { if (ok) toast.success("Folder renamed"); }); setRenaming(false); } }}
             className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-buyer"
             placeholder="Folder name"
           />
           <div className="flex justify-end gap-2">
             <button onClick={() => setRenaming(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700">Cancel</button>
-            <button onClick={() => { renameFolder(folder.id, name); setRenaming(false); }} className="px-5 py-2 rounded-xl bg-brand-buyer text-white text-sm font-bold">Save</button>
+            <button onClick={() => { void renameFolder(folder.id, name).then((ok) => { if (ok) toast.success("Folder renamed"); }); setRenaming(false); }} className="px-5 py-2 rounded-xl bg-brand-buyer text-white text-sm font-bold">Save</button>
           </div>
         </DialogContent>
       </Dialog>
@@ -246,7 +248,8 @@ const SavedCollections = () => {
 
   const submitCreate = () => {
     if (!name.trim()) return;
-    createFolder(name);
+    const id = createFolder(name);
+    void folderSaved(id).then((ok) => { if (ok) toast.success("Folder created"); });
     setName("");
     setCreating(false);
   };
@@ -256,12 +259,12 @@ const SavedCollections = () => {
       <div className="max-w-2xl mx-auto px-4 pt-3 pb-24">
         <h1 className="text-lg font-bold text-gray-900 mb-3">My Saves</h1>
 
-        <SavedSyncGate>
-        <SignedOutNote />
-
         <SavedSellers />
 
         <SavedVideos />
+
+        <SavedSyncGate>
+        <SignedOutNote />
 
         <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Your Collections</p>

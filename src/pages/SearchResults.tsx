@@ -621,21 +621,36 @@ const SearchResults = () => {
   // The facet picks, in the address as ?f=<json> once the buyer changes them; until then the query's defaults (a
   // gender pre-scope). A new search is a new address, so it starts from its own defaults.
   const rawSelections = params.get("f");
-  const selections = useMemo<Record<string, string[]>>(
+  const fromUrl = useMemo<Record<string, string[]>>(
     () => parseSelections(rawSelections) ?? defaultSelections(query),
     [rawSelections, query],
   );
+  // The screen follows a pick at once; the address is written 300 ms after the last change, so dragging the price
+  // slider doesn't replace the history entry dozens of times a second (browsers throttle and refuse that).
+  const [draft, setDraft] = useState<Record<string, string[]> | null>(null);
+  const selections = draft ?? fromUrl;
+  const selectionsRef = useRef(selections);
+  selectionsRef.current = selections;
+  const writeTimer = useRef<number | undefined>(undefined);
+  useEffect(() => { setDraft(null); }, [rawSelections, query]);
+  // A new search drops a write still waiting for the last one's picks.
+  useEffect(() => () => window.clearTimeout(writeTimer.current), [query]);
+  useEffect(() => () => window.clearTimeout(writeTimer.current), []);
   const setSelections = useCallback(
     (next: Record<string, string[]> | ((prev: Record<string, string[]>) => Record<string, string[]>)) => {
-      setParams((prev) => {
-        const current = parseSelections(prev.get("f")) ?? defaultSelections(query);
-        const value = typeof next === "function" ? next(current) : next;
-        const out = new URLSearchParams(prev);
-        out.set("f", JSON.stringify(value));
-        return out;
-      }, { replace: true });
+      const value = typeof next === "function" ? next(selectionsRef.current) : next;
+      selectionsRef.current = value;
+      setDraft(value);
+      window.clearTimeout(writeTimer.current);
+      writeTimer.current = window.setTimeout(() => {
+        setParams((prev) => {
+          const out = new URLSearchParams(prev);
+          out.set("f", JSON.stringify(value));
+          return out;
+        }, { replace: true });
+      }, 300);
     },
-    [setParams, query],
+    [setParams],
   );
   // Browsing (nothing typed), the database applies Supplier location and the order (2026-11-19, review M-15: price,
   // rating, discount and popular sorted only the 96 listings loaded so far). With a query the 200 results are the

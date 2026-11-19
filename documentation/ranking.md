@@ -256,7 +256,9 @@ categories the buyer picked at sign-up (`preferred_categories` → `pref_categor
 
 **Order:**
 1. **Closeness:** live listings nearest the vector (cosine distance), with recent demand breaking ties. The index
-   serves this directly.
+   serves this directly. It searches 200 candidates in strict order and keeps scanning past listings that aren't live
+   (`hnsw.ef_search = 200`, `hnsw.iterative_scan = strict_order` on the function, 2026-11-19, review M-38): with the
+   default 40 it returned at most ~40 of the 200 For You asks for.
 2. **Location nudge:** for a buyer with a city or state, the same candidate set is re-sorted by distance minus a
    small nudge. It is 0.05 when the listing (or its seller) is in the buyer's city, else 0.02 for their state. The
    nudge only reorders; it never adds or drops a listing.
@@ -735,3 +737,4 @@ Design documents:
 | 2026-11-15 | **Fit** orders each seller's lead feed; "Near you"; buyers asked for their state |
 | 2026-11-15 | **Standing** replaces profile score in every seller list; My Quotes opens on Recommended |
 | 2026-11-15 | Standing's buyer interest reaches back 90 days (`admin.seller_viewer_daily`) |
+| 2026-11-19 | For You searches 200 index candidates; Search Results with nothing typed asks `feed_products` for its price, rating, discount and popular orders |

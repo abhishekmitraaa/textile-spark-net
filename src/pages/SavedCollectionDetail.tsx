@@ -145,7 +145,7 @@ function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
           <Phone className="w-3.5 h-3.5" /> CALL NOW
         </button>
         <button
-          onClick={() => { removeFromFolder(folderId, p.id); toast("Removed from collection"); }}
+          onClick={() => void removeFromFolder(folderId, p.id).then((ok) => { if (ok) toast("Removed from collection"); })}
           aria-label="Remove"
           className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-brand-buyer hover:border-brand-buyer/40 transition-colors"
         >
@@ -191,7 +191,10 @@ const SavedCollectionDetail = () => {
   const deleteSelected = () => {
     if (selected.size === 0) { toast("Select items to remove"); return; }
     // Each removal waits for the database and is put back with a message when refused (review M-19).
-    selected.forEach((id) => removeFromFolder(collectionId, id));
+    void Promise.all([...selected].map((id) => removeFromFolder(collectionId, id))).then((done) => {
+      const n = done.filter(Boolean).length;
+      if (n) toast(`Removed ${n} item${n > 1 ? "s" : ""}`);
+    });
     setSelected(new Set());
   };
 

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260801100327_revoke_public_execute_on_reject_vendor_content_sql", "label": "20260801100327_revoke_public_execute_on_reject_vendor_content.sql", "file_type": "code", "source_file": "supabase/migrations/20260801100327_revoke_public_execute_on_reject_vendor_content.sql", "source_location": null}], "edges": []}

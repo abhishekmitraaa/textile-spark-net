@@ -214,11 +214,19 @@ async function mirror(
   undo: () => void,
   failure: string,
 ): Promise<boolean> {
+  const forUser = userId;
   const { error } = await op();
   if (!error) return true;
+  // Signed out (or into another account) meanwhile: the list on screen isn't the one this write was for.
+  if (userId !== forUser) return false;
   undo();
   toast.error(failure, { description: "Please try again." });
   return false;
+}
+
+/** Resolves once a folder made with createFolder() is saved (true), or refused (false). */
+export function folderSaved(folderId: string): Promise<boolean> {
+  return folderWrites.get(folderId) ?? Promise.resolve(true);
 }
 
 /** Take a product back out of folders it was put in (a refused save). */
@@ -313,10 +321,10 @@ export function saveToFolders(product: SavedProduct, folderIds: string[]) {
   })();
 }
 
-export function createFolder(name: string, withProductId?: string): string {
+export function createFolder(name: string): string {
   const id = userId ? newFolderId() : uid();
   const folderName = name.trim() || "New Folder";
-  const folder: Folder = { id, name: folderName, productIds: withProductId ? [withProductId] : [] };
+  const folder: Folder = { id, name: folderName, productIds: [] };
   commit({ ...state, folders: [...state.folders, folder] });
   if (userId && isUuid(id)) {
     const forUser = userId;
@@ -329,43 +337,33 @@ export function createFolder(name: string, withProductId?: string): string {
       return false;
     })();
     folderWrites.set(id, write);
-    if (withProductId && isUuid(withProductId)) {
-      const wasSaved = Boolean(state.products[withProductId]);
-      void (async () => {
-        const saved = await mirror(
-          () => supabase.from("saved_items").upsert({ buyer_id: forUser, product_id: withProductId }, { onConflict: "buyer_id,product_id" }),
-          () => withdraw(withProductId, [ALL_SAVES_ID], !wasSaved),
-          "Couldn't save this product",
-        );
-        if (saved) await dbAddToFolder(id, withProductId);
-      })();
-    }
   }
   return id;
 }
 
-export function renameFolder(id: string, name: string) {
-  if (id === ALL_SAVES_ID) return;
+export function renameFolder(id: string, name: string): Promise<boolean> {
+  if (id === ALL_SAVES_ID) return Promise.resolve(false);
   const trimmed = name.trim();
   const before = state.folders.find((f) => f.id === id)?.name;
   commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, name: trimmed || f.name } : f)) });
   if (userId && isUuid(id) && trimmed && before !== undefined) {
-    void mirror(
+    return mirror(
       () => supabase.from("saved_folders").update({ name: trimmed }).eq("id", id),
       () => commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, name: before } : f)) }),
       "Couldn't rename the folder",
     );
   }
+  return Promise.resolve(Boolean(trimmed));
 }
 
-export function deleteFolder(id: string) {
-  if (id === ALL_SAVES_ID) return; // All Saves is permanent
+export function deleteFolder(id: string): Promise<boolean> {
+  if (id === ALL_SAVES_ID) return Promise.resolve(false); // All Saves is permanent
   const at = state.folders.findIndex((f) => f.id === id);
-  if (at < 0) return;
+  if (at < 0) return Promise.resolve(false);
   const folder = state.folders[at];
   commit({ ...state, folders: state.folders.filter((f) => f.id !== id) });
   if (userId && isUuid(id)) {
-    void mirror(
+    return mirror(
       () => supabase.from("saved_folders").delete().eq("id", id),
       () => {
         const folders = [...state.folders];
@@ -375,20 +373,18 @@ export function deleteFolder(id: string) {
       `Couldn't delete "${folder.name}"`,
     );
   }
+  return Promise.resolve(true);
 }
 
 // Remove a product from one folder. Removing from All Saves unsaves it everywhere.
-export function removeFromFolder(folderId: string, productId: string) {
-  if (folderId === ALL_SAVES_ID) {
-    unsaveProduct(productId);
-    return;
-  }
+export function removeFromFolder(folderId: string, productId: string): Promise<boolean> {
+  if (folderId === ALL_SAVES_ID) return unsaveProduct(productId);
   commit({
     ...state,
     folders: state.folders.map((f) => (f.id === folderId ? { ...f, productIds: f.productIds.filter((p) => p !== productId) } : f)),
   });
   if (userId && isUuid(folderId) && isUuid(productId)) {
-    void mirror(
+    return mirror(
       () => supabase.from("saved_folder_items").delete().eq("folder_id", folderId).eq("product_id", productId),
       () => commit({
         ...state,
@@ -397,10 +393,11 @@ export function removeFromFolder(folderId: string, productId: string) {
       "Couldn't remove it from the folder",
     );
   }
+  return Promise.resolve(true);
 }
 
 // Fully remove a product from every folder + the product map.
-export function unsaveProduct(productId: string) {
+export function unsaveProduct(productId: string): Promise<boolean> {
   const product = state.products[productId];
   const memberOf = state.folders.filter((f) => f.productIds.includes(productId)).map((f) => f.id);
   const products = { ...state.products };
@@ -412,30 +409,31 @@ export function unsaveProduct(productId: string) {
   });
   if (userId && isUuid(productId) && product) {
     const forUser = userId;
-    const restore = () => {
-      const back = new Set(memberOf);
+    // `inFolders` false: the folder rows were already deleted, so it comes back to All Saves only.
+    const restore = (inFolders: boolean) => {
+      const back = new Set(inFolders ? memberOf : [ALL_SAVES_ID]);
       commit({
         ...state,
         products: { ...state.products, [productId]: product },
         folders: state.folders.map((f) => (back.has(f.id) && !f.productIds.includes(productId) ? { ...f, productIds: [productId, ...f.productIds] } : f)),
       });
     };
-    void (async () => {
+    return (async () => {
       // Folder rows first: a save left in a folder with no saved_items row would be invisible but still there.
       const ok = await mirror(
         () => supabase.from("saved_folder_items").delete().eq("product_id", productId),
-        restore,
+        () => restore(true),
         "Couldn't remove this save",
       );
-      if (ok) {
-        await mirror(
-          () => supabase.from("saved_items").delete().eq("buyer_id", forUser).eq("product_id", productId),
-          restore,
-          "Couldn't remove this save",
-        );
-      }
+      if (!ok) return false;
+      return mirror(
+        () => supabase.from("saved_items").delete().eq("buyer_id", forUser).eq("product_id", productId),
+        () => restore(false),
+        "Couldn't remove this save",
+      );
     })();
   }
+  return Promise.resolve(true);
 }
 
 export function isSaved(productId: string): boolean {

@@ -190,6 +190,8 @@ export function useFollowing(): UseFollowingResult {
     async (vendorId: string, hidden: boolean, name?: string) => {
       if (!signedIn) { if (hidden) hideLocal(vendorId); return true; }
       const qk = ["follows", user!.id];
+      // A read already on its way would land after this and put the old flag back.
+      await qc.cancelQueries({ queryKey: qk });
       const before = qc.getQueryData<Brand[]>(qk);
       qc.setQueryData<Brand[]>(qk, (rows) => rows?.map((b) => (b.id === vendorId ? { ...b, isHidden: hidden } : b)));
       const { error } = await supabase.from("follows")
@@ -200,6 +202,7 @@ export function useFollowing(): UseFollowingResult {
         toast.error(hidden ? "Couldn't hide this brand" : "Couldn't show this brand again", { description: "Please try again." });
         return false;
       }
+      void qc.invalidateQueries({ queryKey: qk });
       if (name) toast(hidden ? `Hid ${name} from your Following feed` : `${name} is back in your Following feed`);
       return true;
     },
