@@ -1353,6 +1353,25 @@ undocumented. Deep technical rationale for each lives in
   of the Following feed, listed in View All with Unhide. `saved_vendors` (own rows) is My Saves › Sellers, apart from
   Follow; it is in the data export and `anonymize_account()` deletes it. Following reads `my_followed_brands()` (counts,
   seal parts, hidden flag in one call). Search Results has no Save search.
+- **Back closes what is open over a page** (2026-11-19, review M-29): `useBackCloses()` / `useOverlayState()` /
+  `<BackDropdownMenu>` (`src/hooks/useBackCloses.ts`). Each overlay's history entry names its owner, a close pops it once,
+  and an overlay opened in the same moment waits for that pop. An address change made while an overlay is open is written
+  on the page's entry once the overlay's is gone (`afterOverlay()`; `useUrlState` does this). A new sheet, dialog or menu
+  over a buyer page uses one of them. A multi-step page keeps its step in the address, one entry per step
+  (`useStepParam()`).
+- **Every buyer page has the sign-up gate and the side switch** (2026-11-19, review M-01, M-12, M-13): BuyerShell, or
+  `<BuyerFrame>` for a page with its own frame. Seller pages draw the seller frame whatever the account's side
+  (`<DisplaySide>`, `useDisplayRole()`).
+- **The database checks the buyer Terms too** (Mitra, 2026-11-19, review M-61; `20261119110000`): while
+  `buyer_signup_required` is on, `admin.enforce_buyer_terms()` refuses `rfq_submissions`, `rfqs`, `conversations`,
+  `messages` and the three review tables to an account that isn't onboarded with a Terms record; sellers (registered,
+  exempt, pending) and staff aren't caught, and a seller-side account may still send messages. A new table a buyer
+  writes to as a buyer gets the same trigger.
+- **Sign-in returns a buyer to where it was asked** (Mitra, 2026-11-19, review M-59): `<ReturnToTracker>` remembers the
+  page a link, prompt or the gate left for sign-in, and `landingFor()` (`src/lib/returnTo.ts`) is used where a buyer
+  lands (`finishAuthFlow`, AuthCallback, Welcome). Sellers still land on Seller Home. Sign-in itself is unchanged.
+- **A seller who picked Seller by mistake can be a buyer again** (Mitra, 2026-11-19, review M-60): until a registration
+  is submitted, /onboarding offers "I'm a buyer, not a seller".
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

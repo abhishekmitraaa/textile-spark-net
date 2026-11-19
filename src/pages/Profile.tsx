@@ -114,8 +114,8 @@ const Profile = () => {
   const { data: callCount } = useCallCount();
   const { data: settings } = useSettings(authProfile?.id);
 
-  // Session-scoped, not persisted: a buyer who dismisses it and later decides
-  // to add a city should see the prompt again next visit rather than never.
+  // The city nudge is for this visit only: a buyer who dismisses it and later decides to add a city should see the
+  // prompt again next visit. The state nudge stays closed for 30 days on this device (review M-54).
   const [cityNudgeDismissed, setCityNudgeDismissed] = useState(false);
   const [stateNudgeDismissed, dismissStateNudge] = useDismissed("state-nudge", session?.user?.id);
 

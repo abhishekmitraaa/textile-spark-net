@@ -85,7 +85,7 @@ const MyQuotes = () => {
   const queryClient = useQueryClient();
   const { data: buyerData } = useBuyerQuotes(user?.id);
   const { data: profile } = useProfileFull(user?.id);
-  // For this visit only, like the profile's nudges.
+  // Closed stays closed for 30 days on this device, shared with Profile (review M-54).
   const [stateNudgeDismissed, dismissStateNudge] = useDismissed("state-nudge", user?.id);
   const rfqs = buyerData?.rfqs ?? [];
   // Requirements still with Cosora's review, or not approved (2026-10-17). An approved one is in `rfqs`.
@@ -101,8 +101,12 @@ const MyQuotes = () => {
 
   // The open requirement is a history entry (?view=received&rfq=…), so the phone's Back returns to the list (review M-43).
   const views = useStepParam<View>("view", ["list", "received", "direct"], "list");
-  const view = views.step;
-  const rfqId = view === "list" ? null : new URLSearchParams(window.location.search).get("rfq"); // re-read on each render: views re-renders on every address change
+  const rfqParam = views.step === "list" ? null : new URLSearchParams(window.location.search).get("rfq"); // re-read on each render: views re-renders on every address change
+  // A requirement that isn't (or isn't yet) one of the buyer's open ones (a link to one in review, a deleted one) shows
+  // the list, never an empty page (code review 2026-11-19). While the quotes load, the list's own loading shows.
+  const known = Boolean(rfqParam && buyerData?.rfqs.some((r) => r.id === rfqParam));
+  const view: View = known ? views.step : "list";
+  const rfqId = known ? rfqParam : null;
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");

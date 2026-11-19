@@ -9,6 +9,11 @@
 --   - Cosora staff are never caught;
 --   - server code (service role, jobs, migrations) is never caught (admin.trusted_caller()).
 -- Help, fraud reports, feedback and support threads are other tables and stay open.
+-- Requirements are written to rfq_submissions (Cosora reviews them before they become rfqs rows) and, for a request to
+-- one seller, to rfqs: both are checked (commit security review, 2026-11-19).
+-- An account on the seller side (profiles.active_role = 'seller') may still send chat messages, as the app's gate lets
+-- it: a seller whose registration was sent back keeps answering buyers (code review, 2026-11-19). It may not post
+-- requirements, start chats or write reviews as a buyer until it has accepted the Terms.
 
 create or replace function admin.caller_may_act_as_buyer()
 returns boolean
@@ -39,6 +44,10 @@ security definer
 set search_path = ''
 as $$
 begin
+  if tg_table_name = 'messages'
+     and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.active_role = 'seller') then
+    return new;
+  end if;
   if not admin.caller_may_act_as_buyer() then
     raise exception 'Accept the Cosora Terms to continue'
       using errcode = '42501', hint = 'terms_required';
@@ -51,6 +60,10 @@ revoke all on function admin.enforce_buyer_terms() from public, anon, authentica
 
 drop trigger if exists trg_rfqs_buyer_terms on public.rfqs;
 create trigger trg_rfqs_buyer_terms before insert on public.rfqs
+  for each row execute function admin.enforce_buyer_terms();
+
+drop trigger if exists trg_rfq_submissions_buyer_terms on public.rfq_submissions;
+create trigger trg_rfq_submissions_buyer_terms before insert on public.rfq_submissions
   for each row execute function admin.enforce_buyer_terms();
 
 drop trigger if exists trg_conversations_buyer_terms on public.conversations;
@@ -79,7 +92,7 @@ declare n int;
 begin
   select count(*) into n from pg_trigger t join pg_class c on c.oid = t.tgrelid
    where t.tgname like 'trg_%_buyer_terms' and not t.tgisinternal
-     and c.relname in ('rfqs', 'conversations', 'messages', 'reviews', 'product_reviews', 'service_reviews');
-  if n <> 6 then raise exception 'self-check: % of 6 buyer-terms triggers', n; end if;
+     and c.relname in ('rfqs', 'rfq_submissions', 'conversations', 'messages', 'reviews', 'product_reviews', 'service_reviews');
+  if n <> 7 then raise exception 'self-check: % of 7 buyer-terms triggers', n; end if;
   if not admin.caller_may_act_as_buyer() then raise exception 'self-check: a migration must pass'; end if;
 end $$;

@@ -538,11 +538,12 @@ function FilterSheet({
       {open && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+            className="fixed inset-0 z-[60] bg-black/50" onClick={onClose} />
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "tween", duration: 0.3, ease: E }}
-            className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl flex flex-col max-h-[85vh] sm:max-w-lg sm:mx-auto"
+            className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-2xl flex flex-col max-h-[85vh] sm:max-w-lg sm:mx-auto"
+            /* Above the phone's bottom bar (z-50, later in the page), which covered "Show N results" (found 2026-11-19). */
           >
             {/* Header */}
             <div className="shrink-0 px-5 pt-4 pb-3 border-b border-gray-100">

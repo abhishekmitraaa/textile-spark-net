@@ -17,7 +17,7 @@ export function useStepParam<T extends string>(key: string, allowed: readonly T[
   const marker = `cosoraStep:${key}`;
 
   const write = useCallback(
-    (next: T, push: boolean, extra?: Record<string, string | null>) => {
+    (next: T, push: boolean, extra?: Record<string, string | null>, dropMarker = false) => {
       const out = new URLSearchParams(window.location.search);
       if (next === initial) out.delete(key);
       else out.set(key, next);
@@ -25,7 +25,8 @@ export function useStepParam<T extends string>(key: string, allowed: readonly T[
         if (v === null) out.delete(k);
         else out.set(k, v);
       }
-      const state = (currentState() as Record<string, unknown> | null) ?? {};
+      const state = { ...((currentState() as Record<string, unknown> | null) ?? {}) };
+      if (dropMarker) delete state[marker];
       setParams(out, push ? { state: { ...state, [marker]: true } } : { replace: true, state });
     },
     [initial, key, marker, setParams],
@@ -41,5 +42,8 @@ export function useStepParam<T extends string>(key: string, allowed: readonly T[
     },
     [marker, navigate, write],
   );
-  return { step, go, back, replace };
+  /** The page shows an earlier step than the address (reloaded without what a later step needs): make the address say
+   *  so, as a first entry, so Back from here doesn't pop to an entry showing the same screen. */
+  const reset = useCallback((to: T) => write(to, false, undefined, true), [write]);
+  return { step, go, back, replace, reset };
 }

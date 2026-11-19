@@ -40,9 +40,6 @@ export function ProfileSubpageHeader({ title }: { title: string }) {
 
 export function ProfileSignedOut() {
   const navigate = useNavigate();
-  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
-  // /profile, so Back from there came back here, and round again).
-  const goBack = useStepBack("/profile");
   return (
     <div className="max-w-2xl mx-auto px-4 pt-24 pb-24 text-center">
       <h2 className="text-lg font-bold text-gray-900">You're signed out</h2>

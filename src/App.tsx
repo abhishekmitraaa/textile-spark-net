@@ -244,7 +244,7 @@ const App = () => (
             <Route path="/profile/edit" element={<BuyerFrame><ClarityMask><ProfileEdit /></ClarityMask></BuyerFrame>} />
             <Route path="/profile/business-details" element={<BuyerFrame><ClarityMask><ProfileBusinessDetails /></ClarityMask></BuyerFrame>} />
             {/* Buyer account & security settings (2026-09-23). /settings is the vendor's. */}
-            <Route path="/profile/settings" element={<BuyerFrame><ClarityMask><BuyerSettings /></ClarityMask></BuyerFrame>} />
+            <Route path="/profile/settings" element={<ClarityMask><BuyerSettings /></ClarityMask>} />
             <Route path="/profile/notifications" element={<BuyerFrame><ProfileNotifications /></BuyerFrame>} />
             <Route path="/profile/social-links" element={<BuyerFrame><ClarityMask><ProfileSocialLinks /></ClarityMask></BuyerFrame>} />
             <Route path="/profile/regional-settings" element={<BuyerFrame><ClarityMask><ProfileAccountPrefs /></ClarityMask></BuyerFrame>} />

@@ -31,27 +31,44 @@ export function isOverOverlay(): boolean {
  * entry; and only going back below the owner's entry closes it, so an overlay opened on top of another (a menu in a
  * sheet) leaves the one underneath open.
  */
+// A close that pops an overlay's entry is asynchronous (history.go). An overlay opened in the same moment (a menu item
+// that opens a sheet) must push after that pop lands, or the pop takes the new entry instead (code review 2026-11-19).
+let pendingPop: Promise<void> | null = null;
+function popOverlayEntry(navigate: (delta: number) => void) {
+  pendingPop = new Promise<void>((resolve) => {
+    const done = () => { window.removeEventListener("popstate", done); window.clearTimeout(timer); pendingPop = null; resolve(); };
+    const timer = window.setTimeout(done, 1500);
+    window.addEventListener("popstate", done);
+  });
+  navigate(-1);
+}
+
 export function useBackCloses(isOpen: boolean, onClose: () => void, enabled = true): void {
   const navigate = useNavigate();
+  const [, setTick] = useState(0);
   const location = useLocation();
   const id = useId();
   const owner = (location.state as Record<string, unknown> | null)?.[KEY];
   const mine = owner === id;
-  const phase = useRef<"idle" | "pushing" | "open">("idle");
+  const phase = useRef<"idle" | "pushing" | "open" | "closing">("idle");
   const myIdx = useRef<number | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const locationRef = useRef(location);
   locationRef.current = location;
 
+  // Runs after every render (a pop or push landing re-renders through the location); the phases make it idempotent.
   useEffect(() => {
     if (!enabled) return;
     const idx = historyIdx();
     if (isOpen) {
-      if (phase.current === "idle") {
-        if (mine) {
+      if (phase.current === "idle" || phase.current === "closing") {
+        if (mine && phase.current === "idle") {
           phase.current = "open";
           myIdx.current = idx;
+        } else if (pendingPop) {
+          // An entry (this overlay's last one, or another's) is being popped: push once it has gone.
+          void pendingPop.then(() => setTick((t) => t + 1));
         } else {
           phase.current = "pushing";
           const { pathname, search, hash, state } = locationRef.current;
@@ -68,12 +85,18 @@ export function useBackCloses(isOpen: boolean, onClose: () => void, enabled = tr
       }
       return;
     }
-    // Closed (by its own button, or the page came back with the overlay shut):
-    // drop this overlay's entry so the next back press isn't spent on it.
-    phase.current = "idle";
+    // Closed (by its own button, or the page came back with the overlay shut): drop this overlay's entry, once, so the
+    // next back press isn't spent on it.
     myIdx.current = null;
-    if (mine) navigate(-1);
-  }, [enabled, isOpen, mine, id, location.key, navigate]);
+    if (mine) {
+      if (phase.current !== "closing") {
+        phase.current = "closing";
+        popOverlayEntry(navigate);
+      }
+      return;
+    }
+    phase.current = "idle";
+  });
 }
 
 /** useState for an overlay's open flag, with Back closing it (useBackCloses). */
@@ -93,9 +116,15 @@ export function afterOverlay(apply: () => void): void {
     apply();
     return;
   }
+  const page = window.location.pathname;
+  // Given up when the overlay's entry is left another way (a link out replaces it) or another page is showing: a stale
+  // write must never land on an unrelated page (code review 2026-11-19).
+  const stop = () => { window.removeEventListener("popstate", done); window.clearTimeout(timer); };
+  const timer = window.setTimeout(stop, 10_000);
   const done = () => {
+    if (window.location.pathname !== page) { stop(); return; }
     if (isOverOverlay()) return; // a nested overlay closed; the page's entry isn't back yet
-    window.removeEventListener("popstate", done);
+    stop();
     setTimeout(apply, 0);
   };
   window.addEventListener("popstate", done);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,8 @@ function FraudWizard() {
   const STEP_KEYS = STEPS.map((_, i) => String(i));
   const steps = useStepParam<string>("step", STEP_KEYS, "0");
   const step = Math.min(Number(steps.step), r.description.trim() ? STEPS.length - 1 : 1);
+  const { reset: resetStep } = steps;
+  useEffect(() => { if (String(step) !== steps.step) resetStep(String(step)); }, [step, steps.step, resetStep]);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<{ ticketNo: string; failedFiles: number } | null>(null);

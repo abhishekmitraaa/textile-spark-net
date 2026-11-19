@@ -27,8 +27,11 @@ function worthReturning(path: string): boolean {
 }
 
 export function rememberReturnTo(path: string): void {
-  if (!worthReturning(path)) return;
-  try { sessionStorage.setItem(KEY, JSON.stringify({ path, at: Date.now() })); } catch { /* private mode */ }
+  try {
+    // A sign-in started from a landing page forgets an older, abandoned attempt's page (code review 2026-11-19).
+    if (!worthReturning(path)) sessionStorage.removeItem(KEY);
+    else sessionStorage.setItem(KEY, JSON.stringify({ path, at: Date.now() }));
+  } catch { /* private mode */ }
 }
 
 /** Where a buyer's sign-in or sign-up should land: the remembered page (taken once), else `dest`. */

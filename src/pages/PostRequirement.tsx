@@ -186,6 +186,8 @@ const PostRequirement = () => {
   const step: Step = steps.step === "form" && !categoryId ? "category"
     : steps.step === "success" && !submitted.current ? "main"
     : steps.step;
+  const { reset: resetStep } = steps;
+  useEffect(() => { if (step !== steps.step) resetStep(step); }, [step, steps.step, resetStep]);
   const [recording, setRecording] = useState(false);
   const [openSelect, setOpenSelect] = useState<string | null>(null);
 

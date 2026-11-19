@@ -13,6 +13,7 @@ import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
 import { historyIndex, markAuthStart, takeAuthLanding } from "@/lib/authHistory";
 import { useAuth } from "@/contexts/AuthContext";
+import { currentState } from "@/hooks/useUrlState";
 
 type Role = "buyer" | "seller";
 
@@ -24,11 +25,12 @@ const Register = () => {
   // Buyer or Seller is in the address too (?as=seller), so Back from the details step or a reload keeps it (review
   // M-55: it fell back to Buyer, and a seller signed up as a buyer without noticing).
   const selectedRole: Role = params.get("as") === "seller" ? "seller" : "buyer";
-  const setSelectedRole = (role: Role) => setParams((prev) => {
-    const out = new URLSearchParams(prev);
+  // The entry's state (authStartIdx) is kept: a reload still knows where sign-up started (code review 2026-11-19).
+  const setSelectedRole = (role: Role) => {
+    const out = new URLSearchParams(window.location.search);
     if (role === "seller") out.set("as", "seller"); else out.delete("as");
-    return out;
-  }, { replace: true });
+    setParams(out, { replace: true, state: currentState() });
+  };
   const location = useLocation();
   const step: 1 | 2 = params.get("step") === "2" ? 2 : 1;
   // Where this sign-up started (Login's entry when it came from there): finishing goes back to it (lib/authHistory.ts).
@@ -38,7 +40,7 @@ const Register = () => {
   useEffect(() => {
     if (landing) navigate(landing, { replace: true });
   }, [landing, navigate]);
-  const toDetails = () => setParams(selectedRole === "seller" ? { step: "2", as: "seller" } : { step: "2" });
+  const toDetails = () => setParams(selectedRole === "seller" ? { step: "2", as: "seller" } : { step: "2" }, { state: currentState() });
   // Signed in already (review M-56): the empty form made it look like a second account was needed.
   const { session, profile, loading: authLoading } = useAuth();
   const toRole = () => {
