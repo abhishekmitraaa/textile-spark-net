@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeatureFlag } from "@/lib/queries/featureFlags";
@@ -21,15 +21,19 @@ export default function BuyerSignupGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const on = useFeatureFlag("buyer_signup_required") === true;
   const registration = useSellerRegistration(on && user ? user.id : undefined);
+  // Once the page is on screen it stays while the registration is read (2026-11-19, review M-01): it used to render
+  // the page, then nothing, then the page again, so it mounted twice and its ads were counted twice.
+  const shown = useRef(false);
+  const page = () => { shown.current = true; return <>{children}</>; };
 
-  if (!on || loading || !user || !profile || profile.id !== user.id) return <>{children}</>;
-  if (ALWAYS_OPEN.some((re) => re.test(pathname))) return <>{children}</>;
-  if (profile.active_role === "seller") return <>{children}</>;
-  if (registration.isPending) return null;
+  if (!on || loading || !user || !profile || profile.id !== user.id) return page();
+  if (ALWAYS_OPEN.some((re) => re.test(pathname))) return page();
+  if (profile.active_role === "seller") return page();
+  if (registration.isPending) return shown.current ? page() : null;
   const seller = registration.data?.status;
-  if (registration.isError || seller === "registered" || seller === "exempt" || seller === "pending") return <>{children}</>;
+  if (registration.isError || seller === "registered" || seller === "exempt" || seller === "pending") return page();
 
   if (!profile.onboarded) return <Navigate to="/auth/role-selection" replace />;
   if (!profile.terms_version) return <Navigate to="/auth/terms" replace />;
-  return <>{children}</>;
+  return page();
 }

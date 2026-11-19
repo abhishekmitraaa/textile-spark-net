@@ -9141,5 +9141,20 @@
  "Sellers": "विक्रेता",
  "Remove {0} from My Saves": "{0} को माई सेव्स से हटाएँ",
  "You've hidden every brand you follow.": "आपने फ़ॉलो किए गए सभी ब्रांड छिपा दिए हैं।",
- "Manage them in View All": "उन्हें 'सभी देखें' में प्रबंधित करें"
+ "Manage them in View All": "उन्हें 'सभी देखें' में प्रबंधित करें",
+ "Accept the Cosora Terms to continue": "जारी रखने के लिए कोसोरा की शर्तें स्वीकार करें",
+ "Buyer account": "खरीदार खाता",
+ "Seller account": "विक्रेता खाता",
+ "Your account": "आपका खाता",
+ "Your requirement is saved to your Cosora account, and sellers reply there.": "आपकी आवश्यकता आपके कोसोरा खाते में सेव होती है, और विक्रेता वहीं जवाब देते हैं।",
+ "You're already signed in": "आप पहले से साइन इन हैं",
+ "This device is signed in to a Cosora account, so there's nothing to register.": "यह डिवाइस एक कोसोरा खाते में साइन इन है, इसलिए रजिस्टर करने के लिए कुछ नहीं है।",
+ "Continue to Cosora": "कोसोरा पर जारी रखें",
+ "Finish setting up your account": "अपना खाता सेट करना पूरा करें",
+ "These details set up your Cosora account. A seller you write to in a chat sees your name, business name and city; your email stays private. Other sellers only see how many interested buyers are in each city.": "ये विवरण आपका कोसोरा खाता सेट करते हैं। जिस विक्रेता को आप चैट में लिखते हैं, वह आपका नाम, व्यवसाय का नाम और शहर देखता है; आपका ईमेल निजी रहता है। बाकी विक्रेता केवल यह देखते हैं कि हर शहर में कितने इच्छुक खरीदार हैं।",
+ "Choose your state": "अपना राज्य चुनें",
+ "Couldn't switch to buyer": "खरीदार पर स्विच नहीं हो सका",
+ "Here to buy, not to sell?": "बेचने नहीं, खरीदने आए हैं?",
+ "Switching…": "स्विच हो रहा है…",
+ "I'm a buyer, not a seller": "मैं खरीदार हूँ, विक्रेता नहीं"
 }

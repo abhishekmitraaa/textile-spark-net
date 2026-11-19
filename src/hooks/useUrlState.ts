@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { afterOverlay } from "@/hooks/useBackCloses";
 
 /**
  * A page control kept in the address (?key=value), so Back to the page brings it back as it was (2026-11-19, review
@@ -12,16 +13,22 @@ export function useUrlState<T extends string>(key: string, fallback: T, allowed?
   const value = raw !== null && (!allowed || (allowed as readonly string[]).includes(raw)) ? (raw as T) : fallback;
   const set = useCallback(
     (next: T) => {
-      setParams((prev) => {
-        const out = new URLSearchParams(prev);
+      // Written on the page's own entry: a pick in a menu or sheet waits for the overlay's entry to go (review M-29).
+      afterOverlay(() => {
+        const out = new URLSearchParams(window.location.search);
         if (next === fallback || next === "") out.delete(key);
         else out.set(key, next);
-        return out;
-      }, { replace: true });
+        setParams(out, { replace: true, state: currentState() });
+      });
     },
     [key, fallback, setParams],
   );
   return [value, set];
+}
+
+/** The entry's own state, kept when the address is replaced (useBackCloses and others read it). */
+export function currentState(): unknown {
+  return (window.history.state as { usr?: unknown } | null)?.usr ?? null;
 }
 
 /** A yes/no control in the address (?key=1). */

@@ -9141,5 +9141,20 @@
  "Sellers": "વેચાણકર્તાઓ",
  "Remove {0} from My Saves": "{0} ને માય સેવ્સમાંથી દૂર કરો",
  "You've hidden every brand you follow.": "તમે ફોલો કરેલી બધી બ્રાન્ડ છુપાવી દીધી છે.",
- "Manage them in View All": "તેમને 'બધું જુઓ' માં સંભાળો"
+ "Manage them in View All": "તેમને 'બધું જુઓ' માં સંભાળો",
+ "Accept the Cosora Terms to continue": "ચાલુ રાખવા માટે કોસોરાની શરતો સ્વીકારો",
+ "Buyer account": "ખરીદનાર ખાતું",
+ "Seller account": "વેચાણકર્તા ખાતું",
+ "Your account": "તમારું ખાતું",
+ "Your requirement is saved to your Cosora account, and sellers reply there.": "તમારી જરૂરિયાત તમારા કોસોરા ખાતામાં સેવ થાય છે, અને વેચાણકર્તાઓ ત્યાં જ જવાબ આપે છે.",
+ "You're already signed in": "તમે પહેલેથી સાઇન ઇન છો",
+ "This device is signed in to a Cosora account, so there's nothing to register.": "આ ઉપકરણ કોસોરા ખાતામાં સાઇન ઇન છે, તેથી નોંધણી કરવા માટે કંઈ નથી.",
+ "Continue to Cosora": "કોસોરા પર ચાલુ રાખો",
+ "Finish setting up your account": "તમારું ખાતું સેટ કરવાનું પૂર્ણ કરો",
+ "These details set up your Cosora account. A seller you write to in a chat sees your name, business name and city; your email stays private. Other sellers only see how many interested buyers are in each city.": "આ વિગતો તમારું કોસોરા ખાતું સેટ કરે છે. જે વેચાણકર્તાને તમે ચેટમાં લખો છો, તે તમારું નામ, વ્યવસાયનું નામ અને શહેર જુએ છે; તમારો ઇમેઇલ ખાનગી રહે છે. બાકીના વેચાણકર્તાઓ ફક્ત એટલું જ જુએ છે કે દરેક શહેરમાં કેટલા રસ ધરાવતા ખરીદનારા છે.",
+ "Choose your state": "તમારું રાજ્ય પસંદ કરો",
+ "Couldn't switch to buyer": "ખરીદનાર પર સ્વિચ થઈ શક્યું નથી",
+ "Here to buy, not to sell?": "વેચવા નહીં, ખરીદવા આવ્યા છો?",
+ "Switching…": "સ્વિચ થઈ રહ્યું છે…",
+ "I'm a buyer, not a seller": "હું ખરીદનાર છું, વેચાણકર્તા નહીં"
 }

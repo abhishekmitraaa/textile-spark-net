@@ -26,6 +26,7 @@ import {
   Eye, CheckCheck, Check, Star as StarIcon, Archive, Ban, Flag, Trash2, MailOpen, Loader2, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOverlayState } from "@/hooks/useBackCloses";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 
@@ -79,12 +80,13 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   } = useChatThread(vendorId);
   const locked = underReview || blocked;
   const [draft, setDraft] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Back closes the chat's menus and sheets (review M-29).
+  const [menuOpen, setMenuOpen] = useOverlayState();
   // A seller sees the buyer's small card; buyers have no store page (SH-107).
-  const [buyerCardOpen, setBuyerCardOpen] = useState(false);
-  const [attachOpen, setAttachOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [buyerCardOpen, setBuyerCardOpen] = useOverlayState();
+  const [attachOpen, setAttachOpen] = useOverlayState();
+  const [reportOpen, setReportOpen] = useOverlayState();
+  const [confirmDelete, setConfirmDelete] = useOverlayState();
   const [sendingFile, setSendingFile] = useState(false);
   const recorder = useVoiceRecorder();
   const recording = recorder.state === "recording";

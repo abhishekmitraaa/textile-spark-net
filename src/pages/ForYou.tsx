@@ -46,6 +46,7 @@ import {
   Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOverlayState } from "@/hooks/useBackCloses";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -375,11 +376,11 @@ const ForYou = () => {
 
   // Feed state
   const [search, setSearch] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useOverlayState(); // Back closes it (review M-29)
   const [filterLocQuery, setFilterLocQuery] = useState("");
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   // "Reset preferences" clears the interests saved to the account, so it asks first (review M-06).
-  const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmReset, setConfirmReset] = useOverlayState();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const activeLocations = prefs.locations.filter((l) => l !== "nopreference");

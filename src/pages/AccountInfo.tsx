@@ -12,6 +12,7 @@ import {
 } from "@/lib/queries/profile";
 import { lookupPincode } from "@/lib/reverseGeocode";
 import { useStepBack } from "@/hooks/useStepBack";
+import { INDIA_STATES } from "@/data/indiaStates";
 
 // Something@something.tld, no spaces. Deliverability is the mail server's question, not this form's.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -161,8 +162,8 @@ const AccountInfo = () => {
         {/* Internal use notice */}
         <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 mb-6">
           <p className="text-xs text-gray-500 leading-relaxed">
-            These details set up your Cosora account. Sellers never see your name, email or business name here; they only
-            see how many interested buyers are in each city.
+            These details set up your Cosora account. A seller you write to in a chat sees your name, business name and
+            city; your email stays private. Other sellers only see how many interested buyers are in each city.
           </p>
         </div>
 
@@ -235,8 +236,9 @@ const AccountInfo = () => {
                 placeholder="Enter Pincode"
                 value={form.pincode}
                 onChange={e => {
-                  // A typed pincode replaces the located one: the old city and state no longer describe it.
-                  setPlace({ city: "", state: "" });
+                  // A typed pincode replaces the located city (a pincode is not a city: claude.md); the state is asked
+                  // for below instead of being cleared for good (review M-54).
+                  setPlace((p) => ({ city: "", state: p.city ? "" : p.state }));
                   setLocNote(null);
                   update("pincode", e.target.value.replace(/\D/g, "").slice(0, 6));
                 }}
@@ -246,6 +248,21 @@ const AccountInfo = () => {
             </div>
             {locNote && <p className="mt-1 text-xs text-gray-600" role="status">{locNote}</p>}
             {errorFor("pincode")}
+            {/* Typed, not located: the state is the buyer's to pick (sellers near them see their requirements sooner). */}
+            {form.pincode && !place.city && (
+              <div className="mt-3">
+                <label htmlFor="ai-state" className="text-sm font-semibold text-gray-800 mb-1.5 block">State</label>
+                <select
+                  id="ai-state"
+                  value={place.state}
+                  onChange={(e) => setPlace({ city: "", state: e.target.value })}
+                  className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-base sm:text-sm text-gray-900 bg-white focus:outline-none focus:border-brand-buyer-deep transition-colors"
+                >
+                  <option value="">Choose your state</option>
+                  {INDIA_STATES.map((st) => <option key={st.code} value={st.name}>{st.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Business Name */}

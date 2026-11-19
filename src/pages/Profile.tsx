@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 import BuyerStateNudge from "@/components/buyer/BuyerStateNudge";
 import { stateCodeFor } from "@/data/indiaStates";
+import { useDismissed } from "@/lib/dismissals";
 
 const LOCATION_LABEL: Record<string, string> = {
   tiruppur: "Tiruppur", surat: "Surat", ludhiana: "Ludhiana", delhi: "Delhi NCR",
@@ -116,7 +117,7 @@ const Profile = () => {
   // Session-scoped, not persisted: a buyer who dismisses it and later decides
   // to add a city should see the prompt again next visit rather than never.
   const [cityNudgeDismissed, setCityNudgeDismissed] = useState(false);
-  const [stateNudgeDismissed, setStateNudgeDismissed] = useState(false);
+  const [stateNudgeDismissed, dismissStateNudge] = useDismissed("state-nudge", session?.user?.id);
 
   // A confirmed "Delete my account" (see DeleteAccountCard on /profile/help).
   // Shown until the sweep runs or the buyer cancels; deliberately not dismissible.
@@ -230,7 +231,7 @@ const Profile = () => {
         )}
         {/* One banner slot: the state first (sellers' lead feeds read it, Ranking Fit), then the city. */}
         {dbProfile && !stateNudgeDismissed && !stateCodeFor(view.state) ? (
-          <BuyerStateNudge onDismiss={() => setStateNudgeDismissed(true)} className="mb-3 lg:mb-5" />
+          <BuyerStateNudge onDismiss={dismissStateNudge} className="mb-3 lg:mb-5" />
         ) : !cityNudgeDismissed && !view.city?.trim() && (
           <div className="mb-3 lg:mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-brand-buyer/20 bg-brand-buyer/5 px-4 py-3">
             <MapPin className="h-4 w-4 shrink-0 text-brand-buyer" />

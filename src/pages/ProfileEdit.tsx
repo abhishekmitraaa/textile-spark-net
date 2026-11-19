@@ -10,6 +10,7 @@ import { useEditableProfile } from "@/hooks/useEditableProfile";
 import { errorMessage } from "@/lib/errorMessage";
 import { BUYER_ROLES } from "@/data/buyerRoles";
 import noUserPicture from "@/assets/Buyer/profile section/No user Picture.jpg";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // /profile/edit: photo + personal details. It was the Photo and Personal tabs of
 // the Edit Profile modal on /profile, now a real route that survives a refresh
@@ -22,6 +23,9 @@ import noUserPicture from "@/assets/Buyer/profile section/No user Picture.jpg";
 
 const ProfileEdit = () => {
   const navigate = useNavigate();
+  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
+  // /profile, so Back from there came back here, and round again).
+  const goBack = useStepBack("/profile");
   const [params] = useSearchParams();
   const { signedOut, form, set, save, uploadPhoto } = useEditableProfile();
   const [saving, setSaving] = useState(false);
@@ -49,7 +53,7 @@ const ProfileEdit = () => {
     setSaving(true);
     try {
       toast.success((await save()) ? "Profile updated" : "No changes to save");
-      navigate("/profile");
+      goBack();
     } catch (e) {
       toast.error("Couldn't save profile", { description: errorMessage(e) });
     } finally {
@@ -128,7 +132,7 @@ const ProfileEdit = () => {
                 </div>
               </section>
 
-              <ProfileFormActions saving={saving || uploadingPhoto} onCancel={() => navigate("/profile")} onSave={onSave} />
+              <ProfileFormActions saving={saving || uploadingPhoto} onCancel={() => goBack()} onSave={onSave} />
             </>
           )}
         </div>

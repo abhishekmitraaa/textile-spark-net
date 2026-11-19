@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // ─────────────────────────────────────────────────────────────
 // Shared by /profile/edit (ProfileEdit.tsx) and /profile/business-details
@@ -22,10 +23,13 @@ export function Field({ label, htmlFor, children }: { label: string; htmlFor?: s
 
 export function ProfileSubpageHeader({ title }: { title: string }) {
   const navigate = useNavigate();
+  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
+  // /profile, so Back from there came back here, and round again).
+  const goBack = useStepBack("/profile");
   return (
     <div className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-100">
       <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate("/profile")} aria-label="Back" className="-ml-1 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+        <button onClick={() => goBack()} aria-label="Back" className="-ml-1 p-1 rounded-lg hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-700" />
         </button>
         <h1 className="text-base font-bold text-gray-900">{title}</h1>
@@ -36,6 +40,9 @@ export function ProfileSubpageHeader({ title }: { title: string }) {
 
 export function ProfileSignedOut() {
   const navigate = useNavigate();
+  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
+  // /profile, so Back from there came back here, and round again).
+  const goBack = useStepBack("/profile");
   return (
     <div className="max-w-2xl mx-auto px-4 pt-24 pb-24 text-center">
       <h2 className="text-lg font-bold text-gray-900">You're signed out</h2>

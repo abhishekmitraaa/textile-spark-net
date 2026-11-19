@@ -14,6 +14,8 @@ import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { ReviewPhotoPicker, type ReviewPhoto } from "@/components/reviews/ReviewPhotoPicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/lib/errorMessage";
+import { useBackCloses } from "@/hooks/useBackCloses";
+import { useStepBack } from "@/hooks/useStepBack";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -106,6 +108,9 @@ function SkeletonCard() {
 
 const MyReviews = () => {
   const navigate = useNavigate();
+  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
+  // /profile, so Back from there came back here, and round again).
+  const goBack = useStepBack("/profile");
   const reduced = useReducedMotion();
   const { user, loading: authLoading } = useAuth();
   const { data: raw = [], isPending, isError, error, refetch } = useMyReviews();
@@ -117,6 +122,9 @@ const MyReviews = () => {
   const [filter, setFilter] = useState<"All" | ReviewType>("All");
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [editing, setEditing] = useState<MyReview | null>(null);
+  // Back closes the edit sheet and a review's menu (review M-29).
+  useBackCloses(editing !== null, () => setEditing(null));
+  useBackCloses(menuFor !== null, () => setMenuFor(null));
   const [draftRating, setDraftRating] = useState(5);
   const [draftText, setDraftText] = useState("");
   const [draftPhotos, setDraftPhotos] = useState<ReviewPhoto[]>([]);
@@ -336,7 +344,7 @@ const MyReviews = () => {
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate("/profile")} aria-label="Back" className="-ml-1 p-1">
+          <button onClick={() => goBack()} aria-label="Back" className="-ml-1 p-1">
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="text-base font-bold text-gray-900">My Reviews</h1>

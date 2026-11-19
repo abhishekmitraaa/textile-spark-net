@@ -17,6 +17,7 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { useT } from "@/lib/i18n";
 import { usePublishedHeight } from "@/hooks/usePublishedHeight";
 import { badgeLabel, useChatUnread } from "@/lib/queries/chatUnread";
+import { useDisplayRole } from "@/contexts/DisplaySideContext";
 
 interface MobileBottomNavProps {
   /**
@@ -29,7 +30,7 @@ interface MobileBottomNavProps {
 
 export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {}) => {
   const location = useLocation();
-  const { role } = useUserRole();
+  const role = useDisplayRole();
   const t = useT();
 
   // Unread chat messages, live (lib/queries/chatUnread.ts). It was a hardcoded 3 for everyone.

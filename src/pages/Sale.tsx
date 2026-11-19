@@ -25,6 +25,7 @@ import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTa
 import trustedSeal from "@/assets/Trustedseal.png";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
 import { useUrlState } from "@/hooks/useUrlState";
+import { BackDropdownMenu } from "@/components/ui/back-dropdown-menu";
 
 // ─────────────────────────────────────────────────────────────
 // Animation constants (project convention)
@@ -397,7 +398,7 @@ const Sale = () => {
           <div className="flex items-center justify-between mb-3 px-1">
             <h2 className="text-base lg:text-xl font-bold text-gray-900">All Deals</h2>
             <div className="flex items-center gap-2">
-              <DropdownMenu>
+              <BackDropdownMenu>
                 <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none">
                   <ArrowUpDown className="w-3.5 h-3.5" /> {SORTS.find((s) => s.key === sort)?.label}
                 </DropdownMenuTrigger>
@@ -408,7 +409,7 @@ const Sale = () => {
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </BackDropdownMenu>
               <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
                 <button onClick={() => setViewMode("2-col")} aria-label="2 columns" className={cn("p-1.5 rounded-md transition-colors", viewMode === "2-col" ? "bg-brand-buyer text-white" : "text-gray-400")}>
                   <Grid2X2 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />

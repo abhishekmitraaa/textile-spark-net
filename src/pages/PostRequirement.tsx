@@ -25,6 +25,7 @@ import {
   Check, X, Mic, MicOff, Image as ImageIcon, Plus, ChevronDown, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStepParam } from "@/hooks/useStepParam";
 
 // ─────────────────────────────────────────────────────────────
 // CATEGORY VOCABULARY
@@ -173,12 +174,18 @@ const PostRequirement = () => {
   const recognitionRef = useRef<SpeechRec | null>(null);
   const subCategoryRef = useRef<HTMLDivElement>(null);
 
-  const [step, setStep] = useState<Step>("main");
+  // Each step is a history entry (?step=), so the phone's Back walks the steps (review M-43).
+  const steps = useStepParam<Step>("step", ["main", "category", "form", "success"], "main");
+  const submitted = useRef(false);
   const [quickOpen, setQuickOpen] = useState(false);
   // Both ids are sellerCategories ids (e.g. "apparel-home" / "womens-dresses"),
   // NOT categories.id. They are resolved to a real taxonomy row once, on submit.
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
+  // Opened (or reloaded) on a later step without what it needs: the step before it.
+  const step: Step = steps.step === "form" && !categoryId ? "category"
+    : steps.step === "success" && !submitted.current ? "main"
+    : steps.step;
   const [recording, setRecording] = useState(false);
   const [openSelect, setOpenSelect] = useState<string | null>(null);
 
@@ -352,7 +359,8 @@ const PostRequirement = () => {
       return;
     }
     setSubmitting(false);
-    setStep("success");
+    submitted.current = true;
+    steps.replace("success"); // no entry: Back from the success screen doesn't reopen the sent form
   };
 
   // Success -> redirect to My Previous Quotes
@@ -570,7 +578,7 @@ const PostRequirement = () => {
 
               {/* Create New Requirement */}
               <button
-                onClick={() => { if (signedInOrPrompt()) setStep("category"); }}
+                onClick={() => { if (signedInOrPrompt()) steps.go("category"); }}
                 className="w-full text-left rounded-2xl border border-gray-200 bg-white p-4 mb-4 hover:border-gray-300 transition-colors"
               >
                 <div className="flex items-start gap-3">
@@ -602,7 +610,7 @@ const PostRequirement = () => {
           {step === "category" && (
             <motion.div key="category" initial={reduced ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={reduced ? undefined : { opacity: 0, x: -16 }}>
               <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => setStep("main")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+                <button onClick={() => steps.back("main")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-buyer">Step 1 of 2</p>
                   <h1 className="text-lg font-bold text-gray-900">Request Quote from Sellers</h1>
@@ -655,7 +663,7 @@ const PostRequirement = () => {
                     )}
                   </div>
                   <button
-                    onClick={() => categoryId && setStep("form")}
+                    onClick={() => categoryId && steps.go("form")}
                     disabled={!categoryId}
                     className={cn("shrink-0 rounded-xl px-6 py-3 text-sm font-bold transition-colors", categoryId ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed")}
                   >
@@ -670,7 +678,7 @@ const PostRequirement = () => {
           {step === "form" && category && (
             <motion.div key="form" initial={reduced ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={reduced ? undefined : { opacity: 0, x: -16 }} className="space-y-4">
               <div className="flex items-center gap-2">
-                <button onClick={() => setStep("category")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+                <button onClick={() => steps.back("category")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-buyer">Step 2 of 2</p>
                   <h1 className="text-lg font-bold text-gray-900">Post Your Requirement</h1>
@@ -692,7 +700,7 @@ const PostRequirement = () => {
                     {subCategory && <span className="font-medium text-gray-500"> · {subCategory.name}</span>}
                   </p>
                 </div>
-                <button onClick={() => setStep("category")} className="shrink-0 text-xs font-semibold text-brand-buyer hover:underline">Change</button>
+                <button onClick={() => steps.back("category")} className="shrink-0 text-xs font-semibold text-brand-buyer hover:underline">Change</button>
               </div>
 
               {/* Numbered sections for this category */}

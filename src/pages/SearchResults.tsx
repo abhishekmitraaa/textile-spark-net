@@ -42,7 +42,8 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useT } from "@/lib/i18n";
 import { useStepBack } from "@/hooks/useStepBack";
-import { useUrlState } from "@/hooks/useUrlState";
+import { currentState, useUrlState } from "@/hooks/useUrlState";
+import { afterOverlay, useBackCloses, useOverlayState } from "@/hooks/useBackCloses";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
 
 // Swatch colours for the Colour facet (names must match the facet options).
@@ -643,11 +644,12 @@ const SearchResults = () => {
       setDraft(value);
       window.clearTimeout(writeTimer.current);
       writeTimer.current = window.setTimeout(() => {
-        setParams((prev) => {
-          const out = new URLSearchParams(prev);
+        // The filter sheet holds its own history entry while open: write on the page's entry once it's gone.
+        afterOverlay(() => {
+          const out = new URLSearchParams(window.location.search);
           out.set("f", JSON.stringify(value));
-          return out;
-        }, { replace: true });
+          setParams(out, { replace: true, state: currentState() });
+        });
       }, 300);
     },
     [setParams],
@@ -703,7 +705,9 @@ const SearchResults = () => {
     };
   }, [query, priceBounds, vocabulary]);
 
-  const [filterOpen, setFilterOpen] = useState(false);
+  // Back closes the filter sheet and the gender / sort menus (review M-29).
+  const [filterOpen, setFilterOpen] = useOverlayState();
+  useBackCloses(menu !== null, () => setMenu(null));
 
   // The Category facet is the one facet whose options can't be written ahead of
   // time — they're the taxonomy rows that actually have matching products. Both

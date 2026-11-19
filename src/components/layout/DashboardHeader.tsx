@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useUnreadCount } from "@/lib/queries/notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyStoreName } from "@/lib/queries/vendorStore";
+import { useDisplayRole } from "@/contexts/DisplaySideContext";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -23,7 +24,7 @@ const buyerTabs = [
 ];
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
-  const { role } = useUserRole();
+  const role = useDisplayRole();
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();

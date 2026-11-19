@@ -13,7 +13,9 @@ import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
 import ClarityMask from "./components/analytics/ClarityMask";
 import SiteThemeApplier from "./components/SiteThemeApplier";
 import StoreSync from "./components/StoreSync";
+import { BuyerFrame } from "./components/buyer/BuyerShell";
 import { ScrollToTopOnNavigate } from "./components/ScrollToTopOnNavigate";
+import { ReturnToTracker } from "./components/ReturnToTracker";
 import { RouteErrorBoundary } from "./components/AppErrorBoundary";
 import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
@@ -186,26 +188,26 @@ const App = () => (
                 live-data search feed. Internal entry points now link there directly. */}
             <Route path="/browse" element={<Navigate to="/search" replace />} />
             <Route path="/home/new-arrivals" element={<NewArrivals />} />
-            <Route path="/home/trends" element={<Trends />} />
+            <Route path="/home/trends" element={<BuyerFrame><Trends /></BuyerFrame>} />
             <Route path="/home/sale" element={<Sale />} />
             <Route path="/home/followings" element={<Following />} />
-            <Route path="/home/followings/view-all" element={<FollowingViewAll />} />
-            <Route path="/video-closeups" element={<VideoCloseUpsPage />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/search/results" element={<SearchResults />} />
+            <Route path="/home/followings/view-all" element={<BuyerFrame><FollowingViewAll /></BuyerFrame>} />
+            <Route path="/video-closeups" element={<BuyerFrame><VideoCloseUpsPage /></BuyerFrame>} />
+            <Route path="/search" element={<BuyerFrame><Search /></BuyerFrame>} />
+            <Route path="/search/results" element={<BuyerFrame><SearchResults /></BuyerFrame>} />
             <Route path="/home/for-you" element={<ForYou />} />
             <Route path="/services" element={<ServiceVendors />} />
-            <Route path="/services/:vendorId" element={<ServiceVendorProfile />} />
+            <Route path="/services/:vendorId" element={<BuyerFrame><ServiceVendorProfile /></BuyerFrame>} />
             <Route path="/freelancers" element={<Freelancers />} />
-            <Route path="/freelancers/:id" element={<FreelancerProfile />} />
+            <Route path="/freelancers/:id" element={<BuyerFrame><FreelancerProfile /></BuyerFrame>} />
             <Route path="/requirement/post-requirement" element={<ClarityMask><PostRequirement /></ClarityMask>} />
             <Route path="/requirement/my-quotes" element={<ClarityMask><MyQuotes /></ClarityMask>} />
-            <Route path="/vendor/:id" element={<VendorProfile />} />
-            <Route path="/chats" element={<ClarityMask><Chat /></ClarityMask>} />
-            <Route path="/chats/:vendorId" element={<ClarityMask><ChatThread /></ClarityMask>} />
+            <Route path="/vendor/:id" element={<BuyerFrame><VendorProfile /></BuyerFrame>} />
+            <Route path="/chats" element={<BuyerFrame><ClarityMask><Chat /></ClarityMask></BuyerFrame>} />
+            <Route path="/chats/:vendorId" element={<BuyerFrame><ClarityMask><ChatThread /></ClarityMask></BuyerFrame>} />
             <Route path="/categories" element={<Categories />} />
-            <Route path="/profile/interest-preference" element={<InterestPreference />} />
-            <Route path="/profile/reviews" element={<MyReviews />} />
+            <Route path="/profile/interest-preference" element={<BuyerFrame><InterestPreference /></BuyerFrame>} />
+            <Route path="/profile/reviews" element={<BuyerFrame><MyReviews /></BuyerFrame>} />
             <Route path="/profile/help" element={<ClarityMask><Help /></ClarityMask>} />
             {/* The canned "support chat" is gone (Help & Support P1); the real one is /help/chat (P3). */}
             <Route path="/profile/help/chat" element={<Navigate to="/help" replace />} />
@@ -239,21 +241,21 @@ const App = () => (
             <Route path="/quotes" element={<ClarityMask><Quotes /></ClarityMask>} />
             <Route path="/profile" element={<ClarityMask><Profile /></ClarityMask>} />
             {/* Replaced the Edit Profile modal (2026-09-23): real, refresh-safe routes. */}
-            <Route path="/profile/edit" element={<ClarityMask><ProfileEdit /></ClarityMask>} />
-            <Route path="/profile/business-details" element={<ClarityMask><ProfileBusinessDetails /></ClarityMask>} />
+            <Route path="/profile/edit" element={<BuyerFrame><ClarityMask><ProfileEdit /></ClarityMask></BuyerFrame>} />
+            <Route path="/profile/business-details" element={<BuyerFrame><ClarityMask><ProfileBusinessDetails /></ClarityMask></BuyerFrame>} />
             {/* Buyer account & security settings (2026-09-23). /settings is the vendor's. */}
-            <Route path="/profile/settings" element={<ClarityMask><BuyerSettings /></ClarityMask>} />
-            <Route path="/profile/notifications" element={<ProfileNotifications />} />
-            <Route path="/profile/social-links" element={<ClarityMask><ProfileSocialLinks /></ClarityMask>} />
-            <Route path="/profile/regional-settings" element={<ClarityMask><ProfileAccountPrefs /></ClarityMask>} />
-            <Route path="/profile/data-export" element={<ClarityMask><ProfileAccountPrefs /></ClarityMask>} />
+            <Route path="/profile/settings" element={<BuyerFrame><ClarityMask><BuyerSettings /></ClarityMask></BuyerFrame>} />
+            <Route path="/profile/notifications" element={<BuyerFrame><ProfileNotifications /></BuyerFrame>} />
+            <Route path="/profile/social-links" element={<BuyerFrame><ClarityMask><ProfileSocialLinks /></ClarityMask></BuyerFrame>} />
+            <Route path="/profile/regional-settings" element={<BuyerFrame><ClarityMask><ProfileAccountPrefs /></ClarityMask></BuyerFrame>} />
+            <Route path="/profile/data-export" element={<BuyerFrame><ClarityMask><ProfileAccountPrefs /></ClarityMask></BuyerFrame>} />
             <Route path="/profile/terms" element={<TermsConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/saved" element={<SavedCollections />} />
             <Route path="/saved/:collectionId" element={<SavedCollectionDetail />} />
             <Route path="/my-store" element={<MyStore />} />
             <Route path="/business-profile" element={<ClarityMask><BusinessProfile /></ClarityMask>} />
-            <Route path="/chat" element={<ClarityMask><Chat /></ClarityMask>} />
+            <Route path="/chat" element={<BuyerFrame><ClarityMask><Chat /></ClarityMask></BuyerFrame>} />
             <Route path="/post-requirement" element={<ClarityMask><PostRequirement /></ClarityMask>} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
             <Route path="/service-vendors" element={<ServiceVendors />} />
@@ -311,6 +313,8 @@ const App = () => (
           <StoreSync />
           {/* A new page opens at its top; Back keeps the browser's restore (review M-02) */}
           <ScrollToTopOnNavigate />
+          {/* Back to the page after sign-in (review M-59) */}
+          <ReturnToTracker />
           {/* Dev-only: sign in as a seeded buyer/vendor/admin (no-op in prod) */}
           <DevAccountSwitcher />
         </BrowserRouter>

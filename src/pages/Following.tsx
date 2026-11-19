@@ -56,6 +56,7 @@ import {
   UserMinus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BackDropdownMenu } from "@/components/ui/back-dropdown-menu";
 
 const HOME_TABS = [
   { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
@@ -106,7 +107,7 @@ function FollowingRow({ brand, onUnfollow, onHide }: { brand: Brand; onUnfollow:
           {brand.handle} · Followers {brand.followers} · items {brand.items}
         </p>
       </button>
-      <DropdownMenu>
+      <BackDropdownMenu>
         <DropdownMenuTrigger className="shrink-0 p-1 text-gray-400 hover:text-gray-700 focus:outline-none" aria-label="More options">
           <MoreVertical className="w-4 h-4" />
         </DropdownMenuTrigger>
@@ -124,7 +125,7 @@ function FollowingRow({ brand, onUnfollow, onHide }: { brand: Brand; onUnfollow:
             <EyeOff className="w-4 h-4" /> Hide
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+      </BackDropdownMenu>
     </div>
   );
 }
@@ -148,7 +149,7 @@ function FeedControls({
   return (
     <div className={cn("grid border-y border-gray-200 divide-x divide-gray-200", sealFilter ? "grid-cols-3" : "grid-cols-2")}>
       {/* GENDER */}
-      <DropdownMenu>
+      <BackDropdownMenu>
         <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
           <span className="truncate">{gender === "all" ? "GENDER" : genderLabel}</span>
         </DropdownMenuTrigger>
@@ -160,10 +161,10 @@ function FeedControls({
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
-      </DropdownMenu>
+      </BackDropdownMenu>
 
       {/* SORT */}
-      <DropdownMenu>
+      <BackDropdownMenu>
         <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
           <ArrowUpDown className="w-3.5 h-3.5" />
           <span className="truncate">{sort === "newest" ? "SORT" : sortLabel}</span>
@@ -176,11 +177,11 @@ function FeedControls({
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
-      </DropdownMenu>
+      </BackDropdownMenu>
 
       {/* FILTER */}
       {sealFilter && (
-      <DropdownMenu>
+      <BackDropdownMenu>
         <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
           <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-brand-buyer")} />
           <span>FILTER</span>
@@ -191,7 +192,7 @@ function FeedControls({
             <SlidersHorizontal className="w-4 h-4" /> TradeSEAL brands only
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+      </BackDropdownMenu>
       )}
     </div>
   );

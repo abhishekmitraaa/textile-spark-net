@@ -9,6 +9,7 @@ import BuyerShell from "@/components/buyer/BuyerShell";
 import { DeleteAccountCard } from "@/components/buyer/DeleteAccountCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/lib/errorMessage";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer Settings (/profile/settings, 2026-09-23).
@@ -95,6 +96,9 @@ function realEmail(email: string | undefined): string {
 
 const Settings = () => {
   const navigate = useNavigate();
+  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
+  // /profile, so Back from there came back here, and round again).
+  const goBack = useStepBack("/profile");
   const reduced = useReducedMotion();
   const { session, loading, signOut } = useAuth();
 
@@ -135,7 +139,7 @@ const Settings = () => {
       >
         {/* Header */}
         <motion.div variants={section} className="flex items-center gap-3 mb-5">
-          <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/profile")} aria-label="Back to profile"
+          <motion.button whileTap={TAP} transition={TAP_T} onClick={() => goBack()} aria-label="Back to profile"
             className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1">
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </motion.button>

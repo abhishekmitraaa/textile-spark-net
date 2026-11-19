@@ -13,6 +13,7 @@ import {
   uploadSupportFile, type FraudTarget,
 } from "@/lib/queries/support";
 import { ReceiptLine, SignInForSupport, SupportFrame } from "@/components/support/SupportFrame";
+import { useStepParam } from "@/hooks/useStepParam";
 
 /**
  * Report a potential fraud.
@@ -75,8 +76,12 @@ const LINKED_TEXT: Record<FraudTarget["type"], string> = {
 function FraudWizard() {
   const [params] = useSearchParams();
   const fromPage = fraudTargetFromParams(params);
-  const [step, setStep] = useState(0);
   const [r, setR] = useState<Report>({ name: "", phone: "", url: "", city: "", description: "", amount: "", date: "" });
+  // Each step is a history entry (?step=1…), so the phone's Back walks the steps (review M-43). Past the description
+  // only once there is one (a reload starts the typed answers afresh).
+  const STEP_KEYS = STEPS.map((_, i) => String(i));
+  const steps = useStepParam<string>("step", STEP_KEYS, "0");
+  const step = Math.min(Number(steps.step), r.description.trim() ? STEPS.length - 1 : 1);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<{ ticketNo: string; failedFiles: number } | null>(null);
@@ -93,7 +98,7 @@ function FraudWizard() {
       if (r.amount && !(Number(r.amount) >= 0)) return void toast.error("The amount should be a number.");
       if (r.date && r.date > today) return void toast.error("The date can't be in the future.");
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    steps.go(String(Math.min(step + 1, STEPS.length - 1)));
   };
 
   const addFiles = (list: FileList | null) => {
@@ -277,7 +282,7 @@ function FraudWizard() {
 
           <div className="flex gap-2 pt-1">
             {step > 0 && (
-              <Button variant="outline" className="flex-1 h-11" disabled={Boolean(busy)} onClick={() => setStep((s) => s - 1)}>Back</Button>
+              <Button variant="outline" className="flex-1 h-11" disabled={Boolean(busy)} onClick={() => steps.back(String(step - 1))}>Back</Button>
             )}
             {step < STEPS.length - 1 ? (
               <Button className="flex-1 h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={next}>Next</Button>

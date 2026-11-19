@@ -39,6 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 import trustedSeal from "@/assets/Trustedseal.png";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
+import { useOverlayState } from "@/hooks/useBackCloses";
 
 // === Animation constants ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -390,7 +391,8 @@ const ProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
   const activeColor = selectedColor ?? product?.availableColors[0];
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  // Back closes each of these sheets instead of leaving the product (review M-29).
+  const [sizeChartOpen, setSizeChartOpen] = useOverlayState();
   // Follow is the real follows table (signed out: the local store), exactly as
   // VendorProfile uses it. It was local useState, so it reset on every reload
   // and followed no one (Master Prompt 8, Phase 6).
@@ -398,10 +400,10 @@ const ProductDetail = () => {
   const isFollowingVendor = (vendorId: string) =>
     followedBrands.find((b) => b.id === vendorId)?.isFollowing ?? false;
   const [specsOpen, setSpecsOpen] = useState(true);
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [chatOptionsOpen, setChatOptionsOpen] = useState(false);
-  const [quoteOpen, setQuoteOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useOverlayState();
+  const [chatOptionsOpen, setChatOptionsOpen] = useOverlayState();
+  const [quoteOpen, setQuoteOpen] = useOverlayState();
+  const [shareOpen, setShareOpen] = useOverlayState();
 
   // Real product reviews — the ONLY source of a product rating on this page.
   // `products.rating_avg` / `reviews_count` are deliberately not used: on 23 of
