@@ -15,6 +15,7 @@ import { GettingStartedCard } from "@/components/dashboard/GettingStartedCard";
 import { SellerPromoBanner } from "@/components/dashboard/SellerPromoBanner";
 import { priceText } from "@/lib/currency";
 import { SellerHomeState } from "@/components/dashboard/SellerHomeState";
+import { useProfileScoreState } from "@/lib/queries/vendorDashboard";
 
 // Strong ease-out: starts fast, gives instant perceived feedback
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -49,6 +50,7 @@ const SellerHome = () => {
   const dashQuery = useVendorDashboard(user?.id);
   const dash = dashQuery.data ?? undefined;
   const home = dash?.home;
+  const { waiting: scoreWaiting } = useProfileScoreState();
   const listsLoading = Boolean(user) && dashQuery.isPending;
   const { data: entitlements } = useVendorEntitlements(user?.id);
   const alertsEntitled = Boolean(entitlements?.features.lead_alerts);
@@ -266,7 +268,7 @@ const SellerHome = () => {
             <motion.div variants={section} className="order-4 lg:order-none" data-right-card>
               <NextStepCard
                 signals={profileScoreSignals(dash.scoreInput)}
-                inReview={{ products: home?.review.productsInReview ?? 0, premises: home?.review.premisesInReview ?? 0 }}
+                waiting={scoreWaiting}
               />
             </motion.div>
           )}

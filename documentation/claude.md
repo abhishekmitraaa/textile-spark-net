@@ -1372,6 +1372,16 @@ undocumented. Deep technical rationale for each lives in
   lands (`finishAuthFlow`, AuthCallback, Welcome). Sellers still land on Seller Home. Sign-in itself is unchanged.
 - **A seller who picked Seller by mistake can be a buyer again** (Mitra, 2026-11-19, review M-60): until a registration
   is submitted, /onboarding offers "I'm a buyer, not a seller".
+- **A buyer's profile phone is what a seller dials, so it is E.164** (2026-11-19, review M-47): `normalizeContactPhone()`
+  (`src/lib/contactPhone.ts`: a 10-digit Indian mobile, or a +country number) before it is saved, and
+  `admin.profiles_phone_check` for a browser's new or changed value. Only a changed number is checked.
+- **A buyer's web links reach a seller only through the buyer card** (Mitra, 2026-11-19, review M-50):
+  `chat_buyer_social()`, under `chat_buyer_card()`'s rule; only http(s) addresses. Social links are saved as addresses
+  (an @handle becomes its platform's).
+- **An open chat follows the hub** (2026-11-19, review M-44, M-45): with `live_updates_hub` on, a "chat" event refreshes
+  the chat list and the open thread's newest page; the thread opens no postgres_changes channel then.
+- **Seller Home's banners are text the app draws** (2026-11-19, review M-70, M-71): no picture with words baked in (they
+  promised "0% commission", "only 10 minutes", "proven strategies", and one showed another marketplace's app).
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

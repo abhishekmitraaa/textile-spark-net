@@ -338,8 +338,10 @@ export function useChatThread(otherId: string | undefined) {
       // Through the hub: the newest page again on each chat event (the merge keeps each message once).
       if (hubLive) {
         onHubChat.current = () => {
+          // The clear line as it is now: "Clear chat" moves it after this effect ran (code review 2026-11-19).
+          const clearedNow = clearedAtRef.current;
           let fresh = supabase.from("messages").select(THREAD_COLUMNS).eq("conversation_id", conv.id);
-          if (clearedAt) fresh = fresh.gt("created_at", clearedAt);
+          if (clearedNow) fresh = fresh.gt("created_at", clearedNow);
           void fresh
             .order("created_at", { ascending: false })
             .order("id", { ascending: false })
@@ -347,10 +349,12 @@ export function useChatThread(otherId: string | undefined) {
             .then(({ data }) => {
               if (cancelled || !data) return;
               const rows = (data as RawMessage[]).map(mapMsg);
+              // Only a message from the other person that wasn't on screen yet is news: marking read again for one
+              // already shown would answer every chat event (its own read included) with another (code review).
+              const shown = new Set(messagesRef.current.map((m) => m.id));
+              const arrived = rows.some((m) => m.sender === "vendor" && !shown.has(m.id));
               setMessages((prev) => mergeMessages(prev, rows));
-              if (rows.some((m) => m.sender === "vendor") && document.visibilityState === "visible") {
-                void markConversationRead(conv.id, me, qc);
-              }
+              if (arrived && document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
             });
           void refreshStatus();
         };

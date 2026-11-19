@@ -104,7 +104,7 @@ const ProfileNotifications = () => {
   return (
     <div className="min-h-screen bg-white">
       <SettingsHeader title="Notifications" />
-      {settingsQuery.isError && (
+      {settingsQuery.isError && !settings && (
         <div role="alert" className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           Couldn't load your saved settings, so nothing can be changed yet.{" "}
           <button onClick={() => void settingsQuery.refetch()} className="font-semibold underline">Retry</button>

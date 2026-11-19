@@ -60,12 +60,22 @@ function normalizeUrl(v: string) {
 
 /** What is saved: a full web address, an @handle turned into its profile's address (review M-50: sellers are shown
  *  only http(s) addresses, chat_buyer_social()). */
+const HANDLE_SITES: Partial<Record<keyof SocialLinks, (h: string) => string>> = {
+  x: (h) => `https://x.com/${h}`,
+  instagram: (h) => `https://instagram.com/${h}`,
+  youtube: (h) => `https://youtube.com/@${h}`,
+  facebook: (h) => `https://facebook.com/${h}`,
+};
 function savedLink(key: keyof SocialLinks, v: string): string {
   const t = v.trim();
   if (!t) return "";
-  if (t.startsWith("@") && key === "x") return `https://x.com/${t.slice(1)}`;
-  if (t.startsWith("@") && key === "instagram") return `https://instagram.com/${t.slice(1)}`;
-  if (t.startsWith("@") && key === "youtube") return `https://youtube.com/${t}`;
+  if (/^https?:\/\//i.test(t)) return t;
+  // A handle ("@brand" or "brand", no dot): its platform's address, where one exists. Otherwise kept as typed, which
+  // sellers aren't shown (only http(s) addresses are), rather than "https://brand", a host that doesn't exist.
+  if (!t.includes(".") && !t.includes("/")) {
+    const site = HANDLE_SITES[key];
+    return site ? site(t.replace(/^@/, "")) : t;
+  }
   return normalizeUrl(t);
 }
 
@@ -113,7 +123,7 @@ const ProfileSocialLinks = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <SettingsHeader title="Social media links" />
-      {settingsQuery.isError && (
+      {settingsQuery.isError && !settings && (
         <div role="alert" className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           Couldn't load your saved settings, so nothing can be changed yet.{" "}
           <button onClick={() => void settingsQuery.refetch()} className="font-semibold underline">Retry</button>

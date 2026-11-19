@@ -160,7 +160,8 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
   const rfqIds = rfqRows.map((r) => r.id);
 
   const quoteRows: RawQuote[] = [];
-  await Promise.all(chunks(rfqIds).map(async (group) => {
+  // 20 requirements a request: PostgREST stops at 1,000 rows without saying so (code review 2026-11-19).
+  await Promise.all(chunks(rfqIds, 20).map(async (group) => {
     const { data, error: qErr } = await supabase.from("quotes").select("*").in("rfq_id", group);
     if (qErr) throw qErr;
     quoteRows.push(...((data ?? []) as RawQuote[]));
@@ -186,7 +187,7 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
   const coverOf = new Map<string, string>();
   const productIds = [...new Set(rfqRows.filter((r) => !ownStorageUrl(r.image) && r.product_id).map((r) => r.product_id as string))];
   const images: { product_id: string; url: string; position: number }[] = [];
-  await Promise.all(chunks(productIds).map(async (group) => {
+  await Promise.all(chunks(productIds, 20).map(async (group) => {
     const { data, error: iErr } = await supabase.from("product_images").select("product_id, url, position").in("product_id", group);
     if (iErr) throw iErr;
     images.push(...(data ?? []));

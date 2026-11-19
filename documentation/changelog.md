@@ -1,3 +1,20 @@
+- 2026-11-19 (branch `fix/medium-batch3-2026-11-19`; migration `20261119120000_medium_batch3.sql`;
+  plan `documentation/medium-bugs-batch3-plan-2026-11-19.md`; **built and checked on the local stack, not released**)
+  **Buyer review, Medium batch 3 of 4: quotes, chat, profile, Seller Home** (M-39–M-42, M-44–M-47, M-49–M-52, M-65–M-67,
+  M-70–M-74).
+  - Mitra's call: a buyer's web links on the seller's buyer card (`chat_buyer_social`).
+  - My Quotes: nothing invented (response time, ₹0 sampling, "★ 0 (0)"), no Payment Terms box that saved nothing,
+    errors and signed-out shown, ids read in groups.
+  - Chat through the hub; unread counts read the caller once.
+  - Profile phone checked and stored as E.164 (app and database); settings never saved over a failed read; no
+    `regional.language`; Privacy Policy on deletion.
+  - Seller Home: unquoted direct requests first, fresher after KYC / deletes / notices, a failed refresh keeps the page,
+    honest drawn banners, next step skips what's in review, rows open by keyboard; My Store's "get verified" claim gone.
+  - Local stack: phone check (bad refused with `phone_format`, valid and empty pass), anon can't read buyer links,
+    unread counts, My Quotes signed out, drawn banners, keyboard rows. /code-review medium: 9 of 10 findings fixed, the
+    tenth (Seller Home stale after a product is added elsewhere) already holds: the query re-reads on return.
+  - Found while testing: the phone check first ran with the browser's rights and refused every phone update; it is a
+    definer function now.
 - 2026-11-19 (branch `fix/medium-batch2-2026-11-19`, on top of batch 1; migration `20261119110000_buyer_terms_db_check.sql`;
   plan `documentation/medium-bugs-batch2-plan-2026-11-19.md`; **LIVE 2026-11-19**: migration applied with the CLI (not in
   the ledger), 7 triggers in place, `rls-policy-check` 159/0/0; buyer main `927a527`, bundle `index-DeXFbk3J.js`; follow-up

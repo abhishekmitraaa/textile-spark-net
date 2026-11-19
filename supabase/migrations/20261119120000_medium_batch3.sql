@@ -100,7 +100,8 @@ begin
   if admin.trusted_caller() then
     return new;
   end if;
-  if new.phone is distinct from old.phone and new.phone is not null and new.phone !~ '^\+[1-9][0-9]{7,14}$' then
+  if (tg_op = 'INSERT' or new.phone is distinct from old.phone) and new.phone is not null
+     and (new.phone !~ '^\+[1-9][0-9]{7,14}$' or (new.phone like '+91%' and new.phone !~ '^\+91[6-9][0-9]{9}$')) then
     raise exception 'Enter a 10-digit Indian mobile number, or a number with its +country code.'
       using errcode = '22023', hint = 'phone_format';
   end if;
@@ -111,7 +112,7 @@ $$;
 revoke all on function admin.profiles_phone_check() from public, anon, authenticated;
 
 drop trigger if exists trg_profiles_phone_check on public.profiles;
-create trigger trg_profiles_phone_check before update of phone on public.profiles
+create trigger trg_profiles_phone_check before insert or update of phone on public.profiles
   for each row execute function admin.profiles_phone_check();
 
 -- ── Self-check ───────────────────────────────────────────────────────────────

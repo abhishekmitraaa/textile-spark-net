@@ -221,7 +221,7 @@ const MyQuotes = () => {
   // way to sign in; a failed read looked like no requirements at all).
   const blocked = authLoading || (user && buyerQuery.isPending) ? "loading"
     : !user ? "signed-out"
-    : buyerQuery.isError ? "error"
+    : buyerQuery.isError && !buyerQuery.data ? "error"
     : null;
   if (blocked) {
     return (
