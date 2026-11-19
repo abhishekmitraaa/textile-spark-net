@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
 import { cn } from "@/lib/utils";
+import { quoteRatingText } from "@/lib/quotesData";
 
 const STATUS_STYLES: Record<QuoteStatus, { label: string; cls: string }> = {
   pending: { label: "Pending", cls: "bg-blue-50 text-blue-600" },
@@ -41,9 +42,7 @@ interface Props {
 export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, onCall, onStatus }: Props) {
   const { showBoth } = useDisplayCurrency();
   const navigate = useNavigate();
-  const [paymentTerms, setPaymentTerms] = useState("");
 
-  useEffect(() => { if (quote) setPaymentTerms(""); }, [quote]);
 
   return (
     <AnimatePresence>
@@ -88,7 +87,7 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
                     )}
                     <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
                       <span className="inline-flex items-center gap-0.5 text-gray-700 font-semibold">
-                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {quote.rating}
+                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {quoteRatingText(quote)}
                       </span>
                       <span className="inline-flex items-center gap-0.5"><MapPin className="w-3 h-3" /> {quote.location}</span>
                     </div>
@@ -160,21 +159,15 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
                   <QuoteStat icon={DollarSign} label="Price/Unit" value={showBoth(quote.pricePerUnit, fmtMoney(quote.currency, quote.pricePerUnit), quote.currency)} />
                   <QuoteStat icon={Package} label="MOQ" value={`${quote.moq.toLocaleString()} Units`} />
                   <QuoteStat icon={Clock} label="Lead Time" value={quote.leadTime} />
-                  <QuoteStat icon={FlaskConical} label="Sampling Cost" value={showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
-                  <QuoteStat icon={Star} label="Rating" value={`${quote.rating} (${quote.ratingCount})`} />
+                  <QuoteStat icon={FlaskConical} label="Sampling Cost" value={quote.sampling == null ? "Not specified" : showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
+                  <QuoteStat icon={Star} label="Rating" value={quoteRatingText(quote)} />
                   <QuoteStat icon={CalendarClock} label="Sample Timeline" value={quote.sampleTimeline} />
                   <QuoteStat icon={Layers} label="Fabric" value={quote.fabric} />
                 </div>
                 <ConvertedPriceNote className="mt-2" />
 
-                {/* Payment terms */}
-                <label className="block text-[11px] font-semibold text-gray-500 mt-3 mb-1">Payment Terms</label>
-                <input
-                  value={paymentTerms}
-                  onChange={(e) => setPaymentTerms(e.target.value)}
-                  placeholder="e.g. 50% advance, 50% before dispatch"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
-                />
+                {/* Payment terms are agreed with the seller in chat (review M-39: a box here took them and saved nothing). */}
+                <p className="mt-3 text-[11px] text-gray-500">Agree payment terms with the seller in chat before you accept.</p>
               </div>
 
               {/* Vendor notes */}
@@ -192,7 +185,6 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
                   <span className="block text-sm font-semibold text-gray-900">Chat with Vendor</span>
                   <span className="block text-[11px] text-gray-500">Ask clarifications or negotiate</span>
                 </span>
-                <span className="text-[10px] text-gray-400 whitespace-nowrap">Avg. response ~2 hours</span>
               </button>
             </div>
 

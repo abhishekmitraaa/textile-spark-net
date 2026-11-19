@@ -7,8 +7,14 @@ import type { ProfileScoreSignal } from "@/lib/queries/vendorDashboard";
  * promised "+40% visibility" for "3 more products" with nothing behind either figure. The label, points and link
  * are the profile score's own (profileScoreSignals), so they're always true. Nothing renders once every step is done.
  */
-export function NextStepCard({ signals }: { signals: ProfileScoreSignal[] }) {
-  const next = signals.find((s) => !s.met);
+export function NextStepCard({ signals, inReview }: {
+  signals: ProfileScoreSignal[];
+  /** What Cosora is reviewing now (review M-73): "Get your first product live" isn't the next step while one waits. */
+  inReview?: { products: number; premises: number };
+}) {
+  const waiting = (key: string) =>
+    (key === "liveProduct" && (inReview?.products ?? 0) > 0) || (key === "officePhotos" && (inReview?.premises ?? 0) > 0);
+  const next = signals.find((s) => !s.met && !waiting(s.key));
   if (!next) return null;
   return (
     <div data-testid="next-step-card" className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 lg:p-5">

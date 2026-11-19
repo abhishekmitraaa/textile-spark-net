@@ -6569,6 +6569,10 @@ export type Database = {
           title: string
         }[]
       }
+      chat_buyer_social: {
+        Args: { p_other: string }
+        Returns: Json
+      }
       my_followed_brands: {
         Args: never
         Returns: {

@@ -105,7 +105,7 @@ const ProfileEdit = () => {
                   <input id="pe-email" type="email" className={inputCls} value={form.email} onChange={(e) => set({ email: e.target.value })} />
                 </Field>
                 <Field label="Phone Number" htmlFor="pe-phone">
-                  <input id="pe-phone" className={inputCls} value={form.phone} onChange={(e) => set({ phone: e.target.value })} />
+                  <input id="pe-phone" type="tel" inputMode="tel" autoComplete="tel" className={inputCls} value={form.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="10-digit mobile, or +country code" />
                 </Field>
                 <Field label="City" htmlFor="pe-city">
                   <input

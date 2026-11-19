@@ -76,7 +76,7 @@ const SellerHome = () => {
     ? "loading"
     : !user
       ? "signed-out"
-      : dashQuery.isError
+      : dashQuery.isError && !dashQuery.data
         ? "error"
         : dashQuery.isSuccess && dashQuery.data === null
           ? "not-a-seller"
@@ -113,6 +113,12 @@ const SellerHome = () => {
         </motion.div>
 
         {/* 1b. GETTING STARTED: what is waiting on the seller or on Cosora's review (SH-001, SH-002). */}
+        {dashQuery.isError && dashQuery.data && (
+            <div role="status" className="lg:col-span-12 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+              Couldn't refresh your dashboard; this is what loaded earlier.{" "}
+              <button onClick={() => void dashQuery.refetch()} className="font-semibold underline">Retry</button>
+            </div>
+          )}
         {home?.review && (
           <motion.div variants={section} className="lg:col-span-12">
             <GettingStartedCard review={home.review} />
@@ -196,7 +202,9 @@ const SellerHome = () => {
                 <motion.div
                   key={p.id}
                   variants={listItem}
-                  onClick={() => navigate(`/upload?id=${p.id}`)}
+                  onClick={() => navigate(`/upload?id=${p.id}`)} role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/upload?id=${p.id}`); } }}
                   data-product-id={p.id}
                   className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
                 >
@@ -256,7 +264,10 @@ const SellerHome = () => {
 
           {dash && (
             <motion.div variants={section} className="order-4 lg:order-none" data-right-card>
-              <NextStepCard signals={profileScoreSignals(dash.scoreInput)} />
+              <NextStepCard
+                signals={profileScoreSignals(dash.scoreInput)}
+                inReview={{ products: home?.review.productsInReview ?? 0, premises: home?.review.premisesInReview ?? 0 }}
+              />
             </motion.div>
           )}
 
@@ -293,7 +304,9 @@ const SellerHome = () => {
                 <motion.div
                   key={lead.id}
                   variants={listItem}
-                  onClick={() => navigate(`/leads?rfq=${lead.id}`)}
+                  onClick={() => navigate(`/leads?rfq=${lead.id}`)} role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/leads?rfq=${lead.id}`); } }}
                   data-lead-id={lead.id}
                   className="border border-gray-100 rounded-xl p-3 cursor-pointer hover:border-accent/40 transition-colors"
                 >
@@ -348,7 +361,9 @@ const SellerHome = () => {
                 <motion.div
                   key={msg.otherId}
                   variants={listItem}
-                  onClick={() => navigate(`/chats/${msg.otherId}`)}
+                  onClick={() => navigate(`/chats/${msg.otherId}`)} role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/chats/${msg.otherId}`); } }}
                   data-chat-id={msg.otherId}
                   className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
                 >

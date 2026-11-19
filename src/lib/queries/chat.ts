@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { markConversationRead, chatUnreadKey } from "@/lib/queries/chatUnread";
+import { useHubEvent } from "@/lib/realtimeHub";
 import { shrinkImage } from "@/lib/shrinkImage";
 import { errorMessage } from "@/lib/errorMessage";
 
@@ -206,6 +207,11 @@ export function useChatThread(otherId: string | undefined) {
   const { user } = useAuth();
   const me = user?.id;
   const qc = useQueryClient();
+  // The account's one live channel (live_updates_hub): a "chat" event (a message in any of this person's chats, or a
+  // status change) re-reads the open thread's newest page. Each open chat used to keep a postgres_changes channel of
+  // its own (review M-45); that stays only while the hub isn't live.
+  const onHubChat = useRef<(() => void) | null>(null);
+  const hubLive = useHubEvent("chat", () => onHubChat.current?.());
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [otherName, setOtherName] = useState<string | null>(null);
   const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
@@ -329,9 +335,31 @@ export function useChatThread(otherId: string | undefined) {
       setMemberState({ starred: Boolean(ms?.starred_at), archived: Boolean(ms?.archived_at), clearedAt });
       clearedAtRef.current = clearedAt;
 
+      // Through the hub: the newest page again on each chat event (the merge keeps each message once).
+      if (hubLive) {
+        onHubChat.current = () => {
+          let fresh = supabase.from("messages").select(THREAD_COLUMNS).eq("conversation_id", conv.id);
+          if (clearedAt) fresh = fresh.gt("created_at", clearedAt);
+          void fresh
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .limit(CHAT_PAGE_SIZE)
+            .then(({ data }) => {
+              if (cancelled || !data) return;
+              const rows = (data as RawMessage[]).map(mapMsg);
+              setMessages((prev) => mergeMessages(prev, rows));
+              if (rows.some((m) => m.sender === "vendor") && document.visibilityState === "visible") {
+                void markConversationRead(conv.id, me, qc);
+              }
+            });
+          void refreshStatus();
+        };
+      }
+
       // Join the live channel first, then read the newest page (2026-10-19). The history used to be read before
       // the channel joined, so a message sent in between was in neither. Now one sent while the page loads
       // arrives on the channel, and the merge keeps each message once.
+      if (!hubLive) {
       channel = supabase
         .channel(`thread:${conv.id}`)
         .on(
@@ -381,6 +409,7 @@ export function useChatThread(otherId: string | undefined) {
           }
         });
       });
+      }
       if (cancelled) return;
 
       // The newest page. A chat deleted for me shows only what came after.
@@ -410,10 +439,11 @@ export function useChatThread(otherId: string | undefined) {
 
     return () => {
       cancelled = true;
+      onHubChat.current = null;
       document.removeEventListener("visibilitychange", onVisible);
       if (channel) supabase.removeChannel(channel);
     };
-  }, [me, conversationId, mapMsg, applyStatus, refreshStatus, qc]);
+  }, [me, conversationId, mapMsg, applyStatus, refreshStatus, qc, hubLive]);
 
   /**
    * The page of messages before the oldest one shown (2026-10-19), for when the person scrolls up. Ordered by

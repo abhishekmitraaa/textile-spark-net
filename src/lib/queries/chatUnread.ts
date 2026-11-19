@@ -55,6 +55,8 @@ export function useChatUnread(): ChatUnread {
     if (!userId) return;
     void qc.invalidateQueries({ queryKey: chatUnreadKey(userId) });
     void qc.invalidateQueries({ queryKey: ["vendor_dashboard", userId] });
+    // The chat list: a new chat or a new last message shows without a reload (review M-44).
+    void qc.invalidateQueries({ queryKey: ["conversations", userId] });
   });
 
   // A unique topic per mount: supabase.channel(name) hands back an already-subscribed channel for a name

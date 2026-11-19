@@ -51,7 +51,10 @@ const DEFAULT_TIMEZONE = DEFAULT_SETTINGS.regional.timezone; // "IST (India Stan
 const ProfileAccountPrefs = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: settings } = useSettings(user?.id);
+  // Nothing is saved over a read that hasn't arrived or failed (review M-49): the form would hold defaults.
+  const settingsQuery = useSettings(user?.id);
+  const settings = settingsQuery.data;
+  const settingsUnknown = Boolean(user) && !settings;
   const { regional: storeRegional } = useProfileState();
   const [regional, setRegional] = useState<RegionalSettings>(storeRegional);
   const display = useDisplayCurrency();
@@ -63,6 +66,10 @@ const ProfileAccountPrefs = () => {
 
   // Persist a single regional field (dropdowns save on change).
   const patchRegional = async (patch: Partial<RegionalSettings>) => {
+    if (settingsUnknown) {
+      toast.error("Your settings haven't loaded yet", { description: "Try again in a moment." });
+      return;
+    }
     const next = { ...regional, ...patch };
     setRegional(next);
     if (user) {
@@ -115,6 +122,12 @@ const ProfileAccountPrefs = () => {
   return (
     <div className="min-h-screen bg-white">
       <SettingsHeader title="Regional & Data" />
+      {settingsQuery.isError && (
+        <div role="alert" className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Couldn't load your saved settings, so nothing can be changed yet.{" "}
+          <button onClick={() => void settingsQuery.refetch()} className="font-semibold underline">Retry</button>
+        </div>
+      )}
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-4">
         {/* Regional settings - dropdowns shown directly */}
         <section className="rounded-2xl border border-gray-200 bg-white p-4">

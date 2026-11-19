@@ -68,7 +68,10 @@ const PUSH_ROWS: { key: keyof NotificationSettings; label: string; description: 
 const ProfileNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: settings } = useSettings(user?.id);
+  // Nothing is saved over a read that hasn't arrived or failed (review M-49): the form would hold defaults.
+  const settingsQuery = useSettings(user?.id);
+  const settings = settingsQuery.data;
+  const settingsUnknown = Boolean(user) && !settings;
   const { notifications } = useProfileState();
   const [draft, setDraft] = useState<NotificationSettings>(notifications);
   const [saving, setSaving] = useState(false);
@@ -78,6 +81,7 @@ const ProfileNotifications = () => {
   const set = (key: keyof NotificationSettings, v: boolean) => setDraft((d) => ({ ...d, [key]: v }));
 
   const onSave = async () => {
+    if (settingsUnknown) return;
     if (saving) return;
     setSaving(true);
     try {
@@ -100,6 +104,12 @@ const ProfileNotifications = () => {
   return (
     <div className="min-h-screen bg-white">
       <SettingsHeader title="Notifications" />
+      {settingsQuery.isError && (
+        <div role="alert" className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Couldn't load your saved settings, so nothing can be changed yet.{" "}
+          <button onClick={() => void settingsQuery.refetch()} className="font-semibold underline">Retry</button>
+        </div>
+      )}
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-4">
         {!DELIVERY_LIVE && (
           <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-700">
@@ -135,7 +145,7 @@ const ProfileNotifications = () => {
 
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || settingsUnknown}
           className="w-full py-3 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99] disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save Notification Settings"}

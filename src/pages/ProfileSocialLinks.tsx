@@ -58,10 +58,24 @@ function normalizeUrl(v: string) {
   return `https://${t.replace(/^@/, "")}`;
 }
 
+/** What is saved: a full web address, an @handle turned into its profile's address (review M-50: sellers are shown
+ *  only http(s) addresses, chat_buyer_social()). */
+function savedLink(key: keyof SocialLinks, v: string): string {
+  const t = v.trim();
+  if (!t) return "";
+  if (t.startsWith("@") && key === "x") return `https://x.com/${t.slice(1)}`;
+  if (t.startsWith("@") && key === "instagram") return `https://instagram.com/${t.slice(1)}`;
+  if (t.startsWith("@") && key === "youtube") return `https://youtube.com/${t}`;
+  return normalizeUrl(t);
+}
+
 const ProfileSocialLinks = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: settings } = useSettings(user?.id);
+  // Nothing is saved over a read that hasn't arrived or failed (review M-49): the form would hold defaults.
+  const settingsQuery = useSettings(user?.id);
+  const settings = settingsQuery.data;
+  const settingsUnknown = Boolean(user) && !settings;
   const { social } = useProfileState();
   const [draft, setDraft] = useState<SocialLinks>(social);
   const [saving, setSaving] = useState(false);
@@ -74,11 +88,16 @@ const ProfileSocialLinks = () => {
   const connectedCount = CHANNELS.filter((c) => (draft[c.key] || "").trim().length > 0).length;
 
   const onSave = async () => {
+    if (settingsUnknown) return;
     if (saving) return;
     setSaving(true);
     try {
       if (user) {
-        await saveSetting(user.id, "social", draft);
+        const links = Object.fromEntries(
+          (Object.keys(draft) as (keyof SocialLinks)[]).map((k) => [k, savedLink(k, draft[k] || "")]),
+        ) as unknown as SocialLinks;
+        await saveSetting(user.id, "social", links);
+        setDraft(links);
         queryClient.invalidateQueries({ queryKey: ["profile_settings", user.id] });
       } else {
         updateSocial(draft);
@@ -94,6 +113,12 @@ const ProfileSocialLinks = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <SettingsHeader title="Social media links" />
+      {settingsQuery.isError && (
+        <div role="alert" className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Couldn't load your saved settings, so nothing can be changed yet.{" "}
+          <button onClick={() => void settingsQuery.refetch()} className="font-semibold underline">Retry</button>
+        </div>
+      )}
       <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 pt-4 pb-28">
         {/* Intro */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-start gap-3">
@@ -103,7 +128,7 @@ const ProfileSocialLinks = () => {
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-gray-900">Connect your social profiles</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Add your channels so buyers and vendors can find and trust your brand.{" "}
+              Sellers you write to in a chat see these links on your buyer card.{" "}
               {connectedCount > 0
                 ? `${connectedCount} of ${CHANNELS.length} added.`
                 : "All fields are optional."}
@@ -169,7 +194,7 @@ const ProfileSocialLinks = () => {
           </p>
           <button
             onClick={onSave}
-            disabled={saving}
+            disabled={saving || settingsUnknown}
             className="w-full sm:w-auto sm:min-w-[220px] py-3 px-6 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99] disabled:opacity-60"
           >
             {saving ? "Saving…" : "Update Social Links"}

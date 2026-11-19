@@ -385,7 +385,7 @@ const MyStore = () => {
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-2">
                     <p className="text-xs text-gray-500">
-                      {t("Complete your profile to get verified and attract more buyers")}
+                      {t("A complete profile tells buyers more about your business")}
                     </p>
                     <ChevronRight className="w-4 h-4 shrink-0 text-gray-400" />
                   </div>

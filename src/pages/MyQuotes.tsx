@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { quotesForRfq, rfqStats, bestPrice, topRated } from "@/lib/quotesStore";
 import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
-import { useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb, QuoteChangedError, extendRfqDeadline, canExtendDeadline, useQuoteOrder } from "@/lib/queries/rfqs";
+import { MY_QUOTES_LIMIT, useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb, QuoteChangedError, extendRfqDeadline, canExtendDeadline, useQuoteOrder } from "@/lib/queries/rfqs";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import ReceivedQuoteCard from "@/components/buyer/quotes/ReceivedQuoteCard";
@@ -81,9 +81,10 @@ const MyQuotes = () => {
   const navigate = useNavigate();
   const callVendor = useCallVendor();
   const reduced = useReducedMotion();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
-  const { data: buyerData } = useBuyerQuotes(user?.id);
+  const buyerQuery = useBuyerQuotes(user?.id);
+  const buyerData = buyerQuery.data;
   const { data: profile } = useProfileFull(user?.id);
   // Closed stays closed for 30 days on this device, shared with Profile (review M-54).
   const [stateNudgeDismissed, dismissStateNudge] = useDismissed("state-nudge", user?.id);
@@ -216,6 +217,39 @@ const MyQuotes = () => {
 
   const selectedQuotes = selected.map((id) => quotesMap[id]).filter(Boolean);
 
+  // Signed out, loading and a failed read are their own screens (review M-42: signed out showed "0 Active RFQs" and no
+  // way to sign in; a failed read looked like no requirements at all).
+  const blocked = authLoading || (user && buyerQuery.isPending) ? "loading"
+    : !user ? "signed-out"
+    : buyerQuery.isError ? "error"
+    : null;
+  if (blocked) {
+    return (
+      <BuyerShell>
+        <div className="max-w-md mx-auto px-4 py-16 text-center">
+          <h1 className="text-xl font-bold text-gray-900">My Quotes</h1>
+          {blocked === "loading" ? (
+            <p className="mt-3 text-sm text-gray-400" role="status">Loading your quotes…</p>
+          ) : blocked === "signed-out" ? (
+            <>
+              <p className="mt-2 text-sm text-gray-500">Sign in to see your requirements and the quotes sellers sent you.</p>
+              <button onClick={() => navigate("/login")} className="mt-5 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90">
+                Sign in
+              </button>
+            </>
+          ) : (
+            <div role="alert">
+              <p className="mt-2 text-sm text-gray-500">Couldn't load your quotes. Check your connection and try again.</p>
+              <button onClick={() => void buyerQuery.refetch()} className="mt-5 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90">
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
+      </BuyerShell>
+    );
+  }
+
   return (
     <BuyerShell>
       <div className="max-w-2xl mx-auto px-4 pt-3 pb-24">
@@ -279,6 +313,9 @@ const MyQuotes = () => {
                 <p className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400">
                   {user ? "No requirements yet — tap Create New to post one." : "Sign in as a buyer to see your requirements."}
                 </p>
+              )}
+              {buyerData?.more && (
+                <p className="mb-2 text-xs text-gray-400">Showing your newest {MY_QUOTES_LIMIT} requirements.</p>
               )}
               <div className="space-y-3">
                 {rfqs.map((r) => {

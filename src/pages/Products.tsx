@@ -444,6 +444,7 @@ const Products = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct(id);
+      void queryClient.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's counts and top products (review M-66)
       refresh();
       toast.success("Product deleted");
     } catch (e) {

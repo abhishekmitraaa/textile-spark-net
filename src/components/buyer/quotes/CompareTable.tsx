@@ -3,6 +3,7 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Star, MessageCircle, Phone } from "lucide-react";
 import { fmtMoney, type VendorQuote } from "@/lib/quotesData";
+import { quoteRatingText } from "@/lib/quotesData";
 
 interface Props {
   quotes: VendorQuote[];
@@ -64,7 +65,7 @@ export default function CompareTable({ quotes, onClose, onChat, onCall }: Props)
                     {quotes.map((q) => (
                       <td key={q.id} className="px-4 py-3 whitespace-nowrap">
                         <span className="inline-flex items-center gap-0.5 text-gray-700 font-semibold">
-                          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {q.rating}
+                          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {quoteRatingText(q)}
                         </span>
                       </td>
                     ))}

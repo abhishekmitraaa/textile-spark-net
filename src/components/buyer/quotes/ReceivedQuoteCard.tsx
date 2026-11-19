@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
 import { cn } from "@/lib/utils";
+import { quoteRatingText } from "@/lib/quotesData";
 
 const STATUS_STYLES: Record<QuoteStatus, { label: string; cls: string }> = {
   pending: { label: "Pending", cls: "bg-blue-50 text-blue-600" },
@@ -75,7 +76,7 @@ export default function ReceivedQuoteCard({
           )}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5 text-[11px] text-gray-500">
             <span className="inline-flex items-center gap-0.5 text-gray-700 font-semibold">
-              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {q.rating} <span className="font-normal text-gray-400">({q.ratingCount})</span>
+              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {quoteRatingText(q)}
             </span>
             <span className="inline-flex items-center gap-0.5"><MapPin className="w-3 h-3" /> {q.location}</span>
             <span className="inline-flex items-center gap-0.5"><Clock className="w-3 h-3" /> {q.responseTime}</span>
@@ -94,7 +95,7 @@ export default function ReceivedQuoteCard({
         <StatCell icon={DollarSign} label="Price/Unit" value={showBoth(q.pricePerUnit, fmtMoney(q.currency, q.pricePerUnit), q.currency)} />
         <StatCell icon={Package} label="MOQ" value={`${q.moq.toLocaleString()} units`} />
         <StatCell icon={Clock} label="Lead Time" value={q.leadTime} />
-        <StatCell icon={FlaskConical} label="Sampling" value={showBoth(q.sampling, fmtMoney(q.currency, q.sampling), q.currency)} />
+        <StatCell icon={FlaskConical} label="Sampling" value={q.sampling == null ? "Not specified" : showBoth(q.sampling, fmtMoney(q.currency, q.sampling), q.currency)} />
       </div>
 
       {/* Comment */}

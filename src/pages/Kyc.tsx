@@ -150,6 +150,7 @@ function ReplaceDocumentButton({ vendorId, doc }: { vendorId: string; doc: Vendo
       // A replacement keeps what went with the file (a registration's kind and number).
       await resubmitKycDocument(vendorId, doc.docType, file, doc.detail);
       await qc.invalidateQueries({ queryKey: ["vendor_documents"] });
+      void qc.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's review states (review M-66)
       toast.success(`${label} sent for review`, { description: "Our team reviews submissions within 3–5 days." });
     } catch (err) {
       toast.error(`Couldn't upload your ${label}`, { description: errorMessage(err) });
@@ -248,6 +249,7 @@ function AddDocumentButton({ vendorId, type, currentPan = "", gstin = "" }: {
         await resubmitKycDocument(vendorId, "business_registration", files[0], { kind, ...(n ? { number: n } : {}) });
       }
       await qc.invalidateQueries({ queryKey: ["vendor_documents"] });
+      void qc.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's review states (review M-66)
       setOpen(false);
       setFiles([]);
       toast.success(`${label} sent for review`, { description: "Our team reviews submissions within 3–5 days." });
@@ -495,7 +497,10 @@ const Kyc = () => {
 
         {needsAgreement && (
           <motion.div variants={section}>
-            <SignAgreementCard onSigned={() => void qc.invalidateQueries({ queryKey: ["seller_registration", user?.id] })} />
+            <SignAgreementCard onSigned={() => {
+              void qc.invalidateQueries({ queryKey: ["seller_registration", user?.id] });
+              void qc.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // review M-66
+            }} />
           </motion.div>
         )}
 

@@ -198,7 +198,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
             <StatCell icon={DollarSign} label="Price/Unit" value={showBoth(quote.pricePerUnit, fmtMoney(quote.currency, quote.pricePerUnit), quote.currency)} />
             <StatCell icon={Package} label="MOQ" value={`${quote.moq.toLocaleString()} units`} />
             <StatCell icon={Clock} label="Lead Time" value={quote.leadTime} />
-            <StatCell icon={FlaskConical} label="Sampling" value={showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
+            <StatCell icon={FlaskConical} label="Sampling" value={quote.sampling == null ? "Not specified" : showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
           </div>
           <ConvertedPriceNote className="mt-2" />
 

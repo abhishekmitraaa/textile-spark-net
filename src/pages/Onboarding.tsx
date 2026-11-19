@@ -810,6 +810,7 @@ export default function Onboarding() {
 
   const finishSubmit = (status: "registered" | "pending_review") => {
     void queryClient.invalidateQueries({ queryKey: ["seller_registration", user?.id] });
+    void queryClient.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // review M-66
     if (status === "pending_review") setShowPendingResult(true);
     else {
       finishVendorRegistration(); // saved now, whether or not the welcome screen is tapped
@@ -1279,7 +1280,7 @@ export default function Onboarding() {
                   className="mt-4 w-full rounded-full bg-brand-vendor text-white font-semibold"
                   onClick={() => goToStep(TOTAL_STEPS, { contract: true })}
                 >
-                  Edit details
+                  Open the contract
                 </Button>
               </div>
             </div>
@@ -1697,12 +1698,13 @@ export default function Onboarding() {
                     </div>
                   </div>
                 )}
-                <div className="w-full rounded-2xl overflow-hidden">
-                  <img
-                    src="/vendorhelp.jpg"
-                    alt="Vendor help"
-                    className="w-full h-auto object-contain"
-                  />
+                {/* Drawn by the app (review M-70): the picture here said "it takes only 10 minutes" and "0% commission",
+                    neither of which Cosora promises (the Supplier Agreement has a commission clause). */}
+                <div className="w-full rounded-2xl bg-gradient-to-b from-[#0b1f4a] to-brand-vendor px-5 py-6 text-center text-white">
+                  <h2 className="text-lg font-bold">Register your business on Cosora</h2>
+                  <p className="mt-1.5 text-sm text-white/85">
+                    Your business details, your documents and the Supplier Agreement. Cosora checks your documents, usually in 3–5 days.
+                  </p>
                 </div>
 
                 <div className="space-y-3">
@@ -1785,7 +1787,7 @@ export default function Onboarding() {
                 </div>
 
                 <Button onClick={goNext} className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0]">
-                  Edit details
+                  {businessInfoComplete ? "Continue" : "Start registration"}
                 </Button>
               </div>
             )}

@@ -190,7 +190,12 @@ export function useUnreadCount(): number {
     staleTime: live ? 60_000 : 0,
   });
   useHubEvent("notifications", () => {
-    if (userId) void qc.invalidateQueries({ queryKey: notificationUnreadKey(userId) });
+    if (!userId) return;
+    void qc.invalidateQueries({ queryKey: notificationUnreadKey(userId) });
+    // A notice is often a review decision (a listing, a document, a registration): Seller Home shows those states
+    // (review M-66: it stayed stale until a reload). One summary read, and only when Seller Home's query is in use.
+    void qc.invalidateQueries({ queryKey: ["vendor_dashboard", userId] });
+    void qc.invalidateQueries({ queryKey: ["seller_registration", userId] });
   });
   return count.data ?? 0;
 }

@@ -5,6 +5,10 @@ import { errorMessage } from "@/lib/errorMessage";
 
 interface Card { name: string; company: string | null; city: string | null; member_since: string }
 
+const LINK_LABELS: Record<string, string> = {
+  facebook: "Facebook", x: "X", linkedin: "LinkedIn", youtube: "YouTube", instagram: "Instagram", other: "Website",
+};
+
 /**
  * The buyer a seller is chatting with (Seller Home audit SH-107; Mitra, 2026-11-17, "Small buyer card"): name,
  * company, city and member since, from chat_buyer_card(), which answers only to the other person in the conversation
@@ -17,6 +21,17 @@ export function BuyerCard({ buyerId, open, onOpenChange }: { buyerId: string; op
       const { data, error } = await supabase.rpc("chat_buyer_card", { p_other: buyerId });
       if (error) throw error;
       return ((data ?? []) as Card[])[0] ?? null;
+    },
+    enabled: open && Boolean(buyerId),
+  });
+  // The buyer's own web links (Mitra, 2026-11-19, review M-50), under the same rule as the card.
+  const links = useQuery({
+    queryKey: ["chat_buyer_social", buyerId],
+    queryFn: async (): Promise<[string, string][]> => {
+      const { data, error } = await supabase.rpc("chat_buyer_social", { p_other: buyerId });
+      if (error) throw error;
+      return Object.entries((data ?? {}) as Record<string, string>)
+        .filter(([, url]) => /^https?:\/\//i.test(url));
     },
     enabled: open && Boolean(buyerId),
   });
@@ -39,6 +54,19 @@ export function BuyerCard({ buyerId, open, onOpenChange }: { buyerId: string; op
             <div className="flex justify-between gap-4 py-2"><dt className="text-gray-500">Name</dt><dd className="font-medium text-gray-900" data-no-translate>{card.name}</dd></div>
             {card.company && <div className="flex justify-between gap-4 py-2"><dt className="text-gray-500">Company</dt><dd className="font-medium text-gray-900" data-no-translate>{card.company}</dd></div>}
             {card.city && <div className="flex justify-between gap-4 py-2"><dt className="text-gray-500">City</dt><dd className="font-medium text-gray-900" data-no-translate>{card.city}</dd></div>}
+            {(links.data ?? []).length > 0 && (
+              <div className="py-2">
+                <dt className="text-gray-500">Online</dt>
+                <dd className="mt-1 flex flex-wrap gap-2">
+                  {(links.data ?? []).map(([key, url]) => (
+                    <a key={key} href={url} target="_blank" rel="noopener noreferrer nofollow ugc"
+                      className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-brand-vendor hover:underline">
+                      {LINK_LABELS[key] ?? "Link"}
+                    </a>
+                  ))}
+                </dd>
+              </div>
+            )}
             <div className="flex justify-between gap-4 py-2"><dt className="text-gray-500">On Cosora since</dt><dd className="font-medium text-gray-900">{new Date(card.member_since).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}</dd></div>
           </dl>
         )}

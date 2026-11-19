@@ -8,6 +8,7 @@ import { isBuyerRoleId, type BuyerRoleId } from "@/data/buyerRoles";
 type BuyerProfileInsert = Database["public"]["Tables"]["buyer_profiles"]["Insert"];
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 import type { ProfileData, SocialLinks, NotificationSettings, RegionalSettings } from "@/lib/profileStore";
+import { normalizeContactPhone } from "@/lib/contactPhone";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer profile — the real, DB-backed identity + business details shown on
@@ -106,7 +107,13 @@ export async function saveProfileFull(userId: string, p: ProfileChanges): Promis
   const profile: ProfileUpdate = {};
   if (p.fullName !== undefined) profile.full_name = p.fullName || null;
   if (p.email !== undefined) profile.email = p.email || null;
-  if (p.phone !== undefined) profile.phone = p.phone || null;
+  // A changed phone is stored as E.164, and one this can't read is refused before anything is written (review M-47):
+  // it is the number a seller dials. An unchanged one isn't sent, so an old free-text value doesn't block a save.
+  if (p.phone !== undefined) {
+    const phone = p.phone ? normalizeContactPhone(p.phone) : "";
+    if (phone === null) throw new Error("Enter a 10-digit Indian mobile number, or a number with its +country code.");
+    profile.phone = phone || null;
+  }
   if (p.avatar !== undefined) profile.avatar_url = p.avatar || null;
   if (Object.keys(profile).length) {
     const { error } = await supabase.from("profiles").update(profile).eq("id", userId);
@@ -187,11 +194,13 @@ export function useSettings(userId: string | undefined) {
   return useQuery({
     queryKey: ["profile_settings", userId],
     queryFn: async (): Promise<ProfileSettings> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("buyer_profiles")
         .select("social, notifications, regional")
         .eq("id", userId as string)
         .maybeSingle();
+      // A failed read is an error, never the defaults (review M-49: the pages then saved the defaults as values).
+      if (error) throw error;
       return {
         social: { ...DEFAULT_SETTINGS.social, ...((data?.social as Partial<SocialLinks>) ?? {}) },
         notifications: { ...DEFAULT_SETTINGS.notifications, ...((data?.notifications as Partial<NotificationSettings>) ?? {}) },
@@ -200,6 +209,11 @@ export function useSettings(userId: string | undefined) {
     },
     enabled: Boolean(userId),
   });
+}
+
+function withoutLanguage(r: RegionalSettings): RegionalSettings {
+  const { language: _retired, ...rest } = r;
+  return rest as RegionalSettings;
 }
 
 export async function saveSetting(
@@ -215,7 +229,9 @@ export async function saveSetting(
       ? { id: userId, social: value as SocialLinks }
       : key === "notifications"
         ? { id: userId, notifications: value as NotificationSettings }
-        : { id: userId, regional: value as RegionalSettings };
+        // The interface language is ui_language in auth metadata (claude.md); the retired regional.language isn't
+        // written any more (review M-52).
+        : { id: userId, regional: withoutLanguage(value as RegionalSettings) };
   const { error } = await supabase.from("buyer_profiles").upsert(row, { onConflict: "id" });
   if (error) throw error;
 }

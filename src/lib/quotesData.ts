@@ -93,7 +93,8 @@ export interface VendorQuote {
   priceINR: number;         // INR-normalized value, used for cross-currency ranking
   moq: number;
   leadTime: string;         // "30 days" or "15-18 days"
-  sampling: number;         // sampling cost
+  /** Sampling cost; null when the seller didn't say (shown "Not specified", never ₹0: review M-40). */
+  sampling: number | null;
   sampleTimeline: string;   // "7 Days"
   fabric: string;
   comment: string;
@@ -102,6 +103,11 @@ export interface VendorQuote {
   attachments: QuoteAttachments;
   /** The quote's terms exactly as loaded. Accepting checks they are still these (2026-10-19). Absent on fixtures. */
   terms?: QuoteTerms;
+}
+
+/** A seller's store rating from real reviews, or "No reviews yet" (review M-40: "★ 0 (0)"). */
+export function quoteRatingText(q: Pick<VendorQuote, "rating" | "ratingCount">): string {
+  return q.rating > 0 ? `${q.rating.toFixed(1)} (${q.ratingCount})` : "No reviews yet";
 }
 
 /** What a seller can change on a quote, as stored. */

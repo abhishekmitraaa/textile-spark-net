@@ -6,6 +6,7 @@ import { shrinkImage } from "@/lib/shrinkImage";
 import { ownStorageUrl } from "@/lib/storageUrl";
 import { ensureConversation } from "@/lib/queries/chat";
 import { UNTARGETED, type Rfq, type VendorQuote, type QuoteStatus, type QuoteTerms, type SizeQty } from "@/lib/quotesData";
+import { chunks } from "@/lib/chunks";
 
 // SizeQty lives with the other quote types (quotesData is the JSX-free type
 // home). Re-exported here because callers already import it from this module.
@@ -89,7 +90,7 @@ function mapQuote(q: RawQuote, v?: RawVendor): VendorQuote {
     verified: trustSealFromParts(v?.is_verified, v?.plan_expires_at, v?.ad_verified_until), rating: Number(v?.rating_avg ?? 0), ratingCount: fmtK(v?.reviews_count ?? 0),
     location: v?.city ?? "India", responseTime: "—", status: q.status, currency: q.currency,
     pricePerUnit: Number(q.price_per_unit ?? 0), priceINR: Number(q.price_inr ?? q.price_per_unit ?? 0),
-    moq: q.moq ?? 0, leadTime: q.lead_time ?? "—", sampling: Number(q.sampling_cost ?? 0),
+    moq: q.moq ?? 0, leadTime: q.lead_time ?? "—", sampling: q.sampling_cost == null ? null : Number(q.sampling_cost),
     sampleTimeline: q.sample_timeline ?? "—", fabric: q.fabric ?? "—", comment: q.comment ?? "",
     submittedAgo: ago(q.created_at), isNew: q.status === "pending",
     attachments: { images: [], videos: [], documents: [] },
@@ -140,20 +141,30 @@ function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor, product
   };
 }
 
-export interface BuyerQuotesData { rfqs: Rfq[]; quotesMap: Record<string, VendorQuote> }
+/** `more`: the buyer has more requirements than the newest MY_QUOTES_LIMIT shown. */
+export interface BuyerQuotesData { rfqs: Rfq[]; quotesMap: Record<string, VendorQuote>; more: boolean }
 
+/** My Quotes reads the newest 200 requirements (review M-41: it read them all, and every id in one GET). */
+export const MY_QUOTES_LIMIT = 200;
+
+// Every read's error is thrown, so a failed read is My Quotes' error with Retry, never "0 requirements" (review M-41),
+// and ids go 100 to a request (claude.md: never a long id list in one GET URL).
 async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
   const { data: rfqData, error } = await supabase
-    .from("rfqs").select(RFQ_COLUMNS).eq("buyer_id", buyerId).order("created_at", { ascending: false });
+    .from("rfqs").select(RFQ_COLUMNS).eq("buyer_id", buyerId).order("created_at", { ascending: false })
+    .range(0, MY_QUOTES_LIMIT);
   if (error) throw error;
-  const rfqRows = (rfqData ?? []) as RawRfq[];
+  const fetched = (rfqData ?? []) as RawRfq[];
+  const more = fetched.length > MY_QUOTES_LIMIT;
+  const rfqRows = fetched.slice(0, MY_QUOTES_LIMIT);
   const rfqIds = rfqRows.map((r) => r.id);
 
-  let quoteRows: RawQuote[] = [];
-  if (rfqIds.length) {
-    const { data } = await supabase.from("quotes").select("*").in("rfq_id", rfqIds);
-    quoteRows = (data ?? []) as RawQuote[];
-  }
+  const quoteRows: RawQuote[] = [];
+  await Promise.all(chunks(rfqIds).map(async (group) => {
+    const { data, error: qErr } = await supabase.from("quotes").select("*").in("rfq_id", group);
+    if (qErr) throw qErr;
+    quoteRows.push(...((data ?? []) as RawQuote[]));
+  }));
   // One batched vendor lookup covering BOTH sources: the vendors who quoted,
   // and the target vendor of every targeted request. The second set matters on
   // its own because a targeted request that has not been replied to yet has no
@@ -164,20 +175,24 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
     ...rfqRows.map((r) => r.vendor_id).filter(Boolean) as string[],
   ]));
   const vendorMap = new Map<string, RawVendor>();
-  if (vendorIds.length) {
-    const { data } = await supabase.from("vendor_profiles").select("id, brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until").in("id", vendorIds);
+  await Promise.all(chunks(vendorIds).map(async (group) => {
+    const { data, error: vErr } = await supabase.from("vendor_profiles").select("id, brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until").in("id", group);
+    if (vErr) throw vErr;
     for (const v of (data ?? []) as RawVendor[]) vendorMap.set(v.id, v);
-  }
+  }));
 
   // The cover of each listing a direct request is about: the request itself has no picture of its own
   // unless the buyer attached one.
   const coverOf = new Map<string, string>();
   const productIds = [...new Set(rfqRows.filter((r) => !ownStorageUrl(r.image) && r.product_id).map((r) => r.product_id as string))];
-  if (productIds.length) {
-    const { data } = await supabase.from("product_images").select("product_id, url, position").in("product_id", productIds);
-    for (const img of [...(data ?? [])].sort((a, b) => a.position - b.position)) {
-      if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
-    }
+  const images: { product_id: string; url: string; position: number }[] = [];
+  await Promise.all(chunks(productIds).map(async (group) => {
+    const { data, error: iErr } = await supabase.from("product_images").select("product_id, url, position").in("product_id", group);
+    if (iErr) throw iErr;
+    images.push(...(data ?? []));
+  }));
+  for (const img of images.sort((a, b) => a.position - b.position)) {
+    if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
   }
 
   const quotesMap: Record<string, VendorQuote> = {};
@@ -188,7 +203,7 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
     r.vendor_id ? vendorMap.get(r.vendor_id) : undefined,
     r.product_id ? coverOf.get(r.product_id) : undefined,
   ));
-  return { rfqs, quotesMap };
+  return { rfqs, quotesMap, more };
 }
 
 export function useBuyerQuotes(buyerId: string | undefined) {
