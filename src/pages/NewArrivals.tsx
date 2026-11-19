@@ -757,7 +757,7 @@ const NewArrivals = () => {
         {topVendors.length > 0 && (
         <div>
           <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-1 lg:mb-2 px-1">Recommended Premium Brands</h2>
-          <p className="text-[10px] lg:text-xs text-gray-400 px-1 mb-2 lg:mb-4">Top-rated verified suppliers on Cosora</p>
+          <p className="text-[10px] lg:text-xs text-gray-400 px-1 mb-2 lg:mb-4">Sellers on paid plans first, then by their reviews</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             {topVendors.map((v) => (
               <Link key={v.id} to={`/vendor/${v.id}`} className="relative rounded-xl overflow-hidden aspect-square bg-gray-100">

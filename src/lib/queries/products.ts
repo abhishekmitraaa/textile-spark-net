@@ -173,18 +173,28 @@ function vendorBoost(boosts: Map<string, number>, planId?: string | null, planEx
 // Fetch a set of products by id → keyed ProductCardData map. Used by the
 // DB-backed Saved / Recently-Viewed stores to hydrate rich card objects from
 // the bare product-id references they persist.
+// Ids go 100 to a request (2026-11-19, review M-18): a long saves list in one GET URL failed, and the failure read as
+// "nothing saved". Every read's error is thrown.
 export async function fetchProductCardsByIds(ids: string[]): Promise<Record<string, ProductCardData>> {
   if (!ids.length) return {};
-  const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).in("id", ids);
-  if (error) throw error;
-  const rows = (data ?? []) as unknown as RawProduct[];
-  const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
+  const groupsOf = (xs: string[]) => {
+    const out: string[][] = [];
+    for (let i = 0; i < xs.length; i += 100) out.push(xs.slice(i, i + 100));
+    return out;
+  };
+  const rows: RawProduct[] = [];
+  await Promise.all(groupsOf(ids).map(async (group) => {
+    const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).in("id", group);
+    if (error) throw error;
+    rows.push(...((data ?? []) as unknown as RawProduct[]));
+  }));
   const vendorMap = new Map<string, RawVendor>();
-  if (vendorIds.length) {
-    const { data: vendors } = await supabase
-      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, country_code, onboarding_complete").in("id", vendorIds);
+  await Promise.all(groupsOf(Array.from(new Set(rows.map((r) => r.vendor_id)))).map(async (group) => {
+    const { data: vendors, error } = await supabase
+      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, country_code, onboarding_complete").in("id", group);
+    if (error) throw error;
     for (const v of vendors ?? []) vendorMap.set(v.id, v as RawVendor);
-  }
+  }));
   const out: Record<string, ProductCardData> = {};
   for (const r of rows) {
     const c = mapProductRow(r, vendorMap.get(r.vendor_id));

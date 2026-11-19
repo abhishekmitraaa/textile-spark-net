@@ -544,7 +544,7 @@ const PostRequirement = () => {
             <motion.div key="main" initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? undefined : { opacity: 0, y: -12 }}>
               <div className="text-center mb-5">
                 <h1 className="text-xl font-bold text-gray-900">Post Your Requirement</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Get quotes from verified manufacturers</p>
+                <p className="text-sm text-gray-500 mt-0.5">Get quotes from sellers on Cosora</p>
               </div>
 
               {/* Quick Quote */}
@@ -561,7 +561,7 @@ const PostRequirement = () => {
                       <h3 className="text-base font-bold text-gray-900">Quick Quote</h3>
                       <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase bg-brand-buyer/10 text-brand-buyer px-1.5 py-0.5 rounded"><Sparkles className="w-2.5 h-2.5" /> Fast</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">Just upload an image + quantity. Get quotes in minutes!</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Just upload an image + quantity. Sellers reply with quotes.</p>
                     <p className="inline-flex items-center gap-1 text-[11px] text-gray-400 mt-2"><Clock className="w-3 h-3" /> Takes 30 seconds</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
@@ -730,7 +730,7 @@ const PostRequirement = () => {
                 <Send className="w-4 h-4" /> {submitting ? (files.length ? "Uploading photos…" : "Submitting…") : "Submit Quote Request"}
               </button>
               <p className="text-[11px] text-center text-gray-400">
-                Your request will be sent to verified manufacturers. Expect quotes within 24-48 hours.
+                Sellers on Cosora see your request and can reply with quotes in My Quotes.
               </p>
             </motion.div>
           )}

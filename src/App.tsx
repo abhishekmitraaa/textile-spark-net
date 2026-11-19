@@ -13,6 +13,7 @@ import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
 import ClarityMask from "./components/analytics/ClarityMask";
 import SiteThemeApplier from "./components/SiteThemeApplier";
 import StoreSync from "./components/StoreSync";
+import { ScrollToTopOnNavigate } from "./components/ScrollToTopOnNavigate";
 import { RouteErrorBoundary } from "./components/AppErrorBoundary";
 import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
@@ -308,6 +309,8 @@ const App = () => (
           <PendingEnquiry />
           {/* Syncs Saved + Recently-Viewed stores with the DB on auth changes */}
           <StoreSync />
+          {/* A new page opens at its top; Back keeps the browser's restore (review M-02) */}
+          <ScrollToTopOnNavigate />
           {/* Dev-only: sign in as a seeded buyer/vendor/admin (no-op in prod) */}
           <DevAccountSwitcher />
         </BrowserRouter>

@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
+import { HomeTabs } from "@/components/buyer/HomeTabs";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
@@ -59,14 +61,6 @@ const LOCATIONS = [
   { id: "nopreference", label: "No preference" },
 ];
 
-const HOME_TABS = [
-  { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
-  { label: "TRENDS", href: "/home/trends" },
-  { label: "SALE", href: "/home/sale" },
-  { label: "FOR YOU", href: "/home/for-you" },
-  { label: "FOLLOWINGS", href: "/home/followings" },
-];
-
 const LOCATION_LABEL = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.label]));
 
 const FILTERABLE_LOCATIONS = LOCATIONS.filter((l) => l.id !== "nopreference");
@@ -91,9 +85,15 @@ const FILTERABLE_LOCATIONS = LOCATIONS.filter((l) => l.id !== "nopreference");
 // Map DB locations → preference location ids, so real products flow through the
 // exact same preference-filter logic. Locations are still matched by keyword;
 // only the CATEGORY side moved to the database (see below).
-const PREF_LOC_KEYWORDS: Record<string, string> = {
-  tiruppur: "tirupur", surat: "surat", ludhiana: "ludhiana",
-  delhi: "delhi", bangalore: "bangalore", mumbai: "mumbai",
+// Each place under every name it is written with (2026-11-19, review M-05: "Tiruppur", "Bengaluru", Noida and
+// Gurugram matched nothing).
+const PREF_LOC_KEYWORDS: Record<string, string[]> = {
+  tiruppur: ["tiruppur", "tirupur"],
+  surat: ["surat"],
+  ludhiana: ["ludhiana"],
+  delhi: ["delhi", "ncr", "noida", "gurugram", "gurgaon", "ghaziabad", "faridabad"],
+  bangalore: ["bangalore", "bengaluru"],
+  mumbai: ["mumbai", "bombay", "thane"],
 };
 
 // Category matching used to be a PREF_CAT_KEYWORDS substring scan over the
@@ -107,7 +107,7 @@ const PREF_LOC_KEYWORDS: Record<string, string> = {
 // filter and the ranking can no longer disagree about what a preference means.
 function prefLocationOf(p: ProductCardData): string | undefined {
   const loc = p.location.toLowerCase();
-  for (const [id, kw] of Object.entries(PREF_LOC_KEYWORDS)) if (loc.includes(kw)) return id;
+  for (const [id, kws] of Object.entries(PREF_LOC_KEYWORDS)) if (kws.some((kw) => loc.includes(kw))) return id;
   return undefined;
 }
 function toListing(p: ProductCardData): ListingProduct {
@@ -378,6 +378,8 @@ const ForYou = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterLocQuery, setFilterLocQuery] = useState("");
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
+  // "Reset preferences" clears the interests saved to the account, so it asks first (review M-06).
+  const [confirmReset, setConfirmReset] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const activeLocations = prefs.locations.filter((l) => l !== "nopreference");
@@ -464,6 +466,10 @@ const ForYou = () => {
   }, [pool, prefs.locations]);
 
   const visible = filtered;
+  // The place filter reads the listing's place the way the picker names it, so it filters what has loaded; it keeps
+  // reading pages until there is a screenful or the feed ends (2026-11-19, review M-04: "No matches" could stay for
+  // good while page 2 was never read).
+  const filling = activeLocations.length > 0 && filtered.length < 24 && restFeed.hasNextPage;
   // A count is a claim about the catalogue: with more pages to come it is "at least".
   const countLabel = `${filtered.length}${restFeed.hasNextPage ? "+" : ""}`;
   const { fetchNextPage: nextRest } = restFeed;
@@ -496,6 +502,10 @@ const ForYou = () => {
     });
     return items;
   }, [visible, recentAdBlocks]);
+
+  useEffect(() => {
+    if (filling && !restFeed.isFetchingNextPage) nextRest();
+  }, [filling, restFeed.isFetchingNextPage, nextRest, filtered.length]);
 
   // Infinite scroll.
   useEffect(() => {
@@ -532,6 +542,7 @@ const ForYou = () => {
   if (prefsSync === "error") {
     return (
       <BuyerShell>
+        <HomeTabs active="/home/for-you" />
         <div className="max-w-md mx-auto px-5 flex min-h-[60vh] flex-col items-center justify-center text-center" role="alert">
           <h1 className="text-lg font-bold text-gray-900">Couldn't load your interests</h1>
           <p className="mt-2 text-sm text-gray-500">Your saved picks are safe. Check your connection and try again.</p>
@@ -548,6 +559,7 @@ const ForYou = () => {
   if (prefsSync === "loading" && !prefs.hasCompleted) {
     return (
       <BuyerShell>
+        <HomeTabs active="/home/for-you" />
         <div className="max-w-md mx-auto px-5 flex min-h-[60vh] items-center justify-center" aria-busy="true">
           <p className="text-sm text-gray-500" role="status">Loading your interests…</p>
         </div>
@@ -559,6 +571,7 @@ const ForYou = () => {
   if (!prefs.hasCompleted) {
     return (
       <BuyerShell>
+        <HomeTabs active="/home/for-you" />
         <div className="max-w-md mx-auto px-5 flex min-h-[70vh] items-center justify-center">
           <AnimatePresence mode="wait">
             {step === 0 && (
@@ -644,23 +657,7 @@ const ForYou = () => {
   // ─── FEED ───
   return (
     <BuyerShell>
-      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
-        {/* Home tabs */}
-        <div className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
-          {HOME_TABS.map((tab) => (
-            <Link
-              key={tab.href}
-              to={tab.href}
-              className={cn(
-                "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                tab.href === "/home/for-you" ? "text-brand-buyer border-brand-buyer" : "text-gray-400 border-transparent hover:text-gray-600"
-              )}
-            >
-              {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <HomeTabs active="/home/for-you" />
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24">
         {/* Header toolbar — on desktop the title sits left and the search +
@@ -685,7 +682,7 @@ const ForYou = () => {
             >
               <SlidersHorizontal className="w-4 h-4" /> Edit Preferences
             </button>
-            <button onClick={resetFilters} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
+            <button onClick={() => setConfirmReset(true)} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
               Reset preferences
             </button>
           </div>
@@ -740,6 +737,8 @@ const ForYou = () => {
               </div>
             ))}
           </div>
+        ) : filtered.length === 0 && filling ? (
+          <p className="mt-10 text-center text-sm text-gray-500" role="status">Looking through more listings…</p>
         ) : filtered.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-gray-200 bg-white lg:max-w-xl lg:mx-auto">
             <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
@@ -765,7 +764,7 @@ const ForYou = () => {
                   <h3 className="text-lg font-bold text-gray-900">No matches found</h3>
                   <p className="text-sm text-gray-500 mt-1 mb-4">Try adjusting your preferences or search</p>
                   <button
-                    onClick={() => { setSearch(""); resetFilters(); }}
+                    onClick={() => setConfirmReset(true)}
                     className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
                   >
                     Reset preferences
@@ -800,6 +799,15 @@ const ForYou = () => {
         </div>
       </div>
 
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset your preferences?"
+        body="This clears the categories and places you picked, on every device you use. You can pick them again any time."
+        confirmLabel="Reset"
+        onConfirm={() => { setConfirmReset(false); setSearch(""); resetFilters(); }}
+        onCancel={() => setConfirmReset(false)}
+      />
+
       {/* Filter popup = the first two onboarding questions */}
       <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
@@ -817,7 +825,7 @@ const ForYou = () => {
             </div>
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => { resetFilters(); }}
+                onClick={() => setConfirmReset(true)}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
               >
                 Reset

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Link, useNavigate } from "react-router-dom";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import CosoraLogo from "@/components/CosoraLogo";
 import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
@@ -13,16 +12,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { type Brand } from "@/lib/followingStore";
 import { useFollowing, useNewBrandSuggestions } from "@/lib/queries/follows";
-import { ArrowLeft, BadgeCheck, Bookmark, Check, Flag, MoreVertical, Search, UserMinus } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Bookmark, Check, Eye, EyeOff, Flag, MoreVertical, Search, UserMinus } from "lucide-react";
 import { useStepBack } from "@/hooks/useStepBack";
 
 // ─────────────────────────────────────────────────────────────
 // Following → View All
-// Brand management list: search the brands you follow, Unfollow / Report.
+// Brand management list: search the brands you follow, Unfollow / Hide / Unhide / Report. Hidden brands are listed
+// here with Unhide (Mitra, 2026-11-19, review M-08: Hide is a saved mute).
 // Shares state with the Following feed via the following store.
 // ─────────────────────────────────────────────────────────────
 
-function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) => void }) {
+function BrandRow({ brand, onUnfollow, onToggleHidden }: { brand: Brand; onUnfollow: (b: Brand) => void; onToggleHidden: (b: Brand) => void }) {
   const navigate = useNavigate();
   return (
     <div className="flex items-center gap-3 py-3">
@@ -43,6 +43,11 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
               <BadgeCheck className="w-3 h-3" /> TradeSEAL
             </span>
           )}
+          {brand.isHidden && (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">
+              <EyeOff className="w-3 h-3" /> Hidden
+            </span>
+          )}
         </div>
         <p className="text-[11px] text-gray-500 truncate">
           {brand.location} · Followers {brand.followers}
@@ -56,10 +61,13 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">
           <DropdownMenuItem
-            onClick={() => { onUnfollow(brand); toast(`Unfollowed ${brand.name}`); }}
+            onClick={() => onUnfollow(brand)}
             className="gap-2 text-sm"
           >
             <UserMinus className="w-4 h-4" /> Unfollow
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onToggleHidden(brand)} className="gap-2 text-sm">
+            {brand.isHidden ? <><Eye className="w-4 h-4" /> Unhide</> : <><EyeOff className="w-4 h-4" /> Hide</>}
           </DropdownMenuItem>
           {/* The real report form, about this seller, as on their store page (2026-10-19: this only showed a toast;
               nothing reached Cosora). */}
@@ -78,10 +86,10 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
 const FollowingViewAll = () => {
   const navigate = useNavigate();
   const goBack = useStepBack("/home/followings");
-  const { brands, follow, unfollow } = useFollowing();
+  const { allBrands, follow, unfollow, hide, unhide, signedIn, isLoading, isError, refetch } = useFollowing();
   const [query, setQuery] = useState("");
 
-  const followed = useMemo(() => brands.filter((b) => b.isFollowing && !b.isHidden), [brands]);
+  const followed = useMemo(() => allBrands.filter((b) => b.isFollowing), [allBrands]);
   // Suggestions from the database, marked with what this buyer follows now (see Following.tsx).
   const { data: suggestions = [] } = useNewBrandSuggestions();
   const discoverable = useMemo(() => {
@@ -117,7 +125,7 @@ const FollowingViewAll = () => {
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-24">
         {/* Looking for New Brands? */}
         <div className="mb-4">
-          <NewBrandsCarousel brands={discoverable} onFollow={(b) => follow(b.id)} />
+          <NewBrandsCarousel brands={discoverable} onFollow={(b) => follow(b.id, b.name)} />
         </div>
 
         {/* Search */}
@@ -132,13 +140,33 @@ const FollowingViewAll = () => {
           />
         </div>
 
-        {/* Following count */}
-        <h1 className="text-sm font-bold text-gray-900 mt-4 mb-1">Following {followed.length}</h1>
+        {/* Following count: only once known (review M-11: signed out, loading and a failed read showed "Following 0"). */}
+        <h1 className="text-sm font-bold text-gray-900 mt-4 mb-1">
+          {signedIn && !isLoading && !isError ? `Following ${followed.length}` : "Following"}
+        </h1>
 
         {/* List */}
-        {filtered.length > 0 ? (
+        {!signedIn && !isLoading ? (
+          <p className="py-10 text-center text-sm text-gray-500">
+            <Link to="/login" className="font-semibold text-brand-buyer hover:underline">Sign in</Link> to see the brands you follow.
+          </p>
+        ) : isLoading ? (
+          <p className="py-10 text-center text-sm text-gray-400" role="status">Loading your followings…</p>
+        ) : isError ? (
+          <div className="py-10 text-center text-sm text-gray-500" role="alert">
+            Couldn't load the brands you follow.{" "}
+            <button onClick={refetch} className="font-semibold text-brand-buyer hover:underline">Retry</button>
+          </div>
+        ) : filtered.length > 0 ? (
           <div className="divide-y divide-gray-100">
-            {filtered.map((b) => <BrandRow key={b.id} brand={b} onUnfollow={(x) => unfollow(x.id)} />)}
+            {filtered.map((b) => (
+              <BrandRow
+                key={b.id}
+                brand={b}
+                onUnfollow={(x) => unfollow(x.id, x.name)}
+                onToggleHidden={(x) => (x.isHidden ? unhide(x.id, x.name) : hide(x.id, x.name))}
+              />
+            ))}
           </div>
         ) : (
           <p className="py-10 text-center text-sm text-gray-400">

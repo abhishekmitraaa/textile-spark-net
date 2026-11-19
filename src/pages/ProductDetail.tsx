@@ -394,7 +394,7 @@ const ProductDetail = () => {
   // Follow is the real follows table (signed out: the local store), exactly as
   // VendorProfile uses it. It was local useState, so it reset on every reload
   // and followed no one (Master Prompt 8, Phase 6).
-  const { brands: followedBrands, follow, unfollow } = useFollowing();
+  const { allBrands: followedBrands, follow, unfollow } = useFollowing();
   const isFollowingVendor = (vendorId: string) =>
     followedBrands.find((b) => b.id === vendorId)?.isFollowing ?? false;
   const [specsOpen, setSpecsOpen] = useState(true);

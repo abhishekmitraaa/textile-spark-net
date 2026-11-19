@@ -113,7 +113,10 @@ export function useFeed(filters: FeedFilters, { enabled = true }: { enabled?: bo
     getNextPageParam: (last, pages) =>
       last.length < FEED_PAGE_SIZE || pages.length >= MAX_PAGES ? undefined : pages.length * FEED_PAGE_SIZE,
     enabled,
-    staleTime: 60_000,
+    // A revisit within 5 minutes shows the pages already read; it used to refetch every loaded page one after another
+    // once they were a minute old (2026-11-19, review M-30). Leaving and coming back later starts fresh (gcTime).
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const seen = new Set<string>();
   const items: ProductCardData[] = [];
@@ -151,15 +154,15 @@ export function useFeedSlice(filters: FeedFilters, limit: number, { enabled = tr
  * filters what has loaded and asks for the next 96 as the buyer scrolls. It used to download the
  * whole catalogue (useCatalogue), cut at 1,000 rows.
  */
-export function useBrowseCatalogue(enabled: boolean, supplier: SupplierLocation | null = null) {
+export function useBrowseCatalogue(enabled: boolean, supplier: SupplierLocation | null = null, sort: FeedSort = "newest") {
   const PAGE = 96;
   const q = useInfiniteQuery({
     // The supplier location is filtered by the database: sellers outside India are few, and filtering
     // loaded pages would read up to 960 listings to find them.
-    queryKey: ["feed", "browse-catalogue", supplier],
+    queryKey: ["feed", "browse-catalogue", supplier, sort],
     queryFn: async ({ pageParam }): Promise<{ rows: CatalogueRow[]; count: number }> => {
       const { data, error } = await supabase.rpc("feed_products", {
-        p_sort: "newest", p_limit: PAGE, p_offset: pageParam as number, p_supplier: supplier ?? undefined,
+        p_sort: sort, p_limit: PAGE, p_offset: pageParam as number, p_supplier: supplier ?? undefined,
       });
       if (error) throw error;
       const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
@@ -170,7 +173,8 @@ export function useBrowseCatalogue(enabled: boolean, supplier: SupplierLocation 
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.count < PAGE || pages.length * PAGE > 960 ? undefined : pages.length * PAGE),
     enabled,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const seen = new Set<string>();
   const rows: CatalogueRow[] = [];

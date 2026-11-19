@@ -24,6 +24,7 @@ import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOve
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import trustedSeal from "@/assets/Trustedseal.png";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
+import { useUrlState } from "@/hooks/useUrlState";
 
 // ─────────────────────────────────────────────────────────────
 // Animation constants (project convention)
@@ -204,8 +205,9 @@ const Sale = () => {
   const reduced = useReducedMotion();
   const t = useT();
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
-  const [tier, setTier] = useState<(typeof TIERS)[number]["key"]>("all");
-  const [sort, setSort] = useState<(typeof SORTS)[number]["key"]>("discount");
+  // In the address, so Back to Sale keeps them (2026-11-19, review M-30).
+  const [tier, setTier] = useUrlState<(typeof TIERS)[number]["key"]>("tier", "all", TIERS.map((t) => t.key));
+  const [sort, setSort] = useUrlState<(typeof SORTS)[number]["key"]>("sort", "discount", SORTS.map((o) => o.key));
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -317,7 +319,7 @@ const Sale = () => {
             <h1 className="text-3xl lg:text-5xl font-extrabold tracking-tight leading-none">MEGA SALE</h1>
             {maxDiscount > 0 && (
               <p className="mt-2 text-sm lg:text-base font-medium text-white/90">
-                Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on bulk orders from verified manufacturers
+                Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on listings from sellers on Cosora
               </p>
             )}
 

@@ -48,7 +48,7 @@ export default function SubmitRequirementCard({
           </Link>
 
           <p className="mt-3 inline-flex items-center gap-1 text-xs text-gray-400 lg:self-start">
-            <FileText className="h-3.5 w-3.5" /> {t("Get quotes from verified manufacturers")}
+            <FileText className="h-3.5 w-3.5" /> {t("Get quotes from sellers on Cosora")}
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export default function SubmitRequirementCard({
                   <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
                   <span className="rounded bg-brand-buyer/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-buyer">Fast</span>
                 </div>
-                <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
+                <p className="text-xs text-gray-400">Just upload an image + quantity. Sellers reply with quotes.</p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { type Gender, type ListingProduct } from "@/lib/listingProducts";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { fetchProductCardsByIds } from "@/lib/queries/products";
 
@@ -241,23 +242,44 @@ export function recordView(p: Partial<RecentProduct> & { id: string }) {
   const merged = normalize(p, now, base);
   commit([merged, ...items.filter((i) => i.id !== p.id)].slice(0, MAX_ITEMS));
   if (userId && isUuid(p.id)) {
+    // Nothing to undo for a view the buyer didn't ask to keep; a refusal is only logged (review M-19).
     void supabase
       .from("recently_viewed")
       .upsert({ buyer_id: userId, product_id: p.id, viewed_at: new Date(now).toISOString() }, { onConflict: "buyer_id,product_id" })
-      .then(() => {});
+      .then(({ error }) => { if (error) console.warn("recently_viewed write refused", error.code); });
   }
 }
 
 /** Instant per-card delete (no confirm — per reference note). */
 export function removeRecent(id: string) {
+  const at = items.findIndex((i) => i.id === id);
+  const removed = items[at];
   commit(items.filter((i) => i.id !== id));
-  if (userId && isUuid(id)) void supabase.from("recently_viewed").delete().eq("buyer_id", userId).eq("product_id", id).then(() => {});
+  // Waits for the database; a refusal puts the card back and says so (2026-11-19, review M-19).
+  if (userId && isUuid(id) && removed) {
+    const forUser = userId;
+    void supabase.from("recently_viewed").delete().eq("buyer_id", forUser).eq("product_id", id).then(({ error }) => {
+      if (!error || userId !== forUser) return;
+      const next = [...items];
+      next.splice(Math.min(at, next.length), 0, removed);
+      commit(next.slice(0, MAX_ITEMS));
+      toast.error("Couldn't remove it from your history", { description: "Please try again." });
+    });
+  }
 }
 
 /** Clear entire history (behind a confirm dialog in the UI). */
 export function clearRecent() {
+  const before = items;
   commit([]);
-  if (userId) void supabase.from("recently_viewed").delete().eq("buyer_id", userId).then(() => {});
+  if (userId) {
+    const forUser = userId;
+    void supabase.from("recently_viewed").delete().eq("buyer_id", forUser).then(({ error }) => {
+      if (!error || userId !== forUser) return;
+      commit(before);
+      toast.error("Couldn't clear your history", { description: "Please try again." });
+    });
+  }
 }
 
 // ── Hooks ──

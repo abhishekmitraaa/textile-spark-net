@@ -96,7 +96,7 @@ const uid = () => `f-${Date.now().toString(36)}-${Math.random().toString(36).sli
 // DB sync (Supabase). When a buyer is signed in the wishlist is backed by
 // `saved_items` (the "All Saves" master set) + `saved_folders` /
 // `saved_folder_items` (named folders). Mutations update local state
-// instantly and mirror to the DB fire-and-forget; on sign-in we hydrate real
+// instantly and mirror to the DB, undone when refused (M-19); on sign-in we hydrate real
 // state, replacing the local seed. Signed out → localStorage (unchanged).
 // ─────────────────────────────────────────────────────────────
 
@@ -121,14 +121,19 @@ function relTimeAgo(iso: string): string {
 }
 
 async function hydrateSaved(uidValue: string): Promise<PersistedState> {
-  const [{ data: folderRows }, { data: itemRows }, { data: fiRows }] = await Promise.all([
+  // Every read's error counts (2026-11-19, review M-18): a failed read used to come back as an empty "All Saves".
+  const [folderRes, itemRes, fiRes] = await Promise.all([
     supabase.from("saved_folders").select("id, name, created_at").eq("buyer_id", uidValue).order("created_at", { ascending: true }),
     supabase.from("saved_items").select("product_id, created_at").eq("buyer_id", uidValue).order("created_at", { ascending: false }),
     // RLS scopes saved_folder_items to the caller's own folders.
     supabase.from("saved_folder_items").select("folder_id, product_id, created_at").order("created_at", { ascending: false }),
   ]);
-  const items = itemRows ?? [];
-  const fis = fiRows ?? [];
+  if (folderRes.error) throw folderRes.error;
+  if (itemRes.error) throw itemRes.error;
+  if (fiRes.error) throw fiRes.error;
+  const folderRows = folderRes.data;
+  const items = itemRes.data ?? [];
+  const fis = fiRes.data ?? [];
   const savedAtById = new Map(items.map((i) => [i.product_id, i.created_at]));
   const allIds = Array.from(new Set([...items.map((i) => i.product_id), ...fis.map((f) => f.product_id)]));
 
@@ -158,45 +163,91 @@ async function hydrateSaved(uidValue: string): Promise<PersistedState> {
   return { folders, products };
 }
 
+/**
+ * Whether the saves on screen are the account's (2026-11-19, review M-18/M-20): "local" signed out, "loading" while
+ * the account's are read, "ready", or "error" (Retry with retrySaved()). Unknown is never "nothing saved".
+ */
+export type SavedSync = "local" | "loading" | "ready" | "error";
+let sync: SavedSync = "local";
+function setSync(next: SavedSync) {
+  sync = next;
+  listeners.forEach((l) => l());
+}
+
+async function load(forUser: string) {
+  setSync("loading");
+  try {
+    const persisted = await hydrateSaved(forUser);
+    // Guard against a race where the user changed again mid-fetch.
+    if (userId !== forUser) return;
+    commit({ ...persisted, pending: null }, false);
+    setSync("ready");
+  } catch {
+    if (userId === forUser) setSync("error");
+  }
+}
+
 /** Called by StoreSync when auth changes: hydrate from DB or revert to local. */
 export async function setSavedUser(nextUserId: string | null) {
   if (nextUserId === userId) return;
   userId = nextUserId;
   if (!nextUserId) {
     commit({ ...loadPersisted(), pending: null }, false);
+    setSync("local");
     return;
   }
-  try {
-    const persisted = await hydrateSaved(nextUserId);
-    // Guard against a race where the user changed again mid-fetch.
-    if (userId === nextUserId) commit({ ...persisted, pending: null }, false);
-  } catch {
-    /* keep current state on failure */
-  }
+  // Nothing of the previous account (or the signed-out list) shows while this one's are read.
+  commit({ ...EMPTY_STATE, pending: null }, false);
+  await load(nextUserId);
 }
 
-// Fire-and-forget DB writers (RLS enforces ownership). Only real product UUIDs
-// can be persisted (FK to products); synthetic/demo ids stay local-only.
-function dbSaveItem(productId: string) {
-  if (!userId || !isUuid(productId)) return;
-  void supabase.from("saved_items").upsert({ buyer_id: userId, product_id: productId }, { onConflict: "buyer_id,product_id" }).then(() => {});
+/** Read the account's saves again after a failed read. */
+export function retrySaved() {
+  if (userId) void load(userId);
 }
+
+// Every write waits for the database; a refusal is undone on screen and said (2026-11-19, review M-19: they were
+// fire-and-forget, so a refused save stayed on screen and was gone on the next visit). Only real product UUIDs can be
+// persisted (FK to products); synthetic ids stay local-only.
+async function mirror(
+  op: () => PromiseLike<{ error: unknown }>,
+  undo: () => void,
+  failure: string,
+): Promise<boolean> {
+  const { error } = await op();
+  if (!error) return true;
+  undo();
+  toast.error(failure, { description: "Please try again." });
+  return false;
+}
+
+/** Take a product back out of folders it was put in (a refused save). */
+function withdraw(productId: string, folderIds: string[], dropProduct: boolean) {
+  const products = { ...state.products };
+  if (dropProduct) delete products[productId];
+  const from = new Set(folderIds);
+  commit({
+    ...state,
+    products,
+    folders: state.folders.map((f) => (from.has(f.id) ? { ...f, productIds: f.productIds.filter((p) => p !== productId) } : f)),
+  });
+}
+
 // A folder made in this tab is written before anything is put in it (2026-10-19): the folder and its first product
 // used to be sent at the same moment, the product could land first and be refused (no such folder yet), and the
 // error was ignored, so the folder came back empty on the next visit. Each new folder's write is kept here; adding to
 // it waits for it, and a failure is said.
 const folderWrites = new Map<string, Promise<boolean>>();
 
-function dbAddToFolder(folderId: string, productId: string) {
-  if (!userId || folderId === ALL_SAVES_ID || !isUuid(productId) || !isUuid(folderId)) return;
-  const ready = folderWrites.get(folderId) ?? Promise.resolve(true);
-  void ready.then(async (ok) => {
-    if (!ok) return;
-    const { error } = await supabase
-      .from("saved_folder_items")
-      .upsert({ folder_id: folderId, product_id: productId }, { onConflict: "folder_id,product_id" });
-    if (error) toast.error("Couldn't save to the folder", { description: "Please try again." });
-  });
+async function dbAddToFolder(folderId: string, productId: string): Promise<boolean> {
+  if (!userId || folderId === ALL_SAVES_ID || !isUuid(productId) || !isUuid(folderId)) return true;
+  const ok = await (folderWrites.get(folderId) ?? Promise.resolve(true));
+  if (!ok) return false;
+  return mirror(
+    () => supabase.from("saved_folder_items").upsert({ folder_id: folderId, product_id: productId }, { onConflict: "folder_id,product_id" }),
+    () => withdraw(productId, [folderId], false),
+    "Couldn't save to the folder",
+  );
 }
 
 // ── Modal control ──
@@ -240,16 +291,26 @@ export function closeSaveModal() {
 
 // ── Mutations ──
 export function saveToFolders(product: SavedProduct, folderIds: string[]) {
+  const wasSaved = Boolean(state.products[product.id]);
   const products = { ...state.products, [product.id]: { ...product, savedAt: Date.now() } };
   const targets = new Set<string>([ALL_SAVES_ID, ...folderIds]);
+  const added = state.folders.filter((f) => targets.has(f.id) && !f.productIds.includes(product.id)).map((f) => f.id);
   const folders = state.folders.map((f) =>
     targets.has(f.id) && !f.productIds.includes(product.id)
       ? { ...f, productIds: [product.id, ...f.productIds] }
       : f
   );
   commit({ ...state, products, folders, pending: null });
-  dbSaveItem(product.id);
-  for (const fid of folderIds) dbAddToFolder(fid, product.id);
+  if (!userId || !isUuid(product.id)) return;
+  const forUser = userId;
+  void (async () => {
+    const saved = await mirror(
+      () => supabase.from("saved_items").upsert({ buyer_id: forUser, product_id: product.id }, { onConflict: "buyer_id,product_id" }),
+      () => withdraw(product.id, added, !wasSaved),
+      "Couldn't save this product",
+    );
+    if (saved) for (const fid of folderIds) await dbAddToFolder(fid, product.id);
+  })();
 }
 
 export function createFolder(name: string, withProductId?: string): string {
@@ -258,8 +319,9 @@ export function createFolder(name: string, withProductId?: string): string {
   const folder: Folder = { id, name: folderName, productIds: withProductId ? [withProductId] : [] };
   commit({ ...state, folders: [...state.folders, folder] });
   if (userId && isUuid(id)) {
+    const forUser = userId;
     const write = (async () => {
-      const { error } = await supabase.from("saved_folders").insert({ id, buyer_id: userId, name: folderName });
+      const { error } = await supabase.from("saved_folders").insert({ id, buyer_id: forUser, name: folderName });
       if (!error) return true;
       // Not saved: take it back off the screen rather than show a folder that won't be there next time.
       commit({ ...state, folders: state.folders.filter((f) => f.id !== id) });
@@ -267,7 +329,17 @@ export function createFolder(name: string, withProductId?: string): string {
       return false;
     })();
     folderWrites.set(id, write);
-    if (withProductId) { dbSaveItem(withProductId); dbAddToFolder(id, withProductId); }
+    if (withProductId && isUuid(withProductId)) {
+      const wasSaved = Boolean(state.products[withProductId]);
+      void (async () => {
+        const saved = await mirror(
+          () => supabase.from("saved_items").upsert({ buyer_id: forUser, product_id: withProductId }, { onConflict: "buyer_id,product_id" }),
+          () => withdraw(withProductId, [ALL_SAVES_ID], !wasSaved),
+          "Couldn't save this product",
+        );
+        if (saved) await dbAddToFolder(id, withProductId);
+      })();
+    }
   }
   return id;
 }
@@ -275,14 +347,34 @@ export function createFolder(name: string, withProductId?: string): string {
 export function renameFolder(id: string, name: string) {
   if (id === ALL_SAVES_ID) return;
   const trimmed = name.trim();
+  const before = state.folders.find((f) => f.id === id)?.name;
   commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, name: trimmed || f.name } : f)) });
-  if (userId && isUuid(id) && trimmed) void supabase.from("saved_folders").update({ name: trimmed }).eq("id", id).then(() => {});
+  if (userId && isUuid(id) && trimmed && before !== undefined) {
+    void mirror(
+      () => supabase.from("saved_folders").update({ name: trimmed }).eq("id", id),
+      () => commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, name: before } : f)) }),
+      "Couldn't rename the folder",
+    );
+  }
 }
 
 export function deleteFolder(id: string) {
   if (id === ALL_SAVES_ID) return; // All Saves is permanent
+  const at = state.folders.findIndex((f) => f.id === id);
+  if (at < 0) return;
+  const folder = state.folders[at];
   commit({ ...state, folders: state.folders.filter((f) => f.id !== id) });
-  if (userId && isUuid(id)) void supabase.from("saved_folders").delete().eq("id", id).then(() => {});
+  if (userId && isUuid(id)) {
+    void mirror(
+      () => supabase.from("saved_folders").delete().eq("id", id),
+      () => {
+        const folders = [...state.folders];
+        folders.splice(Math.min(at, folders.length), 0, folder);
+        commit({ ...state, folders });
+      },
+      `Couldn't delete "${folder.name}"`,
+    );
+  }
 }
 
 // Remove a product from one folder. Removing from All Saves unsaves it everywhere.
@@ -296,12 +388,21 @@ export function removeFromFolder(folderId: string, productId: string) {
     folders: state.folders.map((f) => (f.id === folderId ? { ...f, productIds: f.productIds.filter((p) => p !== productId) } : f)),
   });
   if (userId && isUuid(folderId) && isUuid(productId)) {
-    void supabase.from("saved_folder_items").delete().eq("folder_id", folderId).eq("product_id", productId).then(() => {});
+    void mirror(
+      () => supabase.from("saved_folder_items").delete().eq("folder_id", folderId).eq("product_id", productId),
+      () => commit({
+        ...state,
+        folders: state.folders.map((f) => (f.id === folderId && !f.productIds.includes(productId) ? { ...f, productIds: [productId, ...f.productIds] } : f)),
+      }),
+      "Couldn't remove it from the folder",
+    );
   }
 }
 
 // Fully remove a product from every folder + the product map.
 export function unsaveProduct(productId: string) {
+  const product = state.products[productId];
+  const memberOf = state.folders.filter((f) => f.productIds.includes(productId)).map((f) => f.id);
   const products = { ...state.products };
   delete products[productId];
   commit({
@@ -309,9 +410,31 @@ export function unsaveProduct(productId: string) {
     products,
     folders: state.folders.map((f) => ({ ...f, productIds: f.productIds.filter((p) => p !== productId) })),
   });
-  if (userId && isUuid(productId)) {
-    void supabase.from("saved_items").delete().eq("buyer_id", userId).eq("product_id", productId).then(() => {});
-    void supabase.from("saved_folder_items").delete().eq("product_id", productId).then(() => {});
+  if (userId && isUuid(productId) && product) {
+    const forUser = userId;
+    const restore = () => {
+      const back = new Set(memberOf);
+      commit({
+        ...state,
+        products: { ...state.products, [productId]: product },
+        folders: state.folders.map((f) => (back.has(f.id) && !f.productIds.includes(productId) ? { ...f, productIds: [productId, ...f.productIds] } : f)),
+      });
+    };
+    void (async () => {
+      // Folder rows first: a save left in a folder with no saved_items row would be invisible but still there.
+      const ok = await mirror(
+        () => supabase.from("saved_folder_items").delete().eq("product_id", productId),
+        restore,
+        "Couldn't remove this save",
+      );
+      if (ok) {
+        await mirror(
+          () => supabase.from("saved_items").delete().eq("buyer_id", forUser).eq("product_id", productId),
+          restore,
+          "Couldn't remove this save",
+        );
+      }
+    })();
   }
 }
 
@@ -329,6 +452,10 @@ function getSnapshot() {
 
 export function useSaved(): SavedState {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+export function useSavedSync(): SavedSync {
+  return useSyncExternalStore(subscribe, () => sync, () => sync);
 }
 
 // Convenience selectors
