@@ -41,6 +41,8 @@ import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTa
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useStepBack } from "@/hooks/useStepBack";
+import { useUrlState } from "@/hooks/useUrlState";
+import { useSavedVendors, useToggleSavedVendor } from "@/lib/queries/savedVendors";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -89,14 +91,16 @@ const VendorProfile = () => {
   const [gridCols, setGridCols] = useState<2 | 3>(2);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
-  const [productSearch, setProductSearch] = useState("");
+  // The store's search and filters live in the address, so Back to the store keeps them (2026-11-19, review M-30).
+  const [productSearch, setProductSearch] = useUrlState<string>("q", "");
   // A "Brand's Categories" tile, picked: the store's items narrowed to it (its slot).
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [genderFilter, setGenderFilter] = useState<"" | GenderFilter>("");
-  const [sortKey, setSortKey] = useState<"" | "sold" | "rating">("");
+  const [categoryParam, setCategoryParam] = useUrlState<string>("cat", "");
+  const categoryFilter: string | null = categoryParam || null;
+  const setCategoryFilter = (slot: string | null) => setCategoryParam(slot ?? "");
+  const [genderFilter, setGenderFilter] = useUrlState<"" | GenderFilter>("gender", "", ["", "Men", "Women", "Unisex"]);
+  const [sortKey, setSortKey] = useUrlState<"" | "sold" | "rating">("sort", "", ["", "sold", "rating"]);
   const [stuck, setStuck] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [pageSaved, setPageSaved] = useState(false);
 
   const vendorId = id ?? "1";
   const chatHref = `/chats/${vendorId}`;
@@ -110,7 +114,7 @@ const VendorProfile = () => {
   const { submit: submitReview } = useReviewMutations();
   const { user } = useAuth();
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const { brands, follow, unfollow } = useFollowing();
+  const { allBrands: brands, follow, unfollow } = useFollowing();
   const callVendor = useCallVendor();
   // Same moderation rule the Call Now buttons run on click, resolved up front
   // so the contact card can decide whether it may render at all. Two
@@ -132,6 +136,22 @@ const VendorProfile = () => {
   const toggleFollow = () => (following ? unfollow(vendorId) : follow(vendorId));
 
   const brandName = vendor?.brandName ?? "";
+
+  // Saved sellers (Mitra, 2026-11-19, review M-16: the bookmark changed colour and saved nothing). By the resolved
+  // vendor_profiles id, never the route param (it can be a slug).
+  const { vendors: savedVendors } = useSavedVendors();
+  const toggleSavedVendor = useToggleSavedVendor();
+  const pageSaved = Boolean(vendor?.id && savedVendors.some((v) => v.id === vendor.id));
+  const [savingVendor, setSavingVendor] = useState(false);
+  const toggleSaveVendor = async () => {
+    if (!vendor?.id || savingVendor) return;
+    setSavingVendor(true);
+    try {
+      await toggleSavedVendor(vendor.id, !pageSaved, brandName);
+    } finally {
+      setSavingVendor(false);
+    }
+  };
 
   // Interim buyer→vendor messaging (Phase 7). Gated on the SAME contact rule
   // the Call button uses — a vendor whose contact details are withheld by
@@ -361,7 +381,8 @@ const VendorProfile = () => {
             <div className="max-w-2xl lg:max-w-5xl mx-auto flex items-center gap-3 px-4 py-2.5">
               <button onClick={goBack} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
               <h2 className="flex-1 text-base font-extrabold tracking-wide text-gray-900 truncate">{brandName}</h2>
-              <button onClick={() => setPageSaved((s) => !s)} aria-label="Save vendor" className="p-1">
+              <button onClick={() => void toggleSaveVendor()} disabled={savingVendor} aria-pressed={pageSaved}
+                aria-label={pageSaved ? "Remove seller from My Saves" : "Save seller to My Saves"} className="p-1">
                 {pageSaved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-500" />}
               </button>
             </div>
@@ -967,7 +988,9 @@ const VendorProfile = () => {
         <motion.section variants={section} id="store-items" className="scroll-mt-16 rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">{brandName}</h2>
-            <button onClick={() => setPageSaved((p) => !p)} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200">
+            <button onClick={() => void toggleSaveVendor()} disabled={savingVendor} aria-pressed={pageSaved}
+              aria-label={pageSaved ? "Remove seller from My Saves" : "Save seller to My Saves"}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200">
               {pageSaved ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
             </button>
           </div>

@@ -24,6 +24,8 @@ import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOve
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import trustedSeal from "@/assets/Trustedseal.png";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
+import { useUrlState } from "@/hooks/useUrlState";
+import { BackDropdownMenu } from "@/components/ui/back-dropdown-menu";
 
 // ─────────────────────────────────────────────────────────────
 // Animation constants (project convention)
@@ -204,8 +206,9 @@ const Sale = () => {
   const reduced = useReducedMotion();
   const t = useT();
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
-  const [tier, setTier] = useState<(typeof TIERS)[number]["key"]>("all");
-  const [sort, setSort] = useState<(typeof SORTS)[number]["key"]>("discount");
+  // In the address, so Back to Sale keeps them (2026-11-19, review M-30).
+  const [tier, setTier] = useUrlState<(typeof TIERS)[number]["key"]>("tier", "all", TIERS.map((t) => t.key));
+  const [sort, setSort] = useUrlState<(typeof SORTS)[number]["key"]>("sort", "discount", SORTS.map((o) => o.key));
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -317,7 +320,7 @@ const Sale = () => {
             <h1 className="text-3xl lg:text-5xl font-extrabold tracking-tight leading-none">MEGA SALE</h1>
             {maxDiscount > 0 && (
               <p className="mt-2 text-sm lg:text-base font-medium text-white/90">
-                Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on bulk orders from verified manufacturers
+                Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on listings from sellers on Cosora
               </p>
             )}
 
@@ -395,7 +398,7 @@ const Sale = () => {
           <div className="flex items-center justify-between mb-3 px-1">
             <h2 className="text-base lg:text-xl font-bold text-gray-900">All Deals</h2>
             <div className="flex items-center gap-2">
-              <DropdownMenu>
+              <BackDropdownMenu>
                 <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none">
                   <ArrowUpDown className="w-3.5 h-3.5" /> {SORTS.find((s) => s.key === sort)?.label}
                 </DropdownMenuTrigger>
@@ -406,7 +409,7 @@ const Sale = () => {
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </BackDropdownMenu>
               <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
                 <button onClick={() => setViewMode("2-col")} aria-label="2 columns" className={cn("p-1.5 rounded-md transition-colors", viewMode === "2-col" ? "bg-brand-buyer text-white" : "text-gray-400")}>
                   <Grid2X2 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />

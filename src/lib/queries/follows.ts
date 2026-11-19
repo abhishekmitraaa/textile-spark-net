@@ -1,9 +1,10 @@
 import { priceText } from "@/lib/currency";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { trustSealFromParts } from "@/lib/plan";
 import {
   useBrands,
   unfollowBrand as unfollowLocal,
@@ -34,13 +35,6 @@ interface RawVendorRow {
   logo_url: string | null;
 }
 
-/** Ids in groups small enough for a GET URL (claude.md: never put a long id list in one). */
-function chunks<T>(xs: T[], size = 100): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < xs.length; i += size) out.push(xs.slice(i, i + size));
-  return out;
-}
-
 function toBrand(v: RawVendorRow, extra: Pick<Brand, "items" | "isFollowing" | "topProducts">): Brand {
   return {
     id: v.id,
@@ -56,34 +50,29 @@ function toBrand(v: RawVendorRow, extra: Pick<Brand, "items" | "isFollowing" | "
   };
 }
 
+interface RawFollowedRow {
+  vendor_id: string; brand_name: string | null; city: string | null; logo_url: string | null;
+  followers_count: number; live_count: number; is_verified: boolean; plan_id: string | null;
+  plan_expires_at: string | null; ad_verified_until: string | null; hidden: boolean;
+}
+
 /**
- * The sellers this buyer follows, with how many live listings each has.
+ * The sellers this buyer follows, hidden ones included (`isHidden`), each with its live listing count and the same
+ * Trusted Seal every card shows (`trustSealFromParts`).
  *
- * Only those (2026-10-14). This used to download EVERY seller and EVERY live listing and filter in
- * the browser; PostgREST stops at 1,000 rows, so past that a followed seller silently dropped out of
- * "Your Followings" and the Follow buttons. Every reader of useFollowing() only asks "do I follow
- * this seller?", so the followed rows are all it needs. Suggestions are new_brand_suggestions().
+ * One call, my_followed_brands() (2026-11-19, review M-26/M-09/M-08). It downloaded every live listing of every
+ * followed seller to count them (PostgREST stops at 1,000), and the seal was `is_verified` alone.
  */
-async function fetchBrands(userId: string): Promise<Brand[]> {
-  const { data: follows, error } = await supabase.from("follows").select("vendor_id").eq("follower_id", userId);
+async function fetchBrands(): Promise<Brand[]> {
+  const { data, error } = await supabase.rpc("my_followed_brands");
   if (error) throw error;
-  const ids = [...new Set((follows ?? []).map((f) => f.vendor_id))].filter((id) => id !== userId);
-  if (ids.length === 0) return [];
-
-  const vendors: RawVendorRow[] = [];
-  const live = new Map<string, number>();
-  await Promise.all(chunks(ids).map(async (group) => {
-    const [v, p] = await Promise.all([
-      supabase.from("vendor_profiles").select("id, brand_name, city, is_verified, followers_count, logo_url").in("id", group),
-      supabase.from("products").select("vendor_id").eq("status", "live").in("vendor_id", group),
-    ]);
-    if (v.error) throw v.error;
-    if (p.error) throw p.error;
-    vendors.push(...((v.data ?? []) as RawVendorRow[]));
-    for (const r of p.data ?? []) live.set(r.vendor_id, (live.get(r.vendor_id) ?? 0) + 1);
+  return ((data ?? []) as unknown as RawFollowedRow[]).map((r) => ({
+    ...toBrand({ id: r.vendor_id, brand_name: r.brand_name, city: r.city, is_verified: r.is_verified,
+      followers_count: r.followers_count, logo_url: r.logo_url },
+    { items: r.live_count, isFollowing: true, topProducts: [] }),
+    verified: trustSealFromParts(r.is_verified, r.plan_expires_at, r.ad_verified_until),
+    isHidden: r.hidden,
   }));
-
-  return vendors.map((v) => toBrand(v, { items: live.get(v.id) ?? 0, isFollowing: true, topProducts: [] }));
 }
 
 interface RawSuggestion extends RawVendorRow {
@@ -122,78 +111,116 @@ export function useNewBrandSuggestions(limit = 12) {
 }
 
 export interface UseFollowingResult {
+  /** Followed sellers that aren't hidden (signed out: the local list). */
   brands: Brand[];
+  /** Every followed seller, hidden ones too (Following › View All). */
+  allBrands: Brand[];
+  signedIn: boolean;
   isLoading: boolean;
-  follow: (vendorId: string) => void;
-  unfollow: (vendorId: string) => void;
-  hide: (vendorId: string) => void;
+  isError: boolean;
+  refetch: () => void;
+  /** Each resolves true once the database said yes; a refusal is said in a toast. `name` adds a success toast. */
+  follow: (vendorId: string, name?: string) => Promise<boolean>;
+  unfollow: (vendorId: string, name?: string) => Promise<boolean>;
+  hide: (vendorId: string, name?: string) => Promise<boolean>;
+  unhide: (vendorId: string, name?: string) => Promise<boolean>;
 }
 
 export function useFollowing(): UseFollowingResult {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const qc = useQueryClient();
   const localBrands = useBrands();
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   const signedIn = Boolean(user);
+  const key = ["follows", user?.id];
   const query = useQuery({
-    queryKey: ["follows", user?.id],
-    queryFn: () => fetchBrands(user!.id),
+    queryKey: key,
+    queryFn: fetchBrands,
     enabled: signedIn,
   });
 
-  const brands = signedIn ? (query.data ?? []).filter((b) => !hidden.has(b.id)) : localBrands;
+  const allBrands = signedIn ? (query.data ?? []) : localBrands;
+  const brands = allBrands.filter((b) => !b.isHidden);
 
   const follow = useCallback(
-    async (vendorId: string) => {
-      // Signed out there is nowhere real to put a follow. followBrand() patches
-      // a brand already in the local list and cannot insert one, so since the
-      // seed was removed (Master Prompt 9) calling it here would have left the
-      // button looking like it worked while doing nothing at all. Say so
-      // instead.
+    async (vendorId: string, name?: string) => {
+      // Signed out there is nowhere real to put a follow (the local store can't insert one), so say so.
       if (!signedIn) {
         toast.info("Sign in to follow brands", {
           description: "Following is saved to your account.",
         });
-        return;
+        return false;
       }
       // The store and product pages show Follow to everyone, the seller looking at their own store included.
       if (vendorId === user!.id) {
         toast.info("This is your own business", { description: "Buyers follow it; you can't follow yourself." });
-        return;
+        return false;
       }
       const { error } = await supabase.from("follows").insert({ follower_id: user!.id, vendor_id: vendorId });
       // Already following (a second tab, a double tap) is what was asked for; anything else is said.
       if (error && error.code !== "23505") {
         toast.error("Couldn't follow this brand", { description: "Please try again." });
-        return;
+        return false;
       }
       // The count on the brand comes back from the database, which keeps it (follows_count_sync).
-      qc.invalidateQueries({ queryKey: ["follows", user!.id] });
+      await qc.invalidateQueries({ queryKey: ["follows", user!.id] });
+      if (name) toast.success(`Following ${name}`);
+      return true;
     },
     [signedIn, user, qc],
   );
 
   const unfollow = useCallback(
-    async (vendorId: string) => {
-      if (!signedIn) return unfollowLocal(vendorId);
+    async (vendorId: string, name?: string) => {
+      if (!signedIn) { unfollowLocal(vendorId); return true; }
       const { error } = await supabase.from("follows").delete().eq("follower_id", user!.id).eq("vendor_id", vendorId);
       if (error) {
         toast.error("Couldn't unfollow this brand", { description: "Please try again." });
-        return;
+        return false;
       }
-      qc.invalidateQueries({ queryKey: ["follows", user!.id] });
+      await qc.invalidateQueries({ queryKey: ["follows", user!.id] });
+      if (name) toast(`Unfollowed ${name}`);
+      return true;
     },
     [signedIn, user, qc],
   );
 
-  const hide = useCallback(
-    (vendorId: string) => {
-      if (!signedIn) return hideLocal(vendorId);
-      setHidden((prev) => new Set(prev).add(vendorId));
+  // Hide is a saved mute (Mitra, 2026-11-19, review M-08): still followed, out of the Following feed until unhidden.
+  const setHidden = useCallback(
+    async (vendorId: string, hidden: boolean, name?: string) => {
+      if (!signedIn) { if (hidden) hideLocal(vendorId); return true; }
+      const qk = ["follows", user!.id];
+      // A read already on its way would land after this and put the old flag back.
+      await qc.cancelQueries({ queryKey: qk });
+      const before = qc.getQueryData<Brand[]>(qk);
+      qc.setQueryData<Brand[]>(qk, (rows) => rows?.map((b) => (b.id === vendorId ? { ...b, isHidden: hidden } : b)));
+      const { error } = await supabase.from("follows")
+        .update({ hidden_at: hidden ? new Date().toISOString() : null })
+        .eq("follower_id", user!.id).eq("vendor_id", vendorId);
+      if (error) {
+        qc.setQueryData(qk, before);
+        toast.error(hidden ? "Couldn't hide this brand" : "Couldn't show this brand again", { description: "Please try again." });
+        return false;
+      }
+      void qc.invalidateQueries({ queryKey: qk });
+      if (name) toast(hidden ? `Hid ${name} from your Following feed` : `${name} is back in your Following feed`);
+      return true;
     },
-    [signedIn],
+    [signedIn, user, qc],
   );
+  const hide = useCallback((id: string, name?: string) => setHidden(id, true, name), [setHidden]);
+  const unhide = useCallback((id: string, name?: string) => setHidden(id, false, name), [setHidden]);
 
-  return { brands, isLoading: signedIn ? query.isLoading : false, follow, unfollow, hide };
+  return {
+    brands,
+    allBrands,
+    signedIn,
+    isLoading: signedIn ? query.isPending : authLoading,
+    isError: signedIn && query.isError,
+    refetch: () => { void query.refetch(); },
+    follow,
+    unfollow,
+    hide,
+    unhide,
+  };
 }

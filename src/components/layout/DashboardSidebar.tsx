@@ -46,6 +46,7 @@ import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { tierStyle, isUnlimited } from "@/lib/plan";
 import { useT } from "@/lib/i18n";
 import { RoleSwitcher } from "./RoleSwitcher";
+import { useDisplayRole } from "@/contexts/DisplaySideContext";
 
 type NavItem = {
   name: string;
@@ -108,7 +109,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { role } = useUserRole();
+  const role = useDisplayRole();
   const { user, profile, signOut } = useAuth();
   // Seller-side plan chip in the bottom user area (sourced from the same hook
   // that drives enforcement — not fetched separately).
@@ -308,28 +309,37 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           })}
         </div>
 
-        {/* User section — name + plan tier (seller) */}
+        {/* User section — name + plan tier (seller). The account's own name or nothing (review M-62: it invented "Fashion
+            Brand", "Verified Buyer" and "CB"); signed out it offers Sign in, not Sign out. */}
         <div className="border-t border-sidebar-border p-3 lg:p-4">
-          {(() => {
-            const displayName = profile?.full_name || (role === "buyer" ? "Fashion Brand" : "Textile Manufacturer");
-            const initials = displayName.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "CS";
+          {!user ? (
+            <Link
+              to="/login"
+              onClick={isMobile ? onClose : undefined}
+              className="flex items-center justify-center rounded-lg bg-sidebar-accent px-3 py-2.5 text-sm font-semibold text-sidebar-foreground"
+            >
+              {t("Sign in")}
+            </Link>
+          ) : (() => {
+            const displayName = profile?.full_name?.trim() || "";
+            const initials = displayName.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
             const planId = vplan?.effective_plan_id;
             const style = tierStyle(planId);
             const cap = vplan?.limits.product_cap ?? -1;
             const used = vplan?.usage.products_used ?? 0;
             const usageLine = vplan
               ? isUnlimited(cap) ? `${used} products` : `${used}/${cap} products used`
-              : (role === "buyer" ? "Verified Buyer" : "Seller");
+              : (role === "buyer" ? "Buyer account" : "Seller account");
             return (
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent lg:h-10 lg:w-10">
                   <span className="text-xs font-medium text-sidebar-foreground lg:text-sm">
-                    {role === "buyer" ? "CB" : initials}
+                    {initials || <UserCircle size={16} aria-hidden />}
                   </span>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-medium text-sidebar-foreground">{displayName}</p>
+                    <p className="truncate text-sm font-medium text-sidebar-foreground">{displayName || t("Your account")}</p>
                     {role === "seller" && vplan && (
                       <Link
                         to="/subscription"

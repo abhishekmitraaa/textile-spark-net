@@ -374,7 +374,6 @@ const Trends = () => {
               slot="trendsSponsored"
               block={block}
               category={trendCategoryId}
-              label={`Trending in #${category.hashtag}`}
             />
           </div>
         );
@@ -521,7 +520,6 @@ const Trends = () => {
         <SponsoredRail
           slot="trendsSponsored"
           category={trendCategoryId}
-          label={`Trending in #${category.hashtag}`}
         />
 
         {/* "Top Brands for #hashtag" was here: six invented brand names per

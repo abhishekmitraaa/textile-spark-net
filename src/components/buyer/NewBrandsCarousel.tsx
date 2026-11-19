@@ -1,7 +1,6 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Brand } from "@/lib/followingStore";
@@ -165,7 +164,7 @@ export default function NewBrandsCarousel({
                     <p className="text-[11px] text-gray-500 truncate">{brand.location} · {brand.followers} followers · {brand.items} {brand.items === 1 ? "product" : "products"}</p>
                   </button>
                   <button
-                    onClick={() => { if (!following) { onFollow(brand); toast.success(`Following ${brand.name}`); } }}
+                    onClick={() => { if (!following) onFollow(brand); }}
                     className={cn(
                       "shrink-0 flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full transition-colors",
                       following ? "bg-gray-100 text-gray-500" : "bg-brand-buyer hover:bg-brand-buyer/90 text-white"

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260907130200_repoint_products_to_taxonomy_tree_sql", "label": "20260907130200_repoint_products_to_taxonomy_tree.sql", "file_type": "code", "source_file": "supabase/migrations/20260907130200_repoint_products_to_taxonomy_tree.sql", "source_location": null}], "edges": []}

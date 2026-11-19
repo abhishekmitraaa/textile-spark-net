@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, Zap } from "lucide-react";
@@ -10,6 +10,8 @@ import { createRfq, uploadRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
 import { quantityFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { errorMessage } from "@/lib/errorMessage";
+import { useBackCloses, isOverOverlay } from "@/hooks/useBackCloses";
+import { useVisibleViewport } from "@/hooks/useVisibleViewport";
 
 interface QuickRfqModalProps {
   isOpen: boolean;
@@ -25,10 +27,28 @@ interface Photo { file: File; url: string }
  * where the requirement wasn't, and its photos were only ever read into the page. It now uploads the
  * photos (lib/queries/rfqs.ts uploadRfqImages) and writes the requirement (createRfq) before it says
  * so. No category is asked for: matching reads the name and notes (semantic leads, RFQ/leads R2).
+ *
+ * 2026-11-19 (review M-28, M-29): a dialog (role, focus, Escape, Back closes it), pinned above the phone's keyboard
+ * (useVisibleViewport, 16 px fields so iOS doesn't zoom), and signed out it asks for sign-in before anything is typed,
+ * so nothing is lost on the way (claude.md: "A long form asks for sign-in before it starts").
  */
 export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const titleId = useId();
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+  const viewport = useVisibleViewport();
+  useBackCloses(isOpen, onClose);
+  // Escape closes; the first field takes focus when the sheet opens.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    const t = window.setTimeout(() => firstFieldRef.current?.focus(), 50);
+    return () => { window.removeEventListener("keydown", onKey); window.clearTimeout(t); };
+  }, [isOpen, onClose]);
+  // A link out of the sheet replaces its history entry, so Back from there returns to the page (useBackCloses).
+  const goTo = (path: string) => { onClose(); navigate(path, { replace: isOverOverlay() }); };
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -71,7 +91,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
     if (!isValid || submitting) return;
     if (!user) {
       toast.error("Sign in to post a requirement", {
-        action: { label: "Sign in", onClick: () => { onClose(); navigate("/login"); } },
+        action: { label: "Sign in", onClick: () => goTo("/login") },
       });
       return;
     }
@@ -105,8 +125,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
     setSubmitting(false);
     toast.success("Sent for review", { description: "Cosora checks every requirement before sellers see it. This usually takes 3–5 minutes, and we'll notify you." });
     reset();
-    onClose();
-    navigate("/requirement/my-quotes");
+    goTo("/requirement/my-quotes");
   };
 
   return (
@@ -114,26 +133,45 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50"
+          className="fixed inset-x-0 top-0 z-[60] flex items-end sm:items-center justify-center bg-black/50"
+          // Above the keyboard: the backdrop ends where the keyboard starts, and the sheet fits what's visible.
+          style={{ bottom: viewport?.keyboard ?? 0 }}
           onClick={onClose}
+          data-clarity-mask="True"
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
             initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
             onClick={e => e.stopPropagation()}
+            style={viewport ? { maxHeight: Math.round(viewport.height * 0.9) } : undefined}
             className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-brand-buyer fill-brand-buyer" />
-                <h2 className="text-base font-bold text-gray-900">Quick Quote</h2>
+                <h2 id={titleId} className="text-base font-bold text-gray-900">Quick Quote</h2>
               </div>
-              <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+              <button onClick={onClose} aria-label="Close" className="p-1 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
 
-            {/* Body */}
+            {/* Signed out: sign in first, so nothing typed is lost on the way. */}
+            {!authLoading && !user ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-sm font-semibold text-gray-900">Sign in to post a requirement</p>
+                <p className="mt-1 text-xs text-gray-500">Your requirement is saved to your Cosora account, and sellers reply there.</p>
+                <button
+                  onClick={() => goTo("/login")}
+                  className="mt-4 w-full rounded-xl bg-brand-buyer py-3 text-sm font-bold text-white hover:bg-brand-buyer/90"
+                >
+                  Sign in
+                </button>
+              </div>
+            ) : (
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
               {/* Product/Service Name */}
               <div>
@@ -141,11 +179,12 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                   Product / Service Name <span className="text-brand-buyer">*</span>
                 </label>
                 <input
+                  ref={firstFieldRef}
                   type="text"
                   placeholder="e.g., Cotton T-Shirt, Leather Wallet"
                   value={productName}
                   onChange={e => setProductName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors"
                 />
               </div>
 
@@ -159,7 +198,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                   placeholder="e.g., 500 pieces, 1000 units"
                   value={quantity}
                   onChange={e => setQuantity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors"
                 />
               </div>
 
@@ -223,7 +262,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                   placeholder="Any specific requirements? Colors, sizes, fabric..."
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors resize-none"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors resize-none"
                 />
               </div>
 
@@ -246,13 +285,14 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
               <p className="text-center text-xs text-gray-400">
                 Need more options?{" "}
                 <button
-                  onClick={() => { onClose(); navigate("/requirement/post-requirement"); }}
+                  onClick={() => goTo("/requirement/post-requirement")}
                   className="text-brand-buyer font-semibold hover:underline"
                 >
                   Create detailed Quote
                 </button>
               </p>
             </div>
+            )}
           </motion.div>
         </motion.div>
       )}

@@ -2,6 +2,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Camera, Mail } from "lucide-react";
 import heroImage from "@/assets/cosora-studio-hero.jpg";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import BuyerShell from "@/components/buyer/BuyerShell";
 
 // Cosora Studio (2026-11-05; ToDo "Remove invented claims and real brand names still on live pages").
 // Until then this page listed invented studios with real brands as clients ("Featured in Vogue India"),
@@ -39,10 +41,13 @@ const ACTIONS = [
 ];
 
 const CosoraStudio = () => {
+  // A shared page keeps the side the person came from (2026-11-19, review M-14: buyers got the seller dashboard frame).
+  const { role } = useUserRole();
+  const Layout = role === "seller" ? DashboardLayout : BuyerShell;
   const reduced = useReducedMotion();
 
   return (
-    <DashboardLayout>
+    <Layout>
       <motion.div
         variants={reduced ? {} : page}
         initial="hidden"
@@ -88,7 +93,7 @@ const CosoraStudio = () => {
           ))}
         </motion.section>
       </motion.div>
-    </DashboardLayout>
+    </Layout>
   );
 };
 

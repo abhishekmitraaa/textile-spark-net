@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260906120000_embedding_foundation_extensions_and_queue_sql", "label": "20260906120000_embedding_foundation_extensions_and_queue.sql", "file_type": "code", "source_file": "supabase/migrations/20260906120000_embedding_foundation_extensions_and_queue.sql", "source_location": null}], "edges": []}

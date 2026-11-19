@@ -29,6 +29,9 @@ import RfqThumb from "@/components/RfqThumb";
 import BuyerStateNudge from "@/components/buyer/BuyerStateNudge";
 import { stateCodeFor } from "@/data/indiaStates";
 import { useProfileFull } from "@/lib/queries/profile";
+import { useBackCloses } from "@/hooks/useBackCloses";
+import { useDismissed } from "@/lib/dismissals";
+import { useStepParam } from "@/hooks/useStepParam";
 
 // "received" is the open-marketplace comparison screen (many competing
 // vendors). "direct" is a product-page request addressed to one vendor, where
@@ -82,8 +85,8 @@ const MyQuotes = () => {
   const queryClient = useQueryClient();
   const { data: buyerData } = useBuyerQuotes(user?.id);
   const { data: profile } = useProfileFull(user?.id);
-  // For this visit only, like the profile's nudges.
-  const [stateNudgeDismissed, setStateNudgeDismissed] = useState(false);
+  // Closed stays closed for 30 days on this device, shared with Profile (review M-54).
+  const [stateNudgeDismissed, dismissStateNudge] = useDismissed("state-nudge", user?.id);
   const rfqs = buyerData?.rfqs ?? [];
   // Requirements still with Cosora's review, or not approved (2026-10-17). An approved one is in `rfqs`.
   const { data: submissions = [] } = useMyRfqSubmissions(user?.id);
@@ -96,8 +99,14 @@ const MyQuotes = () => {
   }, [submissions, queryClient]);
   const quotesMap = buyerData?.quotesMap ?? {};
 
-  const [view, setView] = useState<View>("list");
-  const [rfqId, setRfqId] = useState<string | null>(null);
+  // The open requirement is a history entry (?view=received&rfq=…), so the phone's Back returns to the list (review M-43).
+  const views = useStepParam<View>("view", ["list", "received", "direct"], "list");
+  const rfqParam = views.step === "list" ? null : new URLSearchParams(window.location.search).get("rfq"); // re-read on each render: views re-renders on every address change
+  // A requirement that isn't (or isn't yet) one of the buyer's open ones (a link to one in review, a deleted one) shows
+  // the list, never an empty page (code review 2026-11-19). While the quotes load, the list's own loading shows.
+  const known = Boolean(rfqParam && buyerData?.rfqs.some((r) => r.id === rfqParam));
+  const view: View = known ? views.step : "list";
+  const rfqId = known ? rfqParam : null;
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -109,6 +118,10 @@ const MyQuotes = () => {
 
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  // Back closes the quote, chat and compare modals (review M-29).
+  useBackCloses(detailsId !== null, () => setDetailsId(null));
+  useBackCloses(chatId !== null, () => setChatId(null));
+  useBackCloses(showCompare, () => setShowCompare(false));
   const [banner, setBanner] = useState<{ type: "accepted" | "rejected" } | null>(null);
 
   const rfq = rfqs.find((r) => r.id === rfqId);
@@ -134,7 +147,7 @@ const MyQuotes = () => {
   // single-vendor thread; everything else keeps the comparison screen.
   const openReceived = (id: string) => {
     const target = rfqs.find((r) => r.id === id);
-    setRfqId(id); setView(target?.targetVendorId ? "direct" : "received");
+    views.go(target?.targetVendorId ? "direct" : "received", { rfq: id });
     setSearch(""); setStatus("all"); setSort("recommended");
     setCompareMode(false); setSelected([]); setBanner(null);
   };
@@ -224,7 +237,7 @@ const MyQuotes = () => {
               </div>
 
               {profile && !stateNudgeDismissed && !stateCodeFor(profile.state) && (
-                <BuyerStateNudge onDismiss={() => setStateNudgeDismissed(true)} className="mb-4" />
+                <BuyerStateNudge onDismiss={dismissStateNudge} className="mb-4" />
               )}
 
               {/* Stats */}
@@ -368,7 +381,7 @@ const MyQuotes = () => {
               <DirectRequestThread
                 rfq={rfq}
                 quote={directQuote}
-                onBack={() => setView("list")}
+                onBack={() => views.back("list", { rfq: null })}
                 onChat={() => navigate(`/chats/${rfq.targetVendorId}`)}
                 onCall={() => callVendor(rfq.targetVendorId as string, rfq.productName)}
                 onStatus={(s) => { if (directQuote) changeStatus(directQuote.id, s); }}
@@ -380,7 +393,7 @@ const MyQuotes = () => {
           {view === "received" && rfq && (
             <motion.div key="received" initial={reduced ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={reduced ? undefined : { opacity: 0, x: -16 }}>
               <div className="flex items-center gap-2 mb-3">
-                <button onClick={() => setView("list")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+                <button onClick={() => views.back("list", { rfq: null })} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
                 <div>
                   <h1 className="text-lg font-bold text-gray-900">Quotes Received</h1>
                   <p className="text-xs text-gray-500">Review and manage quotes from vendors</p>

@@ -12,25 +12,37 @@ import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, toE164 } from "@/lib/
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
 import { historyIndex, markAuthStart, takeAuthLanding } from "@/lib/authHistory";
+import { useAuth } from "@/contexts/AuthContext";
+import { currentState } from "@/hooks/useUrlState";
 
 type Role = "buyer" | "seller";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState<Role>("buyer");
   // The step is in the address (?step=2), one history entry each, so the device's back returns to the role step with
   // what was typed still there (buyer sign-up audit item 11a: back used to leave Register altogether).
   const [params, setParams] = useSearchParams();
+  // Buyer or Seller is in the address too (?as=seller), so Back from the details step or a reload keeps it (review
+  // M-55: it fell back to Buyer, and a seller signed up as a buyer without noticing).
+  const selectedRole: Role = params.get("as") === "seller" ? "seller" : "buyer";
+  // The entry's state (authStartIdx) is kept: a reload still knows where sign-up started (code review 2026-11-19).
+  const setSelectedRole = (role: Role) => {
+    const out = new URLSearchParams(window.location.search);
+    if (role === "seller") out.set("as", "seller"); else out.delete("as");
+    setParams(out, { replace: true, state: currentState() });
+  };
   const location = useLocation();
   const step: 1 | 2 = params.get("step") === "2" ? 2 : 1;
   // Where this sign-up started (Login's entry when it came from there): finishing goes back to it (lib/authHistory.ts).
   const startIdx = useRef<number | null>((location.state as { authStartIdx?: number } | null)?.authStartIdx ?? historyIndex());
   // A sign-up that started here and just finished went back to this entry: finish its landing (lib/authHistory.ts).
+  const [landing] = useState(() => takeAuthLanding());
   useEffect(() => {
-    const landing = takeAuthLanding();
     if (landing) navigate(landing, { replace: true });
-  }, [navigate]);
-  const toDetails = () => setParams({ step: "2" });
+  }, [landing, navigate]);
+  const toDetails = () => setParams(selectedRole === "seller" ? { step: "2", as: "seller" } : { step: "2" }, { state: currentState() });
+  // Signed in already (review M-56): the empty form made it look like a second account was needed.
+  const { session, profile, loading: authLoading } = useAuth();
   const toRole = () => {
     if (location.key !== "default") navigate(-1);
     else setParams({}, { replace: true });
@@ -103,6 +115,22 @@ const Register = () => {
   const buyerBenefits = ["Post requirements and compare quotes", "Chat with suppliers on Cosora", "Save and follow suppliers you like"];
   const sellerBenefits = ["List your products for buyers to find", "See buyers' requirements and send quotes", "Manage quotes and chats in one place"];
   const benefits = selectedRole === "buyer" ? buyerBenefits : sellerBenefits;
+
+  if (!landing && !authLoading && session) {
+    const next = !profile?.onboarded ? "/auth/role-selection" : profile.active_role === "seller" ? "/seller-home" : "/home/new-arrivals";
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="w-full max-w-sm text-center">
+          <div className="flex justify-center mb-6"><CosoraLogo height={26} /></div>
+          <h1 className="text-xl font-bold text-foreground">You're already signed in</h1>
+          <p className="mt-2 text-sm text-muted-foreground">This device is signed in to a Cosora account, so there's nothing to register.</p>
+          <Button className="mt-6 w-full" onClick={() => navigate(next, { replace: true })}>
+            {profile?.onboarded ? "Continue to Cosora" : "Finish setting up your account"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">

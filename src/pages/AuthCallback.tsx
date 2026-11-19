@@ -5,6 +5,7 @@ import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
 import { clearAuthStart } from "@/lib/authHistory";
+import { BUYER_LANDING, landingFor } from "@/lib/returnTo";
 
 // ─────────────────────────────────────────────────────────────
 // The landing page for BOTH redirect-based sign-ins:
@@ -61,7 +62,8 @@ export default function AuthCallback() {
       if (!profile.onboarded) {
         navigate("/auth/role-selection", { replace: true });
       } else {
-        navigate(profile.active_role === "seller" ? "/seller-home" : "/home/new-arrivals", { replace: true });
+        // A buyer goes back to the page they came from (review M-59); a seller to Seller Home.
+        navigate(profile.active_role === "seller" ? "/seller-home" : landingFor(BUYER_LANDING), { replace: true });
       }
     })();
     return () => { cancelled = true; };

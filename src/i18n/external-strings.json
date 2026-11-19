@@ -665,5 +665,9 @@
   "This product is already listed in your catalogue. Keep one listing per product.",
   "The listing shows a phone number, email address or outside link. Buyers reach you through Cosora.",
   "Buyers reported a problem with this listing, and Cosora is checking it."
+ ],
+ "buyer_terms_server_source": "Raised by admin.enforce_buyer_terms() (migration 20261119110000_buyer_terms_db_check.sql) when an account that hasn't accepted the buyer Terms posts a requirement, chats or reviews; shown through errorMessage().",
+ "buyer_terms_server": [
+  "Accept the Cosora Terms to continue"
  ]
 }

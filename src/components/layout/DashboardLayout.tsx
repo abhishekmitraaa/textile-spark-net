@@ -6,6 +6,7 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { RegistrationBanner } from "@/components/vendor/RegistrationBanner";
+import { DisplaySide } from "@/contexts/DisplaySideContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -39,6 +40,7 @@ export const DashboardLayout = ({ children, variant = "default", registrationBan
   }, []);
 
   return (
+    <DisplaySide side={routeSide(pathname) === "seller" ? "seller" : null}>
     <div className="vendor-shell min-h-screen bg-background">
       <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -63,5 +65,6 @@ export const DashboardLayout = ({ children, variant = "default", registrationBan
       {/* Mobile Bottom Navigation */}
       {!fullScreen && <MobileBottomNav />}
     </div>
+    </DisplaySide>
   );
 };

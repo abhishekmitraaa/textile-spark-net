@@ -14,6 +14,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useCurrencySetting } from "@/hooks/useCurrencySetting";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import { useOverlayState } from "@/hooks/useBackCloses";
 
 function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
@@ -143,7 +144,7 @@ export default function BuyerTopBar() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const t = useT();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useOverlayState(); // Back closes the drawer (review M-29)
   const { active: converting } = useDisplayCurrency();
 
   return (

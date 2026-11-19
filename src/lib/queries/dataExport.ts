@@ -303,6 +303,10 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
   const follows = await allPages((from, to) =>
     supabase.from("follows").select("vendor_id, created_at").eq("follower_id", userId)
       .order("created_at", { ascending: true }).order("vendor_id").range(from, to));
+  // Saved sellers (2026-11-19, review M-16), apart from follows.
+  const savedVendors = await allPages((from, to) =>
+    supabase.from("saved_vendors").select("vendor_id, created_at").eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("vendor_id").range(from, to));
 
   // A conversation counterpart is a vendor only if it has a vendor_profiles row,
   // which is exactly what brandNames() returned for them.
@@ -310,7 +314,8 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
   const callVendors = calls.map((c) => String(c.vendor_id));
   const quoteVendors = quotes.map((q) => String(q.vendor_id));
   const followedVendors = follows.map((f) => String(f.vendor_id));
-  const moreNames = await brandNames([...callVendors, ...quoteVendors, ...followedVendors]);
+  const savedVendorIds = savedVendors.map((f) => String(f.vendor_id));
+  const moreNames = await brandNames([...callVendors, ...quoteVendors, ...followedVendors, ...savedVendorIds]);
   const vendorList = (ids: string[]) =>
     [...new Set(ids)]
       .map((id) => ({ vendor_id: id, brand_name: names.get(id) || moreNames.get(id) || null }))
@@ -332,6 +337,10 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
   });
 
   const saved = {
+    sellers: savedVendors.map((v) => {
+      const id = String(v.vendor_id);
+      return { vendor_id: id, brand_name: moreNames.get(id) || null, link: moreNames.has(id) ? siteLink(`/vendor/${id}`) : null, saved_at: v.created_at };
+    }),
     all_saves: savedItems.map((s) => ({ ...product(String(s.product_id)), saved_at: s.created_at })),
     folders: savedFolders.map((f) => ({
       id: f.id,
@@ -366,6 +375,7 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     vendors_contacted: vendorsContacted.length,
     vendors_messaged: vendorsMessaged.length,
     saved_items: savedItems.length,
+    saved_sellers: savedVendors.length,
     saved_folders: savedFolders.length,
     saved_folder_items: folderItems.length,
     recently_viewed: recentlyViewed.length,

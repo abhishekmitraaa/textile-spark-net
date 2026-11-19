@@ -31,6 +31,7 @@ import { faqText, useFaqs } from "@/lib/queries/faqs";
 import { useLang } from "@/lib/i18n";
 import { PRIMARY_TYPES } from "@/data/vendorTypes";
 import { SUPPORT_INSTAGRAM } from "@/lib/supportContact";
+import { useOverlayState } from "@/hooks/useBackCloses";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 24 },
@@ -84,6 +85,8 @@ const menuLinks = [
 ];
 
 const VendorLanding = () => {
+  // Back closes the menu (review M-29).
+  const [landingMenuOpen, setLandingMenuOpen] = useOverlayState();
   // Seller Registration FAQs are admin-edited in Cosora-Admin (/faqs) and read
   // live, signed out included. They replaced a hardcoded list here (2026-09-23).
   const { data: faqs, isPending: faqsLoading } = useFaqs("seller_registration");
@@ -114,7 +117,7 @@ const VendorLanding = () => {
                 Login
               </Button>
             </Link>
-            <Sheet>
+            <Sheet open={landingMenuOpen} onOpenChange={setLandingMenuOpen}>
               <SheetTrigger asChild>
                 <button
                   type="button"

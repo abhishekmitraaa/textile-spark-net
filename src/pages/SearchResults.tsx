@@ -1,6 +1,6 @@
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import * as SliderPrimitive from "@radix-ui/react-slider";
@@ -9,7 +9,7 @@ import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useFollowing } from "@/lib/queries/follows";
 import { fetchCatalogueByIds, isInternationalSupplier } from "@/lib/queries/products";
-import { useBrowseCatalogue } from "@/lib/queries/feed";
+import { useBrowseCatalogue, type FeedSort } from "@/lib/queries/feed";
 import { useQuery } from "@tanstack/react-query";
 import { useProductSearch } from "@/lib/queries/search";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
@@ -42,6 +42,8 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useT } from "@/lib/i18n";
 import { useStepBack } from "@/hooks/useStepBack";
+import { currentState, useUrlState } from "@/hooks/useUrlState";
+import { afterOverlay, useBackCloses, useOverlayState } from "@/hooks/useBackCloses";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
 
 // Swatch colours for the Colour facet (names must match the facet options).
@@ -82,6 +84,28 @@ const SORTS = [
   { key: "rating", label: "Customer Rating" },
 ] as const;
 type SortKey = (typeof SORTS)[number]["key"];
+
+/** Browsing (nothing typed): the order feed_products gives for each sort (review M-15). */
+const BROWSE_SORT: Record<SortKey, FeedSort> = {
+  "new": "newest", "price-desc": "price_desc", "popularity": "trending", "discount": "discount",
+  "price-asc": "price_asc", "rating": "rating",
+};
+
+/** The facet picks from ?f=, or null when absent or not a { facet: string[] } object. */
+function parseSelections(raw: string | null): Record<string, string[]> | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+    const out: Record<string, string[]> = {};
+    for (const [k, vals] of Object.entries(v as Record<string, unknown>)) {
+      if (Array.isArray(vals) && vals.every((x) => typeof x === "string")) out[k] = (vals as string[]).slice(0, 50);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
 
 // ── Data ──
 interface RProduct {
@@ -248,7 +272,7 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
   const rail = useDragScroll<HTMLDivElement>();
   // The account's real follows (2026-10-19: this heart saved to the browser only, so it never reached Following or
   // the seller's follower count). Signed out, follow() asks the visitor to sign in.
-  const { brands: followed, follow, unfollow } = useFollowing();
+  const { allBrands: followed, follow, unfollow } = useFollowing();
   const following = followed.some((b) => b.id === brand.id);
   const [busy, setBusy] = useState(false);
   const toggleFollow = async () => {
@@ -514,11 +538,12 @@ function FilterSheet({
       {open && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+            className="fixed inset-0 z-[60] bg-black/50" onClick={onClose} />
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "tween", duration: 0.3, ease: E }}
-            className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl flex flex-col max-h-[85vh] sm:max-w-lg sm:mx-auto"
+            className="fixed inset-x-0 bottom-0 z-[60] bg-white rounded-t-2xl flex flex-col max-h-[85vh] sm:max-w-lg sm:mx-auto"
+            /* Above the phone's bottom bar (z-50, later in the page), which covered "Show N results" (found 2026-11-19). */
           >
             {/* Header */}
             <div className="shrink-0 px-5 pt-4 pb-3 border-b border-gray-100">
@@ -566,14 +591,14 @@ const SearchResults = () => {
   const goBack = useStepBack("/search");
   const reduced = useReducedMotion();
   const t = useT();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const query = params.get("q") || params.get("category") || "";
 
-  const [tab, setTab] = useState<Tab>("product");
+  // Tab, sort and the facet picks live in the address, so Back to the results keeps them (2026-11-19, review M-30).
+  const [tab, setTab] = useUrlState<Tab>("tab", "product", ["product", "brand"]);
   const [menu, setMenu] = useState<Menu>(null);
-  const [sort, setSort] = useState<SortKey>("new");
+  const [sort, setSort] = useUrlState<SortKey>("sort", "new", SORTS.map((s) => s.key));
   const [cols, setCols] = useState<2 | 3>(2);
-  const [pageSaved, setPageSaved] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
@@ -595,10 +620,45 @@ const SearchResults = () => {
   // unconditionally (rules of hooks); `enabled` decides which one runs.
   const hasQuery = query.trim().length > 0;
   const { data: searchData, isLoading: searchLoading } = useProductSearch(query);
-  const [selections, setSelections] = useState<Record<string, string[]>>(() => defaultSelections(query));
-  // Browsing (nothing typed), the database applies Supplier location: sellers outside India are few, and
-  // filtering loaded pages would read up to 960 listings to find them. With a query the facet filters the 200.
-  const browse = useBrowseCatalogue(!hasQuery, supplierFromLabel(selections.supplier));
+  // The facet picks, in the address as ?f=<json> once the buyer changes them; until then the query's defaults (a
+  // gender pre-scope). A new search is a new address, so it starts from its own defaults.
+  const rawSelections = params.get("f");
+  const fromUrl = useMemo<Record<string, string[]>>(
+    () => parseSelections(rawSelections) ?? defaultSelections(query),
+    [rawSelections, query],
+  );
+  // The screen follows a pick at once; the address is written 300 ms after the last change, so dragging the price
+  // slider doesn't replace the history entry dozens of times a second (browsers throttle and refuse that).
+  const [draft, setDraft] = useState<Record<string, string[]> | null>(null);
+  const selections = draft ?? fromUrl;
+  const selectionsRef = useRef(selections);
+  selectionsRef.current = selections;
+  const writeTimer = useRef<number | undefined>(undefined);
+  useEffect(() => { setDraft(null); }, [rawSelections, query]);
+  // A new search drops a write still waiting for the last one's picks.
+  useEffect(() => () => window.clearTimeout(writeTimer.current), [query]);
+  useEffect(() => () => window.clearTimeout(writeTimer.current), []);
+  const setSelections = useCallback(
+    (next: Record<string, string[]> | ((prev: Record<string, string[]>) => Record<string, string[]>)) => {
+      const value = typeof next === "function" ? next(selectionsRef.current) : next;
+      selectionsRef.current = value;
+      setDraft(value);
+      window.clearTimeout(writeTimer.current);
+      writeTimer.current = window.setTimeout(() => {
+        // The filter sheet holds its own history entry while open: write on the page's entry once it's gone.
+        afterOverlay(() => {
+          const out = new URLSearchParams(window.location.search);
+          out.set("f", JSON.stringify(value));
+          setParams(out, { replace: true, state: currentState() });
+        });
+      }, 300);
+    },
+    [setParams],
+  );
+  // Browsing (nothing typed), the database applies Supplier location and the order (2026-11-19, review M-15: price,
+  // rating, discount and popular sorted only the 96 listings loaded so far). With a query the 200 results are the
+  // whole answer, so they are sorted and filtered here.
+  const browse = useBrowseCatalogue(!hasQuery, supplierFromLabel(selections.supplier), BROWSE_SORT[sort]);
   const browseData = hasQuery ? undefined : browse.rows;
   const browseLoading = browse.isLoading;
   const browseMoreRef = useRef<HTMLDivElement | null>(null);
@@ -646,7 +706,9 @@ const SearchResults = () => {
     };
   }, [query, priceBounds, vocabulary]);
 
-  const [filterOpen, setFilterOpen] = useState(false);
+  // Back closes the filter sheet and the gender / sort menus (review M-29).
+  const [filterOpen, setFilterOpen] = useOverlayState();
+  useBackCloses(menu !== null, () => setMenu(null));
 
   // The Category facet is the one facet whose options can't be written ahead of
   // time — they're the taxonomy rows that actually have matching products. Both
@@ -681,8 +743,6 @@ const SearchResults = () => {
         : f),
   }), [baseSchema, categoryOptions]);
 
-  // Re-derive default selections (e.g. gender pre-scope) when the query changes.
-  useEffect(() => { setSelections(defaultSelections(query)); }, [query]);
 
   // Gender is surfaced as its own bar dropdown (GENDER | SORT | FILTER), so it's
   // pulled out of the filter sheet — the sheet + its active-count only cover the
@@ -758,8 +818,9 @@ const SearchResults = () => {
     let list = source.filter((p) => schema.facets.every((f) => matchFacet(p, f, selections[f.id])));
     // "What's new" keeps the incoming order. For a search that order IS the
     // server's fused relevance ranking, so re-sorting here would throw away the
-    // result of match_products.
-    if (sort === "price-asc") list = [...list].sort((a, b) => a.priceValue - b.priceValue);
+    // result of match_products. Browsing, the database already sorted (review M-15).
+    if (!hasQuery) { /* feed_products' order */ }
+    else if (sort === "price-asc") list = [...list].sort((a, b) => a.priceValue - b.priceValue);
     else if (sort === "price-desc") list = [...list].sort((a, b) => b.priceValue - a.priceValue);
     else if (sort === "popularity") list = [...list].sort((a, b) => b.popularity - a.popularity);
     else if (sort === "discount") list = [...list].sort((a, b) => b.discount - a.discount);
@@ -780,6 +841,13 @@ const SearchResults = () => {
     }
     return list;
   }, [catalogue, schema, selections, sort, categoryBrowse, tiersOn, viewerState, featuredSlot, featuredRows, hasQuery]);
+
+  // Browsing with a facet that only the browser can apply: keep reading pages until there is a screenful or the feed
+  // ends (review M-15: "No products match" could stay for good while page 2 was never read).
+  const browseFilling = !hasQuery && products.length < 24 && browse.hasNextPage;
+  useEffect(() => {
+    if (browseFilling && !browse.isFetchingNextPage) nextBrowse();
+  }, [browseFilling, browse.isFetchingNextPage, nextBrowse, products.length]);
 
   // What was featured to this visitor, once per product per mount.
   const loggedFeatured = useRef<Set<string>>(new Set());
@@ -939,9 +1007,6 @@ const SearchResults = () => {
               <span className={cn("flex-1 truncate text-sm", query ? "text-gray-900" : "text-gray-400")}>{query || "Search for items or brands"}</span>
               {query && <span onClick={(e) => { e.stopPropagation(); navigate("/search"); }} aria-label="Clear"><X className="w-4 h-4 text-gray-400" /></span>}
             </button>
-            <button onClick={() => setPageSaved((s) => !s)} aria-label="Save search" className="p-1 shrink-0">
-              {pageSaved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-700" />}
-            </button>
           </div>
 
           {/* Tabs */}
@@ -1037,7 +1102,7 @@ const SearchResults = () => {
             <div className="space-y-5">
               <div className="text-center py-2">
                 <p className="text-sm text-gray-500">{t("No brands match")} {query && <span className="font-semibold text-gray-800">"{query}"</span>} {t("yet")}.</p>
-                <p className="text-xs text-gray-400 mt-1">{t("Post a requirement and verified manufacturers will reach out.")}</p>
+                <p className="text-xs text-gray-400 mt-1">{t("Post a requirement and sellers on Cosora can send you quotes.")}</p>
               </div>
               <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
             </div>
@@ -1134,6 +1199,8 @@ const SearchResults = () => {
                     </div>
                   ))}
                 </div>
+              ) : products.length === 0 && browseFilling ? (
+                <p className="py-16 text-center text-sm text-gray-500" role="status">Looking through more listings…</p>
               ) : products.length === 0 ? (
                 <div className="py-16 text-center">
                   <p className="text-sm font-semibold text-gray-700">
@@ -1160,7 +1227,7 @@ const SearchResults = () => {
                     className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>
                     {feedNodes}
                   </motion.div>
-                  <div ref={browseMoreRef} className="py-6 text-center text-xs text-gray-400">
+                  <div ref={browseMoreRef} className="py-6 text-center text-xs text-gray-400" aria-live="polite">
                     {products.length}{!hasQuery && browse.hasNextPage ? "+" : ""} {products.length === 1 ? "result" : "results"}
                     {hasQuery && !semanticActive && " · keyword match only"}
                     {!hasQuery && browse.isFetchingNextPage && " · loading more"}

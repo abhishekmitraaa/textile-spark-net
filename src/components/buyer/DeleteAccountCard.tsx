@@ -20,6 +20,7 @@ import {
   type DeletionChannel,
   type DeletionCopy,
 } from "@/lib/queries/accountDeletion";
+import { useBackCloses } from "@/hooks/useBackCloses";
 
 // The "Delete my account" block on /profile/help. It replaces a button that only
 // toasted "Delete account request submitted" and did nothing (2026-09-23).
@@ -46,6 +47,8 @@ export function DeleteAccountCard() {
   const [sentChannel, setSentChannel] = useState<DeletionChannel | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  // Back closes the dialog, as its Close does (not while a request is on its way) (review M-29).
+  useBackCloses(dialogOpen, () => { if (!busy) setDialogOpen(false); });
   const [problem, setProblem] = useState<DeletionCopy | null>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["account_deletion", user?.id] });

@@ -19,13 +19,17 @@ import { useLang, isLang, LANG_OPTIONS } from "@/lib/i18n";
 import { chooseLang } from "@/lib/languagePreference";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { currencyCodeOf, formatRateDate } from "@/lib/currency";
+import { useStepBack } from "@/hooks/useStepBack";
 
 function SettingsHeader({ title }: { title: string }) {
   const navigate = useNavigate();
+  // Back and a finished save go back to where the page was opened from, else /profile (review M-48: they pushed
+  // /profile, so Back from there came back here, and round again).
+  const goBack = useStepBack("/profile");
   return (
     <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
       <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate("/profile")} aria-label="Back" className="-ml-1 p-1">
+        <button onClick={() => goBack()} aria-label="Back" className="-ml-1 p-1">
           <ArrowLeft className="w-5 h-5 text-gray-700" />
         </button>
         <h1 className="text-base font-bold text-gray-900">{title}</h1>

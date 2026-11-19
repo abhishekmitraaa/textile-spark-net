@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRecentSearches } from "@/lib/recentSearches";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
@@ -111,7 +112,6 @@ const Search = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [query, setQuery] = useState("");
-  const [recentKeywords, setRecentKeywords] = useState<string[]>([]);
   // Category chip filtering the feed below. Null = everything.
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
@@ -123,6 +123,10 @@ const Search = () => {
   // loaded, so nobody signed in is ever called Guest; an account with no name gets no name.
   const { session, profile: authProfile, loading: authLoading } = useAuth();
   const greetName = authLoading ? null : session ? authProfile?.full_name?.trim().split(/\s+/)[0] || "" : "Guest";
+
+  // Recent searches stay on this device, per account (review M-17).
+  const recent = useRecentSearches(session?.user?.id ?? null);
+  const recentKeywords = recent.terms;
 
   // Trending searches, measured from Cosora's own searches (see the DATA note above).
   const { trends, loading: trendsLoading } = useTrendingSearches();
@@ -165,11 +169,11 @@ const Search = () => {
   const runSearch = (term: string) => {
     const trimmed = term.trim();
     if (!trimmed) return;
-    setRecentKeywords((prev) => [trimmed, ...prev.filter((k) => k !== trimmed)].slice(0, 8));
+    recent.add(trimmed);
     navigate(`/search/results?q=${encodeURIComponent(trimmed)}`);
   };
 
-  const removeRecent = (term: string) => setRecentKeywords((prev) => prev.filter((k) => k !== term));
+  const removeRecent = recent.remove;
   const closeDropdown = () => { setQuery(""); inputRef.current?.blur(); };
 
   // ── Voice search (browser Web Speech API — no plugin/key) ──
@@ -480,7 +484,7 @@ const Search = () => {
             <motion.div variants={section} className="pt-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-bold text-gray-900">Recent keywords</p>
-                <button onClick={() => setRecentKeywords([])} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Delete all</button>
+                <button onClick={recent.clear} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Delete all</button>
               </div>
               <div className="flex flex-wrap gap-2">
                 <AnimatePresence mode="popLayout">

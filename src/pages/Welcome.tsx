@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import CosoraLogo from "@/components/CosoraLogo";
+import { BUYER_LANDING, landingFor } from "@/lib/returnTo";
 
 const Welcome = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate("/home/new-arrivals", { replace: true }), 2000);
+    // The end of buyer sign-up: back to the page it started from, if any (review M-59).
+    const timer = setTimeout(() => navigate(landingFor(BUYER_LANDING), { replace: true }), 2000);
     return () => clearTimeout(timer);
   }, [navigate]);
 

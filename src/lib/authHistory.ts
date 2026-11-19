@@ -1,4 +1,5 @@
 import type { NavigateFunction } from "react-router-dom";
+import { landingFor } from "@/lib/returnTo";
 
 // ─────────────────────────────────────────────────────────────
 // Sign-in and sign-up leave no trail in the back button (buyer sign-up audit item 8).
@@ -33,6 +34,18 @@ export function historyIndex(): number | null {
 export function markAuthStart(idx: number | null): void {
   if (idx === null) return;
   try { sessionStorage.setItem(KEY, JSON.stringify({ idx, at: Date.now() } satisfies Mark)); } catch { /* private mode */ }
+}
+
+/** True while a sign-in that started on Login's phone form is still under way in this tab (the mark isn't used up). */
+export function hasAuthStart(): boolean {
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    if (!raw) return false;
+    const m = JSON.parse(raw) as Partial<Mark>;
+    return typeof m.idx === "number" && typeof m.at === "number" && Date.now() - m.at <= MAX_AGE_MS;
+  } catch {
+    return false;
+  }
 }
 
 /** Forgets a started flow (a sign-in that didn't go through these pages, such as Google). */
@@ -75,7 +88,9 @@ export function takeAuthLanding(): string | null {
  * Ends sign-in or sign-up: goes back to the entry the flow started on and replaces it with `dest`. Without a mark (or
  * when there is nothing to go back over), a plain replace.
  */
-export async function finishAuthFlow(navigate: NavigateFunction, dest: string): Promise<void> {
+export async function finishAuthFlow(navigate: NavigateFunction, landing: string): Promise<void> {
+  // A buyer goes back to the page a prompt or the sign-up gate took them from (review M-59, lib/returnTo.ts).
+  const dest = landingFor(landing);
   const mark = takeMark();
   const now = currentIdx();
   if (mark && now !== null && mark.idx < now) {

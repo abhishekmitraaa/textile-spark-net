@@ -1391,16 +1391,19 @@ export type Database = {
         Row: {
           created_at: string
           follower_id: string
+          hidden_at: string | null
           vendor_id: string
         }
         Insert: {
           created_at?: string
           follower_id: string
+          hidden_at?: string | null
           vendor_id: string
         }
         Update: {
           created_at?: string
           follower_id?: string
+          hidden_at?: string | null
           vendor_id?: string
         }
         Relationships: [
@@ -2750,6 +2753,39 @@ export type Database = {
             columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "product_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_vendors: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          vendor_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          vendor_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_vendors_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_vendors_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6531,6 +6567,23 @@ export type Database = {
           rfq_id: string
           status: Database["public"]["Enums"]["rfq_status"]
           title: string
+        }[]
+      }
+      my_followed_brands: {
+        Args: never
+        Returns: {
+          ad_verified_until: string | null
+          brand_name: string | null
+          city: string | null
+          followed_at: string
+          followers_count: number
+          hidden: boolean
+          is_verified: boolean
+          live_count: number
+          logo_url: string | null
+          plan_expires_at: string | null
+          plan_id: string | null
+          vendor_id: string
         }[]
       }
       my_feature_flags: {

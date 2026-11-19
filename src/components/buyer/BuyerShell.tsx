@@ -32,7 +32,12 @@ interface BuyerShellProps {
  * BuyerTopBar's drawer covers secondary navigation instead, so content
  * gets the full viewport width up to its own max-w containers.
  */
-export default function BuyerShell({ children }: BuyerShellProps) {
+/**
+ * What every buyer page needs whatever its own frame: the side the address decides and the sign-up gate. BuyerShell is
+ * this plus the top bar and bottom bar; a buyer page with its own frame (Trends, Following › View All, Search, a seller's
+ * store, the reel, chats, the profile pages) wraps in this (2026-11-19, review M-12, M-13: they skipped both).
+ */
+export function BuyerFrame({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const { role, setRole, vendorRegistered } = useUserRole();
 
@@ -43,8 +48,12 @@ export default function BuyerShell({ children }: BuyerShellProps) {
     if (routeSide(pathname) === "buyer" && role === "seller" && vendorRegistered) setRole("buyer");
   }, [pathname, role, vendorRegistered, setRole]);
 
+  return <BuyerSignupGate>{children}</BuyerSignupGate>;
+}
+
+export default function BuyerShell({ children }: BuyerShellProps) {
   return (
-    <BuyerSignupGate>
+    <BuyerFrame>
       <div className="min-h-screen bg-white">
         <BuyerTopBar />
         <main className="pb-20 lg:pb-10">
@@ -53,6 +62,6 @@ export default function BuyerShell({ children }: BuyerShellProps) {
         <MobileBottomNav />
         <ToTopButton />
       </div>
-    </BuyerSignupGate>
+    </BuyerFrame>
   );
 }

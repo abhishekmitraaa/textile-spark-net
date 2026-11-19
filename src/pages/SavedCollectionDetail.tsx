@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import BuyerShell from "@/components/buyer/BuyerShell";
+import { SavedSyncGate } from "@/pages/SavedCollections";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -144,7 +145,7 @@ function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
           <Phone className="w-3.5 h-3.5" /> CALL NOW
         </button>
         <button
-          onClick={() => { removeFromFolder(folderId, p.id); toast("Removed from collection"); }}
+          onClick={() => void removeFromFolder(folderId, p.id).then((ok) => { if (ok) toast("Removed from collection"); })}
           aria-label="Remove"
           className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-brand-buyer hover:border-brand-buyer/40 transition-colors"
         >
@@ -189,17 +190,26 @@ const SavedCollectionDetail = () => {
 
   const deleteSelected = () => {
     if (selected.size === 0) { toast("Select items to remove"); return; }
-    selected.forEach((id) => removeFromFolder(collectionId, id));
-    toast(`Removed ${selected.size} item${selected.size > 1 ? "s" : ""}`);
+    // Each removal waits for the database and is put back with a message when refused (review M-19).
+    void Promise.all([...selected].map((id) => removeFromFolder(collectionId, id))).then((done) => {
+      const n = done.filter(Boolean).length;
+      if (n) toast(`Removed ${n} item${n > 1 ? "s" : ""}`);
+    });
     setSelected(new Set());
   };
 
   if (!folder) {
+    // While the saves are being read (or the read failed) the folder isn't known yet: SavedSyncGate says so, and
+    // "no longer exists" is only for a folder the loaded saves don't have (review M-20).
     return (
       <BuyerShell>
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <p className="text-sm text-gray-500">This collection no longer exists.</p>
-          <button onClick={() => navigate("/saved")} className="mt-4 text-sm font-semibold text-brand-buyer">Back to My Saves</button>
+        <div className="max-w-2xl mx-auto px-4">
+          <SavedSyncGate>
+            <div className="py-16 text-center">
+              <p className="text-sm text-gray-500">This collection no longer exists.</p>
+              <button onClick={() => navigate("/saved")} className="mt-4 text-sm font-semibold text-brand-buyer">Back to My Saves</button>
+            </div>
+          </SavedSyncGate>
         </div>
       </BuyerShell>
     );

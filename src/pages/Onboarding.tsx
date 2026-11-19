@@ -49,6 +49,7 @@ import { stateByCode, stateCodeFor } from "@/data/indiaStates";
 import { RegistrationPending } from "@/components/vendor/RegistrationPending";
 import { pictureProblem } from "@/lib/queries/premisesPhotos";
 import { useQueryClient } from "@tanstack/react-query";
+import { finishAuthFlow, hasAuthStart } from "@/lib/authHistory";
 
 // The help button reaches Cosora Support's number (Mitra, 2026-11-13: +91 88155 78226); it used to open
 // wa.me/918821826465, which isn't Cosora's support line.
@@ -172,7 +173,7 @@ function KycDocumentUpload({
 export default function Onboarding() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, chooseRole, profile } = useAuth();
   const { setRole, setVendorRegistered } = useUserRole();
   // Set only from the history entry (the effect below); move with goToStep() / goPrev().
   const [currentStep, setCurrentStep] = useState(1);
@@ -322,6 +323,22 @@ export default function Onboarding() {
   const overseasOn = useFeatureFlag("overseas_seller_registration") === true;
   const { data: registration } = useSellerRegistration(user?.id);
   const rejected = registration?.status === "rejected";
+  // Picked Seller by mistake (Mitra, 2026-11-19, review M-60: "Allow switch back"): until a registration is submitted,
+  // the account can become a buyer again. Onboarded buyers go Home; a new account goes on with buyer sign-up.
+  const canBeBuyer = Boolean(user) && registration?.status === "none";
+  const [becomingBuyer, setBecomingBuyer] = useState(false);
+  const becomeBuyer = async () => {
+    if (becomingBuyer) return;
+    setBecomingBuyer(true);
+    try {
+      await chooseRole("buyer");
+      setRole("buyer");
+      navigate(profile?.onboarded ? "/home/new-arrivals" : "/auth/sub-role", { replace: true });
+    } catch (e) {
+      toast.error("Couldn't switch to buyer", { description: errorMessage(e) });
+      setBecomingBuyer(false);
+    }
+  };
   const { data: myStore } = useMyVendorProfile(rejected ? user?.id : undefined);
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
   const businessCameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -810,6 +827,9 @@ export default function Onboarding() {
   };
   // The welcome screen's tap: Seller Home takes the guard entry's place (once the jump back above has landed there).
   const goToSellerHome = () => {
+    // A new account came here from sign-up: go back over the sign-in pages too, so Back from Seller Home leaves for the
+    // page before signing in instead of walking through Login and the sign-up steps (review M-57).
+    if (hasAuthStart()) { void finishAuthFlow(navigate, "/seller-home"); return; }
     if (entry?.onboardingVisit === visit.current && entry?.guard) navigate("/seller-home", { replace: true });
     else homeOnArrival.current = true;
   };
@@ -1654,6 +1674,19 @@ export default function Onboarding() {
             {/* STEP 1 */}
             {currentStep === 1 && (
               <div className="space-y-6">
+                {canBeBuyer && (
+                  <p className="rounded-2xl border border-brand-border bg-[#f8f9fb] px-4 py-3 text-sm text-brand-ink">
+                    Here to buy, not to sell?{" "}
+                    <button
+                      type="button"
+                      onClick={() => void becomeBuyer()}
+                      disabled={becomingBuyer}
+                      className="font-semibold text-brand-vendor hover:underline disabled:opacity-60"
+                    >
+                      {becomingBuyer ? "Switching…" : "I'm a buyer, not a seller"}
+                    </button>
+                  </p>
+                )}
                 {rejected && (
                   <div role="alert" className="flex items-start gap-2 rounded-2xl border border-brand-buyer/40 bg-brand-buyer/5 p-4">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-buyer" />
