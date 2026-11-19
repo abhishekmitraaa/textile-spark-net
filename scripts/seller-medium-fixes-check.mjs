@@ -76,6 +76,9 @@ check("SH-044: www. and m. subdomains count", n("facebook", "https://m.facebook.
 check("SH-044: a social profile in the Website box is refused", n("other", "https://instagram.com/mybiz") === null);
 check("SH-044: a website in the Website box", n("other", "mybiz.in") === "https://mybiz.in/");
 check("SH-044: javascript: and http-auth are refused", n("other", "javascript:alert(1)") === null && n("other", "https://a:b@mybiz.in") === null);
+check("2026-11-20: a messaging service is never a website", n("other", "https://wa.me/919800000000") === null
+  && n("other", "api.whatsapp.com/send?phone=91") === null && n("other", "t.me/someone") === null && n("other", "https://m.me/x") === null);
+check("2026-11-20: a site whose name only contains one still is", n("other", "https://swa.me.in/") !== null);
 check("SH-044: look-alike host refused", n("facebook", "https://facebook.com.evil.in/x") === null && n("facebook", "https://notfacebook.com/x") === null);
 const shown = social.socialLinksForDisplay({ facebook: ["https://instagram.com/wrong", "facebook.com/right"], instagram: ["a", "b", "c", "d"], nonsense: ["x"] });
 check("SH-044: the store shows only valid links, at most 3 per platform",

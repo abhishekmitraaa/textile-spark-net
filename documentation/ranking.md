@@ -57,7 +57,7 @@ function, so `grep` finds both.
 | Spotlight | everyone | spotlight rails | `spotlight_listings` | VIP sellers' best listing each, rotated daily |
 | Featured candidates | Cosora-Admin | featured slots | `admin.featured_candidates` | plan's featured tier, then each seller's best listing |
 | Sponsored results | everyone | Search page sponsored row | `search_ads` → `admin.search_ads_ranked` | meaning match first, then category match, bumped, newest |
-| Videos | everyone | Video Closeups | client query; `match_videos` for "more like this" | most viewed; closeness of meaning |
+| Videos | everyone | Video Closeups | `video_closeups_feed`; `match_videos` for "more like this" | tagged listing's recent demand with the video's own age; closeness of meaning |
 | Trending searches | everyone | `/search` | `trending_searches` | distinct visitors, then searches |
 | Sellers in lists | buyers, visitors | Recommended Premium Brands, brand suggestions on Following, sellers in search suggestions | `top_vendors`, `new_brand_suggestions`, `search_suggestions` | **paid plan**, then **Standing**, then rating / recency / followers |
 | A buyer's quotes | the buyer | My Quotes › a requirement | `quote_order_for_rfq` | **Standing** only (Recommended, the default sort) |
@@ -144,9 +144,11 @@ B ranks above A on trending, although A had more events.
 - at most 100 signed-out viewers per listing per day.
 
 Signed-in viewers are keyed `u:<account>`. Signed-out viewers are keyed `b:<browser id>`, an id the browser makes up,
-which is why they weigh a quarter and are capped. `product_view_daily` is only this day-by-day dedupe ledger: days
-before yesterday are deleted as calls come in. A counted signed-in view is also written to
-`admin.seller_viewer_daily` (seller, viewer, day), which keeps 90 days for Standing (section 5.3).
+which is why they weigh a quarter and are capped. `product_view_daily` is only this day-by-day dedupe ledger. A
+counted view is queued (`admin.product_view_queue`, 2026-11-20) and the job `product-views-fold` adds it every minute:
+to `views_count`, to recent demand (the queued weights summed per listing, at the latest view's time) and, for a
+signed-in viewer, to `admin.seller_viewer_daily` (seller, viewer, day), which keeps 90 days for Standing (section 5.3).
+The job also deletes ledger days before yesterday.
 
 ### 3.3 Meaning: embeddings and similarity
 
@@ -317,8 +319,21 @@ Ads never mix into organic results; they are labelled "Sponsored" in their own r
 
 ### 4.7 Video Closeups
 
-The reel is a client query on `product_videos`: approved videos, the **most viewed first** (`views_count`), limited to
-30 (paging is a ToDo). "More like this" uses `match_videos`, by closeness of meaning with views breaking ties.
+The reel's order is `video_closeups_feed(p_limit)` (2026-11-20, review M-22; 30 by default, 60 at most): approved
+videos by one score on the recent-demand scale (section 3.2):
+
+`score = demand_log_add(tagged listing's log2_score, demand_log_of(10, video created_at))`
+
+- the listing the video is tagged to, when it is live, brings its recent demand;
+- the video's own posting counts as one event of weight 10 (an enquiry's) at the time it went up, so a new video starts
+  where a listing with an enquiry today stands, and fades by half every 7 days;
+- ties: newer video first, then id.
+
+It returns ids only; the page reads the rows under `product_videos`' read rules. The browser then puts videos in the
+buyer's interest categories first (stored interests and this session's saves) and avoids two from one seller in a row;
+otherwise it keeps this order. The formula is written inline (the helpers carry a `SET` clause), and the migration's
+self-check holds it equal to the helpers. Before: the 30 most viewed ever, re-ranked on `product_videos.rating`,
+which nothing writes. "More like this" uses `match_videos`, by closeness of meaning with views breaking ties.
 
 ### 4.8 Trending searches
 

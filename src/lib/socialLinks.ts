@@ -15,6 +15,15 @@ export const SOCIAL_PLATFORMS: { key: SocialKey; label: string; hosts: string[] 
   { key: "other", label: "Website", hosts: null },
 ];
 
+/**
+ * Messaging and contact services, never a "Website" (security review, 2026-11-20): a chat locks on a phone number,
+ * and a wa.me link on a profile hands the number over round it. chat_buyer_social() holds the same list.
+ */
+export const MESSAGING_HOSTS = [
+  "wa.me", "whatsapp.com", "t.me", "telegram.me", "telegram.dog", "telegram.org", "signal.me", "signal.group",
+  "m.me", "messenger.com", "viber.com", "line.me",
+];
+
 /** At most this many links per platform. */
 export const SOCIAL_MAX_PER_PLATFORM = 3;
 
@@ -41,7 +50,7 @@ export function normaliseSocialLink(key: string, raw: string): string | null {
   const host = url.hostname.toLowerCase();
   if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return null;
   const others = SOCIAL_PLATFORMS.filter((p) => p.hosts).flatMap((p) => p.hosts as string[]);
-  if (platform.hosts ? !hostMatches(host, platform.hosts) : hostMatches(host, others)) return null;
+  if (platform.hosts ? !hostMatches(host, platform.hosts) : hostMatches(host, others) || hostMatches(host, MESSAGING_HOSTS)) return null;
   // A platform's own address with no account in it ("https://instagram.com/") isn't a link to the seller.
   if (platform.hosts && (url.pathname === "/" || url.pathname === "")) return null;
   return url.toString();

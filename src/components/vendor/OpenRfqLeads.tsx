@@ -90,13 +90,13 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null, 
   const { user } = useAuth();
   const qc = useQueryClient();
   const [limit, setLimit] = useState(LEADS_PAGE);
-  const leadsQuery = useOpenRfqs(user?.id, limit);
+  const leadsQuery = useOpenRfqs(user?.id, limit, { overseasOnly });
   const { isLoading, isError, refetch, isFetching } = leadsQuery;
   const all = leadsQuery.data?.leads ?? [];
   const total = leadsQuery.data?.total ?? 0;
-  const rfqs = overseasOnly ? all.filter((r) => r.overseas) : all;
+  const rfqs = all;
   // More open requirements than loaded (review M-69): the best-fitting first, the rest on request.
-  const hasMore = total > all.length;
+  const hasMore = Boolean(leadsQuery.data?.more) && total > all.length;
   // The CRM (subscriptions P8): a vendor whose plan includes it can track a lead from here.
   const { data: entitlements } = useVendorEntitlements(user?.id);
   const crm = Boolean(entitlements?.features.crm_pipeline);
@@ -182,7 +182,7 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null, 
       <div className="flex items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-gray-900 lg:text-base">{overseasOnly ? "Open to you" : "Buyer Requirements"}</h2>
-          <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{overseasOnly ? rfqs.length : total} live</span>
+          <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{total} live</span>
         </div>
       </div>
 
@@ -283,7 +283,9 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null, 
       </div>
       {hasMore && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-          <span>Showing the best {all.length} of {total} open requirements</span>
+          <span>{overseasOnly
+            ? <>Showing the newest {all.length} of {total}</>
+            : <>Showing the best {all.length} of {total} open requirements</>}</span>
           <button
             type="button"
             onClick={() => setLimit((n) => n + LEADS_PAGE)}

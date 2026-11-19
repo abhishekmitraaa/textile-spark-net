@@ -62,9 +62,19 @@ function normalizeUrl(v: string) {
 /** What is saved: the seller's link rules (normaliseSocialLink, src/lib/socialLinks.ts), so a seller's buyer card
  *  shows each link under its own platform (review M-50; the code review of batch 3 found an "Instagram" box saving
  *  "@cosora.in" as https://cosora.in, and any address passing as Facebook). "" when empty, null when it doesn't fit. */
+// The seller rules turn an @handle into an address for X and Instagram; a buyer's Facebook and YouTube boxes take one
+// too (they did before, code review of batch 4).
+const BUYER_HANDLE_BASE: Partial<Record<keyof SocialLinks, string>> = {
+  facebook: "https://facebook.com/",
+  youtube: "https://youtube.com/@",
+};
 function savedLink(key: keyof SocialLinks, v: string): string | null {
   const t = v.trim();
   if (!t) return "";
+  const base = BUYER_HANDLE_BASE[key];
+  if (base && /^@?[A-Za-z0-9_.-]{1,50}$/.test(t) && (t.startsWith("@") || !t.includes("."))) {
+    return normaliseSocialLink(key, base + t.replace(/^@/, ""));
+  }
   return normaliseSocialLink(key, t);
 }
 
@@ -93,7 +103,11 @@ const ProfileSocialLinks = () => {
     try {
       if (user) {
         const keys = Object.keys(draft) as (keyof SocialLinks)[];
-        const bad = keys.filter((k) => savedLink(k, draft[k] || "") === null);
+        // Only a box the buyer changed is judged: one saved before these rules is kept as it was (the seller's buyer
+        // card leaves it out), and doesn't block saving the others.
+        const stored = (settings?.social ?? {}) as Partial<SocialLinks>;
+        const changed = (k: keyof SocialLinks) => (draft[k] || "").trim() !== (stored[k] || "").trim();
+        const bad = keys.filter((k) => changed(k) && savedLink(k, draft[k] || "") === null);
         if (bad.length) {
           const label = CHANNELS.find((c) => c.key === bad[0])?.label ?? "this";
           toast.error(`Check the ${label} link`, {
@@ -103,7 +117,7 @@ const ProfileSocialLinks = () => {
           });
           return;
         }
-        const links = Object.fromEntries(keys.map((k) => [k, savedLink(k, draft[k] || "") ?? ""])) as unknown as SocialLinks;
+        const links = Object.fromEntries(keys.map((k) => [k, changed(k) ? savedLink(k, draft[k] || "") ?? "" : stored[k] ?? ""])) as unknown as SocialLinks;
         await saveSetting(user.id, "social", links);
         setDraft(links);
         queryClient.invalidateQueries({ queryKey: ["profile_settings", user.id] });

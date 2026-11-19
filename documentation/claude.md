@@ -1382,6 +1382,37 @@ undocumented. Deep technical rationale for each lives in
   the chat list and the open thread's newest page; the thread opens no postgres_changes channel then.
 - **Seller Home's banners are text the app draws** (2026-11-19, review M-70, M-71): no picture with words baked in (they
   promised "0% commission", "only 10 minutes", "proven strategies", and one showed another marketplace's app).
+- **A product view is queued, and counted every minute** (Mitra, 2026-11-19, review M-35, "Add the job";
+  `20261120100000`). `increment_product_view()` keeps its daily dedupe and signed-out cap, then queues a row in
+  `admin.product_view_queue`; the job `product-views-fold` adds the queue into `views_count`, recent demand and Standing's
+  viewer ledger, and clears ledger days before yesterday. Counts lag by up to a minute; a test that reads them runs
+  `admin.product_views_fold()` first. Nothing in a buyer's view writes `products`.
+- **An ad impression counts when the ad is on screen** (2026-11-20, review M-33): `ref={track(ad.adId)}` from
+  `useAdImpressions()` (half the card visible, once per mount); `logAdImpression()` sends the ids together a second later
+  through `ad_impressions()` (each campaign once per call, at most 48). A new ad surface uses the hook, never a mount effect.
+- **Pages load as their own files** (2026-11-20, review M-34): a route in `App.tsx` is `lazyPage(() => import(…))`;
+  `{ warm: true }` fetches a common page when the browser is idle. Sign-in pages, Landing, New Arrivals and Not Found
+  stay in the first script.
+- **A deleted account's live listings go to draft** (Mitra, 2026-11-19, review M-37, "Hide deleted only"):
+  `trg_profiles_products_off_when_deleted`. Suspension leaves them live.
+- **A browser sets pictures only from this project's Storage** (2026-11-20, review M-75): `admin.image_urls_check` on
+  `profiles.avatar_url` and `vendor_profiles.logo_url` / `banner_url` / `office_photos`, for a browser's new or changed
+  value (`admin.own_storage_url`, which fails closed without `admin.storage_origin`). A new picture column gets the trigger.
+- **The Video Closeups reel is ordered by the database** (2026-11-20, review M-22): `video_closeups_feed()` (ids only;
+  the rows are read under `product_videos`' own rules), `ranking.md` 4.7. The browser only lifts the buyer's interests
+  and spreads sellers out.
+- **/leads is the best by Fit over the whole pool, and its count is Seller Home's** (2026-11-20, review M-69):
+  `useOpenRfqs(vendor, limit)` returns `{ leads, total, more }`; "Show more" adds 200. Seller Home's chats refresh on
+  their own after a chat event (`seller_home_chats()`, M-68); a new Seller Home card that changes with chat traffic
+  goes there, not in the summary.
+- **A buyer's links follow the seller's link rules** (2026-11-20, code review of batch 3): `normaliseSocialLink()` on
+  save and on the buyer card, and `chat_buyer_social()` in the database; a "Website" is never a messaging service
+  (`MESSAGING_HOSTS`, held equal to the function's list).
+- **A store page reads the newest 200 live listings** (2026-11-20, review M-23; `STORE_LISTING_LIMIT`, Gold's cap) and
+  says when there are more; a listing's review numbers come from `product_review_summary()` (M-24).
+- **A function patched by anchored text normalises line endings first** (2026-11-20): production's stored bodies carry
+  CRLF (30 functions, migrations applied from Windows), so `replace(pg_get_functiondef(…), E'\r\n', E'\n')` before
+  matching anchors that span lines, and test the patch on a CRLF copy.
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

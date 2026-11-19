@@ -20,7 +20,13 @@ with no need to dictate format, context, or reference each time.
 - Status: Open. Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
   `20261119110000`; plans `documentation/medium-bugs-batch1-plan-2026-11-19.md`, `…batch2…`); M-58 left open (needs a
   real Google sign-in to test). Follow-up `20261119110100` (the Terms check's message exemption no longer trusts
-  `admin.is_real_seller`) is written and applied locally, waiting to be applied to production. Next: batch 3, then 4.
+  `admin.is_real_seller`) is written and applied locally, waiting to be applied to production. Batch 3 (20 items,
+  `fix/medium-batch3-2026-11-19`) and batch 4 (14 items, `fix/medium-batch4-2026-11-20`, on batch 3; plan
+  `documentation/medium-bugs-batch4-plan-2026-11-20.md`) are built and checked locally, not released. M-36 needed no
+  change (no service or freelancer page shows reviews since H-13). Batch 4 follow-ups: (1) the product page still makes
+  ~20 of its own requests (listing, related, recently viewed, the seller block each read separately): one data function
+  for the page (M-25's request count); (2) engagement events are still one request per ad shown: a batch function for
+  `log_engagement_event` (M-33); (3) 59 more unindexed foreign keys (M-75 listed 64; 5 added).
 
 **High**
 - H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
@@ -36,7 +42,6 @@ with no need to dictate format, context, or reference each time.
 - M-33 — One ad_impression call per ad, including unseen rails.
 - M-34 — ~110 pages in the first bundle; only 2 lazy. App.tsx
 - M-35 — Each view rewrites products.views_count and purges daily rows inside the request.
-- M-36 — Service/freelancer reviews have no Report button.
 - M-37 DB latent — Listings of suspended/deleted sellers stay in feed_products, new_brand_suggestions, active_ads, for_you_products.
 
 **Medium — requirements, quotes, chats, profile**

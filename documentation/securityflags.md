@@ -132,6 +132,18 @@ in the next one.
 
 ## Log
 
+### 2026-11-20 — Medium batch 4 (built, not released) — Severity: Low
+- **Accepted (Mitra, 2026-11-19, "Leave as is"; review M-75):** every account's name stays readable (`profiles` is
+  `SELECT true` for names). A script can list every account's name; it can't read email or phone (column grants).
+- **Fixed on the branch:** a browser could set a logo, banner, premises photo or avatar to any address (a tracking pixel
+  on another person's screen); now only this project's public Storage (`admin.image_urls_check`, fails closed).
+- **Fixed on the branch (code reviews):** the seller's buyer card took any http(s) link under any platform label, so a
+  "Facebook" chip could open a phishing page; and a WhatsApp or Telegram link as a "Website" (seller or buyer) handed a
+  phone number over round the chat's number lock. Both sides now follow `normaliseSocialLink()` /
+  `chat_buyer_social()`, with `MESSAGING_HOSTS` refused. **Residual (Low):** a link shortener or an ordinary site that
+  forwards to WhatsApp still passes; chats are monitored and staff take down a profile link.
+- **Fixed on the branch:** `ad_impressions()` let one call add 48 impressions to one campaign; now once per call.
+
 ### 2026-11-15 — Ranking Standing (live 2026-11-15) — Severity: Low
 - **Fixed before release (automated security review of the first version):** (1) interest counted signed-out viewers, whose keys the browser makes, so a seller could mint "people": now only signed-in viewers, follows and messages count; (2) the new-seller floor keyed off the oldest live listing, so unlisting and relisting re-armed it: now the account's age; (3) `public.vendor_standing(uuid)` was open to anon, so anyone could watch a seller's number halve when staff record a fraud finding: now no client can call it, and `top_vendors` / `new_brand_suggestions` run as definer to read it.
 - **Residual (Low):** accounts are cheap while the test sign-in code accepts any 6 digits, so a seller could still make accounts to view, follow or message themselves. Interest is log-scaled with a fixed ceiling and weighs 0.30, and the public lists show only an order. Reviews come only from buyers' own review rows. The parts stay in `admin.vendor_standing`, which clients can't read.

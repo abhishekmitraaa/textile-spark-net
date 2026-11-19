@@ -20,14 +20,14 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 export default function OverseasLeads() {
   const reduced = useReducedMotion();
   const { user } = useAuth();
-  const { data: open, isLoading } = useOpenRfqs(user?.id);
+  const { data: open, isLoading } = useOpenRfqs(user?.id, undefined, { overseasOnly: true });
   const rfqs = open?.leads ?? [];
   const { data: count } = useOverseasLeadCount(user?.id);
   const mine = rfqs.filter((r) => r.overseas);
   const vip = count?.tier === "vip";
   // Gold sees every open overseas requirement except those in VIP's head start. Approximate
   // (the count and the list are two reads), so never below zero.
-  const withVip = count && count.tier === "gold" ? Math.max(0, count.open - mine.length) : 0;
+  const withVip = count && count.tier === "gold" ? Math.max(0, count.open - (open?.total ?? mine.length)) : 0;
 
   return (
     <DashboardLayout>

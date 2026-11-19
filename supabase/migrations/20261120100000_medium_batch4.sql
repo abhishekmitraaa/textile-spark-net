@@ -4,7 +4,8 @@
 --    the buyer's request. The view is recorded once a day per viewer as before (product_view_daily) and queued; the
 --    job product-views-fold adds the queue into views_count and recent demand every minute, and clears old ledger
 --    days. Counts on screen lag by up to a minute.
--- 2. M-33: ad_impressions(ads[]) queues several impressions in one call (the page sends the ads it showed together).
+-- 2. M-33: ad_impressions(ads[]) queues several impressions in one call (the page sends the ads it showed together),
+--    each campaign once per call.
 -- 3. M-32: top_vendors() and new_brand_suggestions() read Standing with one join, not one function call per seller.
 -- 4. M-37 (Mitra: "Hide deleted only"): when an account is deleted its live listings go to draft, so they leave every
 --    feed, New Brands, For You and search at once. Suspension leaves live content up (the standing rule); ads already
@@ -93,40 +94,35 @@ set search_path = ''
 as $function$
 declare
   v_rows integer;
-  v_max  bigint;
-  r      record;
   v_day  date := (now() at time zone 'Asia/Kolkata')::date;
 begin
+  -- One fold at a time.
   if not pg_try_advisory_xact_lock(hashtext('admin.product_views_fold')) then
     return 0;
   end if;
-  select max(id) into v_max from admin.product_view_queue;
-  if v_max is null then
-    delete from public.product_view_daily d where d.day < v_day - 1;
-    return 0;
-  end if;
-
-  drop table if exists pg_temp.view_fold;
-  create temporary table view_fold (product_id uuid, n integer, weight double precision, at timestamptz) on commit drop;
-  insert into pg_temp.view_fold
-  select q.product_id, count(*)::integer, sum(q.weight), max(q.at)
-    from admin.product_view_queue q where q.id <= v_max group by q.product_id;
-
-  update public.products x set views_count = x.views_count + f.n
-    from pg_temp.view_fold f where x.id = f.product_id;
-  get diagnostics v_rows = row_count;
-
-  for r in select f.product_id, f.weight, f.at from pg_temp.view_fold f loop
-    perform public.add_listing_demand(r.product_id, r.weight, r.at);
-  end loop;
-
-  insert into admin.seller_viewer_daily (vendor_id, viewer_id, day)
-  select distinct q.vendor_id, q.viewer_id, (q.at at time zone 'Asia/Kolkata')::date
-    from admin.product_view_queue q
-   where q.id <= v_max and q.viewer_id is not null and q.vendor_id is not null
-  on conflict do nothing;
-
-  delete from admin.product_view_queue q where q.id <= v_max;
+  -- One statement, as admin.ad_impressions_fold(): the rows deleted are exactly the rows counted (a view that commits
+  -- while the fold runs waits for the next one; code review of batch 4).
+  with taken as (
+    delete from admin.product_view_queue q where q.id <= (select max(id) from admin.product_view_queue)
+    returning q.product_id, q.weight, q.vendor_id, q.viewer_id, q.at
+  ), per_product as (
+    select t.product_id, count(*)::integer as n, sum(t.weight) as weight, max(t.at) as at
+      from taken t group by t.product_id
+  ), counted as (
+    update public.products x set views_count = x.views_count + pp.n
+      from per_product pp where x.id = pp.product_id
+    returning x.id
+  ), viewers as (
+    insert into admin.seller_viewer_daily (vendor_id, viewer_id, day)
+    select distinct t.vendor_id, t.viewer_id, (t.at at time zone 'Asia/Kolkata')::date
+      from taken t where t.viewer_id is not null and t.vendor_id is not null
+    on conflict do nothing
+    returning 1
+  ), demand as (
+    select public.add_listing_demand(pp.product_id, pp.weight, pp.at) from per_product pp
+  )
+  select (select count(*) from counted) + 0 * (select count(*) from demand) + 0 * (select count(*) from viewers)
+    into v_rows;
   -- The ledger keeps today and yesterday (it was cleared now and then inside a buyer's view).
   delete from public.product_view_daily d where d.day < v_day - 1;
   return v_rows;
@@ -156,10 +152,11 @@ begin
     raise exception 'Too many ads in one call' using errcode = '22023';
   end if;
   -- The same rule as ad_impression(): every view of a running campaign is queued, no cap (Mitra, 2026-11-18).
+  -- Each campaign once per call, as one ad_impression() call each (code review: 48 copies of one id in a call).
   insert into admin.ad_impression_queue (ad_id)
   select a.id from public.advertisements a
-    join unnest(p_ads) as x(id) on x.id = a.id
-   where a.status = 'active';
+   where a.id in (select distinct x.id from unnest(p_ads) as x(id))
+     and a.status = 'active';
 end
 $function$;
 revoke all on function public.ad_impressions(uuid[], text) from public;
@@ -288,8 +285,9 @@ stable
 security definer
 set search_path = ''
 as $function$
+  -- No origin on record: nothing passes but an empty value (fails closed).
   select p_url is null or p_url = ''
-      or p_url like (select s.origin from admin.storage_origin s limit 1) || '/storage/v1/object/public/%'
+      or coalesce(p_url like (select s.origin from admin.storage_origin s limit 1) || '/storage/v1/object/public/%', false)
 $function$;
 revoke all on function admin.own_storage_url(text) from public, anon, authenticated;
 
@@ -442,7 +440,9 @@ grant execute on function public.seller_home_chats() to authenticated;
 -- function, including batch 3's lead order, is kept as it is).
 do $patch$
 declare
-  def text := pg_get_functiondef('public.seller_home_summary()'::regprocedure);
+  -- Production's stored body has Windows line endings (migrations applied from Windows; 30 functions, checked
+  -- 2026-11-20): the anchors are matched on LF, so the body is read as LF first.
+  def text := replace(pg_get_functiondef('public.seller_home_summary()'::regprocedure), E'\r\n', E'\n');
   a1 text := E'),\n  unread as (';
   a2 text := E'  select jsonb_build_object(';
   b1 text := E'    ''recent_chats'', coalesce((';
@@ -472,7 +472,8 @@ $patch$;
 -- Code review of batch 3 (M-50): chat_buyer_social() let any http(s) address through under any platform, so a
 -- "Facebook" chip on the seller's buyer card could open any site (or a wa.me link round the chat's number lock). Now
 -- the rule of normaliseSocialLink() (src/lib/socialLinks.ts), which the seller's own links already follow: https only,
--- a plain host (no user@), each platform's own hosts with an account path, and "Website" none of the platforms.
+-- a plain host (no user@), each platform's own hosts with an account path, and "Website" none of the platforms and no
+-- messaging service.
 create or replace function public.chat_buyer_social(p_other uuid)
 returns jsonb
 language sql
@@ -505,9 +506,12 @@ as $$
              when 'youtube'   then p.host ~ '(^|\.)(youtube\.com|youtu\.be)$'
              when 'instagram' then p.host ~ '(^|\.)instagram\.com$'
              else p.host !~ '(^|\.)(facebook\.com|fb\.com|x\.com|twitter\.com|linkedin\.com|youtube\.com|youtu\.be|instagram\.com)$'
+                  -- Never a messaging or contact service: the chat locks on a phone number, and a link to one would
+                  -- hand the number over round it (security review, 2026-11-20). MESSAGING_HOSTS in socialLinks.ts.
+                  and p.host !~ '(^|\.)(wa\.me|whatsapp\.com|t\.me|telegram\.me|telegram\.dog|telegram\.org|signal\.me|signal\.group|m\.me|messenger\.com|viber\.com|line\.me)$'
            end
-       -- A platform's own address with no account in it isn't a link to the buyer.
-       and (p.key = 'other' or p.rest not in ('', '/'))
+       -- A platform's own address with no account in it ("/", "/?x") isn't a link to the buyer.
+       and (p.key = 'other' or p.rest ~ '^/[^/?#]')
   ), '{}'::jsonb)
   where (select auth.uid()) is not null
     and p_other <> (select auth.uid())

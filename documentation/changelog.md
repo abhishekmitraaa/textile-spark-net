@@ -1,3 +1,14 @@
+- 2026-11-20 (branch `fix/medium-batch4-2026-11-20`, on batch 3; migration `20261120100000_medium_batch4.sql`;
+  plan `documentation/medium-bugs-batch4-plan-2026-11-20.md`; **built and checked on the local stack, not released**)
+  **Buyer review, Medium batch 4 of 4: speed and database** (M-21–M-25, M-31–M-37, M-68, M-69, M-75).
+  - Mitra's calls: deleted sellers' listings to draft; the views job; names left readable.
+  - Views queued and folded every minute; impressions only when on screen, batched; Standing joined once.
+  - Pages lazy (first script 907 → 380 kB gzipped); Home reads trending once; the product page reads review numbers,
+    not 100 reviews; the store page bounded; Video Closeups on recent demand with a failed-read state.
+  - /leads best by Fit with a count that matches Seller Home; Seller Home's chats refresh alone.
+  - Pictures only from Cosora's Storage; 5 indexes.
+  - Batch 3 code review fixed here (buyer links, quotes paging, chat re-reads, Seller Home on a failed refresh).
+  - Batch 4 code review: 8 of 10 fixed; found the summary patch would have failed on production's CRLF bodies.
 - 2026-11-19 (branch `fix/medium-batch3-2026-11-19`; migration `20261119120000_medium_batch3.sql`;
   plan `documentation/medium-bugs-batch3-plan-2026-11-19.md`; **built and checked on the local stack, not released**)
   **Buyer review, Medium batch 3 of 4: quotes, chat, profile, Seller Home** (M-39–M-42, M-44–M-47, M-49–M-52, M-65–M-67,

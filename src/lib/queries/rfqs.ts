@@ -588,8 +588,11 @@ export const LEADS_PAGE = 200;
 export interface OpenLeads {
   /** The best-fitting `limit` open requirements, best first. */
   leads: LeadRfq[];
-  /** Every open requirement this seller may quote on: the count Seller Home shows (the same filters, rfqs_select). */
+  /** Every open requirement this seller may quote on: the count Seller Home shows (the same filters, rfqs_select).
+   *  Overseas only: the open overseas requirements. */
   total: number;
+  /** More can be asked for ("Show more"): the ranking filled the page. */
+  more: boolean;
 }
 
 // The open marketplace a seller may quote on: active, still taking quotes (the 7-day deadline the buyer can extend,
@@ -604,20 +607,34 @@ export interface OpenLeads {
  * rest sorted as 0. Now the order is match_vendor_rfqs' (Fit, over the whole pool), the rows are read by id under
  * rfqs_select, and the count is the pool's. If the ranking call fails the list is the newest, as before.
  */
-async function fetchOpenRfqs(vendorId: string, limit: number): Promise<OpenLeads> {
+async function fetchOpenRfqs(vendorId: string, limit: number, overseasOnly: boolean): Promise<OpenLeads> {
   const nowIso = new Date().toISOString();
   type Match = { rfq_id: string; similarity: number | null; category_match: boolean; score: number; near: boolean };
+  let countQ = supabase.from("rfqs").select("id", { count: "exact", head: true })
+    .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId);
+  if (overseasOnly) countQ = countQ.eq("overseas", true);
   const [countRes, scoreRes] = await Promise.all([
-    supabase.from("rfqs").select("id", { count: "exact", head: true })
-      .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId),
-    // Every vendor gets the same ranking (Mitra, 2026-10-02: leads are the same on every plan; R2).
-    supabase.rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: limit }),
+    countQ,
+    // Every vendor gets the same ranking (Mitra, 2026-10-02: leads are the same on every plan; R2). The overseas page
+    // takes its badges from it, over the whole pool (its list is the overseas requirements themselves, newest first:
+    // filtering the best 200 left lower-ranked overseas ones out; code review of batch 4).
+    supabase.rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: overseasOnly ? 1000 : limit }),
   ]);
   if (countRes.error) throw countRes.error;
 
   let rows: RawLeadRfq[];
+  let more: boolean;
   const matchOf = new Map<string, Match>();
-  if (!scoreRes.error && scoreRes.data) {
+  if (overseasOnly) {
+    for (const m of (scoreRes.data ?? []) as Match[]) matchOf.set(m.rfq_id, m);
+    const { data, error } = await supabase.from("rfqs").select(OPEN_LEAD_COLUMNS)
+      .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId).eq("overseas", true)
+      .order("created_at", { ascending: false }).order("id")
+      .limit(limit);
+    if (error) throw error;
+    rows = (data ?? []) as RawLeadRfq[];
+    more = rows.length >= limit;
+  } else if (!scoreRes.error && scoreRes.data) {
     const ranked = scoreRes.data as Match[];
     for (const m of ranked) matchOf.set(m.rfq_id, m);
     const parts = await Promise.all(chunks(ranked.map((m) => m.rfq_id), 100).map(async (ids) => {
@@ -628,6 +645,11 @@ async function fetchOpenRfqs(vendorId: string, limit: number): Promise<OpenLeads
     }));
     const byId = new Map(parts.flat().map((r) => [r.id, r]));
     rows = ranked.flatMap((m) => byId.get(m.rfq_id) ?? []);
+    // The ranking's own ties fall on the requirement id; here an equal Fit shows the newest first, as before.
+    rows.sort((a, b) => (matchOf.get(b.id)?.score ?? 0) - (matchOf.get(a.id)?.score ?? 0)
+      || b.created_at.localeCompare(a.created_at));
+    // A full page from the ranking: there may be more (it also holds the seller's own requirements, left out here).
+    more = ranked.length >= limit;
   } else {
     const { data, error } = await supabase.from("rfqs").select(OPEN_LEAD_COLUMNS)
       .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId)
@@ -635,6 +657,7 @@ async function fetchOpenRfqs(vendorId: string, limit: number): Promise<OpenLeads
       .limit(limit);
     if (error) throw error;
     rows = (data ?? []) as RawLeadRfq[];
+    more = rows.length >= limit;
   }
 
   // The seller's quotes on these requirements only (it read every quote the seller ever sent, errors dropped).
@@ -667,13 +690,13 @@ async function fetchOpenRfqs(vendorId: string, limit: number): Promise<OpenLeads
       expiresAt: r.expires_at ?? null,
     };
   });
-  return { leads, total: Math.max(countRes.count ?? 0, leads.length) };
+  return { leads, total: Math.max(countRes.count ?? 0, leads.length), more };
 }
 
-export function useOpenRfqs(vendorId: string | undefined, limit = LEADS_PAGE) {
+export function useOpenRfqs(vendorId: string | undefined, limit = LEADS_PAGE, { overseasOnly = false }: { overseasOnly?: boolean } = {}) {
   return useQuery({
-    queryKey: ["rfqs", "open", vendorId, limit],
-    queryFn: () => fetchOpenRfqs(vendorId as string, limit),
+    queryKey: ["rfqs", "open", vendorId, limit, overseasOnly],
+    queryFn: () => fetchOpenRfqs(vendorId as string, limit, overseasOnly),
     enabled: Boolean(vendorId),
     // "Show more" keeps the list on screen while the longer one loads.
     placeholderData: keepPreviousData,
