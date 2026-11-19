@@ -1,5 +1,7 @@
 - 2026-11-19 (branch `fix/medium-batch2-2026-11-19`, on top of batch 1; migration `20261119110000_buyer_terms_db_check.sql`;
-  plan `documentation/medium-bugs-batch2-plan-2026-11-19.md`; **built and checked on the local stack, not released**)
+  plan `documentation/medium-bugs-batch2-plan-2026-11-19.md`; **LIVE 2026-11-19**: migration applied with the CLI (not in
+  the ledger), 7 triggers in place, `rls-policy-check` 159/0/0; buyer main `927a527`, bundle `index-DeXFbk3J.js`; follow-up
+  `20261119110100` (message exemption without `admin.is_real_seller`, after a second commit security review) not yet on production)
   **Buyer review, Medium batch 2 of 4: frame, sign-up gate, Back on overlays, Register** (M-01, M-12–M-14, M-28, M-29,
   M-43, M-48, M-53–M-57, M-59–M-64; M-58 left open: it needs a real Google sign-in to test).
   - Mitra's calls: "I'm a buyer, not a seller" until a registration is submitted; the database refuses requirements,
@@ -15,7 +17,9 @@
     passes; Back on menus, sheets and the filter sheet with picks kept in the address; return-to remembered; Register
     `?as=seller` survives a reload. /code-review medium: 10 findings fixed; commit security review: `rfq_submissions` added.
 - 2026-11-19 (branch `fix/medium-batch1-2026-11-19`; migration `20261119100000_follows_hidden_saved_vendors.sql`;
-  plan `documentation/medium-bugs-batch1-plan-2026-11-19.md`; **built and checked on the local stack, not released**)
+  plan `documentation/medium-bugs-batch1-plan-2026-11-19.md`; **LIVE 2026-11-19**: migration applied with the CLI (not in
+  the ledger; follows.hidden_at, saved_vendors, my_followed_brands, anonymize_account patched, for_you_products ef_search 200);
+  released with batch 2 in main `927a527`)
   **Buyer review, Medium batch 1 of 4: Following, For You, Search, Saves** (M-02–M-11, M-15–M-20, M-26, M-27, M-30, M-38).
   - Mitra's calls: Hide on Following is a saved mute (`follows.hidden_at`, Unhide in View All); the seller page's bookmark
     saves the seller (`saved_vendors`, My Saves › Sellers, data export, account deletion); Save search removed.

@@ -17,42 +17,20 @@ with no need to dictate format, context, or reference each time.
 - Mitra's decisions for High (2026-11-18): H-04 take the demo data off live; H-11 precomputed feed + a scheduled job;
   H-12 thumbnails, then server-made once a browser-made one was found to skip review; H-13 keep Service Vendors / Freelancers but remove the fakes.
 - Reference: 2026-11-18 review sessions (two passes), SESSION-CONTEXT.md.
-- Status: Open (H-12 server half next; then Medium and Low)
+- Status: Open. Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
+  `20261119110000`; plans `documentation/medium-bugs-batch1-plan-2026-11-19.md`, `…batch2…`); M-58 left open (needs a
+  real Google sign-in to test). Follow-up `20261119110100` (the Terms check's message exemption no longer trusts
+  `admin.is_real_seller`) is written and applied locally, waiting to be applied to production. Next: batch 3, then 4.
 
 **High**
 - H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
 
 **Medium — buyer home and browsing**
-- M-01 live — BuyerSignupGate renders the page, then null while the registration loads: double mount, ads counted twice. BuyerSignupGate.tsx:28
-- M-02 live — Switching Home tabs keeps the scroll position (Trends opens 2,500 px down).
-- M-03 live — For You signed out hides the tab strip.
-- M-04 — For You's city filter only filters loaded rows; "No matches" can be permanent, page 2 never loads. ForYou.tsx:460-462
-- M-05 — For You city aliases miss Tiruppur, Bengaluru, Noida/Gurugram. ForYou.tsx:94-97
-- M-06 — "Reset preferences" wipes saved interests without confirm. preferencesStore.ts:272-275
-- M-07 — Follow toasts "Following X" on failure / signed out; Unfollow toasts before the delete. NewBrandsCarousel.tsx, Following.tsx:114
-- M-08 — "Hide brand" isn't saved. follows.ts
-- M-09 — Following's seal filter and badge use is_verified only. Following.tsx:293
-- M-10 — Following's filter doesn't apply to Most Popular. Following.tsx:310
-- M-11 — Following collapses error / signed-out / loading into "not following any brands" / "Following 0". Following.tsx:400-430
-- M-12 — Trends and Following › View All skip BuyerShell (gate, side switch). Trends.tsx:411
-- M-13 — The sign-up gate also misses Search, SearchResults, VendorProfile, Video Close-Ups, Service/Freelancer profiles, Chats, ChatThread and the profile sub-pages.
-- M-14 live — Cosora Studio opens in the seller dashboard frame for buyers.
-- M-15 — Search Results sorts and filters only loaded rows. SearchResults.tsx:763
-- M-16 — Save buttons that save nothing: Save vendor (VendorProfile.tsx:97), Save search (SearchResults.tsx:574), Service/Freelancer Save.
-- M-17 — Recent searches never survive (useState). Search.tsx:112
-- M-18 — Saved hydration ignores errors and sends every id unchunked → empty "All Saves". savedStore.ts:124-129, products.ts:176-178
-- M-19 — Save/unsave/folder/recently-viewed writes are fire-and-forget. savedStore.ts:182, recentlyViewedStore.ts:209-224
-- M-20 — /saved and /saved/:id have no loading/error/signed-out states ("no longer exists" while loading). SavedCollectionDetail.tsx:196
 - M-21 — Video Close-Ups shows a failed read as "No video close-ups yet". VideoCloseUpsPage.tsx:122
 - M-22 known — Reel = 30 lifetime-most-viewed only; ranked on product_videos.rating, never written. videos.ts:49
 - M-23 — Seller page reads listings and videos unbounded, errors dropped. vendor.ts:112-127
 - M-24 — Product/service reviews unbounded, averages in the browser. reviews.ts:150
 - M-25 — Product page downloads 100 store reviews for an average; ~18 requests per view. ProductDetail.tsx:416
-- M-26 — Following downloads every live listing of followed sellers to count them (1,000 cap). follows.ts:78
-- M-27 live — Untrue copy: "Top-rated verified suppliers" (NewArrivals.tsx:778), "verified manufacturers" / "quotes in minutes" (SubmitRequirementCard), Sale "verified manufacturers", Trends "Trending in #…".
-- M-28 — Quick RFQ sheet isn't a dialog, keyboard covers it, sign-in loses text and photos. QuickRfqModal.tsx:115
-- M-29 — Overlays don't close on Back: Quick RFQ, ⋮ drawer, For You prefs, Sale/Following dropdowns, product page sheets, search filter sheet, chat menus, My Quotes modals, review edit, deletion dialog, Login pickers, seller landing menu.
-- M-30 — Filters reset on Back (Sale, Following, Search Results, seller page); feeds refetch every loaded page after 60 s. feed.ts:108
 - M-31 — ~15–20 requests per Home view, trending computed twice, mostly identical for everyone.
 - M-32 DB — top_vendors / new_brand_suggestions call vendor_standing once per seller.
 - M-33 — One ad_impression call per ad, including unseen rails.
@@ -60,37 +38,23 @@ with no need to dictate format, context, or reference each time.
 - M-35 — Each view rewrites products.views_count and purges daily rows inside the request.
 - M-36 — Service/freelancer reviews have no Report button.
 - M-37 DB latent — Listings of suspended/deleted sellers stay in feed_products, new_brand_suggestions, active_ads, for_you_products.
-- M-38 DB — for_you_products returns ≤ ~40 once the HNSW index is used (ef_search 40).
 
 **Medium — requirements, quotes, chats, profile**
 - M-39 — My Quotes' "Payment Terms" is thrown away. QuoteDetailsModal.tsx:171
 - M-40 — "Avg. response ~2 hours" invented; "★ 0 (0)"; unknown sampling cost shows ₹0. QuoteDetailsModal.tsx:195
 - M-41 — My Quotes hides read errors, `.in(rfq_id)` unchunked, no paging. rfqs.ts:154
 - M-42 live — My Quotes signed out shows "0 Active RFQs" and no Sign in.
-- M-43 — Post Requirement, My Quotes and Report Fraud steps aren't history entries.
 - M-44 — Chat list doesn't update on a new chat (hub handler refreshes counts only). chatUnread.ts:54
 - M-45 plausible — One postgres_changes channel per open chat/support thread (scale). chat.ts, support.ts
 - M-46 DB — chat_unread_counts calls auth.uid() bare (8× per row).
 - M-47 — Edit profile phone is free text and is what sellers dial. ProfileEdit.tsx:84
-- M-48 — Profile sub-page Back/Save push /profile → loops. ProfileEditKit.tsx:28, ProfileEdit.tsx:33, ProfileNotifications.tsx:19, ProfileAccountPrefs.tsx:27, MyReviews.tsx:339, Settings.tsx:138
 - M-49 — JSON settings pages save the whole object over a failed read (defaults saved as values). profile.ts:186-199
 - M-50 — Buyer social links promise visibility; nobody sees them. ProfileSocialLinks.tsx:102
 - M-51 plausible — Privacy Policy promises a deletion code that can't be sent while channels are unconfigured.
 - M-52 — Regional settings still write the retired regional.language. ProfileAccountPrefs.tsx:62
 
 **Medium — sign-up, registration, seller home, database**
-- M-53 live — Account Information says sellers never see your name; sellers you message do. AccountInfo.tsx:164
-- M-54 live — A typed pincode clears the state, then Profile nags "Add your state" every visit. AccountInfo.tsx:237-241
-- M-55 — Register forgets Buyer/Seller on Back or refresh → silently a buyer. Register.tsx:20
-- M-56 — Register shows its empty form to signed-in users. Register.tsx:29-35
-- M-57 — After registering, Back from Seller Home bounces through sign-up pages. Onboarding.tsx:801-813
 - M-58 — Google sign-up: Back shows Home 4–5 times. AuthCallback.tsx:43
-- M-59 — No return to the original page after the gate or a sign-in prompt.
-- M-60 — Picking Seller by mistake can't be undone. useSwitchRole.ts:31
-- M-61 — The sign-up gate is navigation only; the database never checks Terms acceptance.
-- M-62 live — DashboardSidebar invents "Fashion Brand" / "Verified Buyer" / "CB"; Sign out shown signed out. DashboardSidebar.tsx:314-328
-- M-63 live — Unregistered account on /seller-home: seller header + buyer tabs + buyer bottom bar, two ≡ icons, dead header buttons, Trends/Followings → /for-you. DashboardHeader.tsx:19-22
-- M-64 — Overseas seller waiting for approval: Seller Home in the buyer frame, told to "finish" registration. DashboardLayout.tsx:32
 - M-65 — Recent Leads pins already-quoted direct requests.
 - M-66 — Seller home stale after KYC sign/replace, product delete, onboarding, approval notices. Kyc.tsx:496
 - M-67 — One failed refresh replaces a working seller home with the error screen. SellerHome.tsx:79-80
