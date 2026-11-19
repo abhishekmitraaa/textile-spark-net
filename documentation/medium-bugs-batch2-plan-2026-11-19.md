@@ -7,7 +7,7 @@ M-63, M-64. Built on top of batch 1 (branch `fix/medium-batch2-2026-11-19` from 
 - M-60 "Allow switch back": until a seller registration is submitted, /onboarding offers "I'm a buyer, not a seller".
 - M-61 "Database checks": requirements (rfq_submissions, rfqs), chats (conversations, messages) and reviews are refused
   until the buyer Terms are accepted, while `buyer_signup_required` is on; sellers (registered, exempt, pending) and
-  staff are not caught, and an account on the seller side may still send messages.
+  staff are not caught, and a seller who submitted a registration (any outcome) may still send messages.
 - M-59 "Return to the page": sign-in and sign-up land a buyer on the page a prompt or the gate took them from.
   Sign-in itself (mobile + OTP, Login, OtpVerify, otp.ts, AuthContext) is untouched.
 

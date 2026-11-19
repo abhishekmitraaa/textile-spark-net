@@ -11,9 +11,10 @@
 -- Help, fraud reports, feedback and support threads are other tables and stay open.
 -- Requirements are written to rfq_submissions (Cosora reviews them before they become rfqs rows) and, for a request to
 -- one seller, to rfqs: both are checked (commit security review, 2026-11-19).
--- An account on the seller side (profiles.active_role = 'seller') may still send chat messages, as the app's gate lets
--- it: a seller whose registration was sent back keeps answering buyers (code review, 2026-11-19). It may not post
--- requirements, start chats or write reviews as a buyer until it has accepted the Terms.
+-- A seller who submitted a registration (any outcome: a registration sent back for changes too) may still send chat
+-- messages, so it keeps answering buyers (code review, 2026-11-19). The proof is a vendor_registrations row, written
+-- only by submit_vendor_registration(); never profiles.active_role, which the account sets itself (commit security
+-- review, 2026-11-19). It may not post requirements, start chats or write reviews as a buyer until it accepted the Terms.
 
 create or replace function admin.caller_may_act_as_buyer()
 returns boolean
@@ -45,7 +46,7 @@ set search_path = ''
 as $$
 begin
   if tg_table_name = 'messages'
-     and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.active_role = 'seller') then
+     and exists (select 1 from public.vendor_registrations r where r.vendor_id = (select auth.uid())) then
     return new;
   end if;
   if not admin.caller_may_act_as_buyer() then

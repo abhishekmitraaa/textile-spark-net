@@ -1365,7 +1365,7 @@ undocumented. Deep technical rationale for each lives in
 - **The database checks the buyer Terms too** (Mitra, 2026-11-19, review M-61; `20261119110000`): while
   `buyer_signup_required` is on, `admin.enforce_buyer_terms()` refuses `rfq_submissions`, `rfqs`, `conversations`,
   `messages` and the three review tables to an account that isn't onboarded with a Terms record; sellers (registered,
-  exempt, pending) and staff aren't caught, and a seller-side account may still send messages. A new table a buyer
+  exempt, pending) and staff aren't caught, and a seller who submitted a registration may still send messages. A new table a buyer
   writes to as a buyer gets the same trigger.
 - **Sign-in returns a buyer to where it was asked** (Mitra, 2026-11-19, review M-59): `<ReturnToTracker>` remembers the
   page a link, prompt or the gate left for sign-in, and `landingFor()` (`src/lib/returnTo.ts`) is used where a buyer
