@@ -45,8 +45,10 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- admin.is_real_seller(): registered, exempt, or holding seller content (listings, quotes…): never self-asserted.
   if tg_table_name = 'messages'
-     and exists (select 1 from public.vendor_registrations r where r.vendor_id = (select auth.uid())) then
+     and (exists (select 1 from public.vendor_registrations r where r.vendor_id = (select auth.uid()))
+          or admin.is_real_seller((select auth.uid()))) then
     return new;
   end if;
   if not admin.caller_may_act_as_buyer() then
