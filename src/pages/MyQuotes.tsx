@@ -311,7 +311,7 @@ const MyQuotes = () => {
               <h2 className="text-xs font-bold tracking-wide text-gray-400 mb-2.5">YOUR REQUESTS</h2>
               {rfqs.length === 0 && submissions.length === 0 && (
                 <p className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400">
-                  {user ? "No requirements yet — tap Create New to post one." : "Sign in as a buyer to see your requirements."}
+                  No requirements yet — tap Create New to post one.
                 </p>
               )}
               {buyerData?.more && (

@@ -1,5 +1,6 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAdImpressions } from "@/hooks/useAdImpressions";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
@@ -14,14 +15,14 @@ import { BadgeCheck, Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, Ma
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useVideoCloseUps } from "@/lib/queries/videos";
-import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useAdSlotBlocks, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
-import { useFeed, useFeedSlice } from "@/lib/queries/feed";
+import { HOME_TRENDING_COUNT, useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { NEW_ARRIVALS_TILES, categoryTileSlot } from "@/lib/categoryImageSlots";
 import { useCategoryPicture } from "@/hooks/useCategoryPicture";
 import { useAuth } from "@/contexts/AuthContext";
@@ -234,16 +235,8 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const drag = useDragScroll<HTMLDivElement>();
-  const logged = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    ads.forEach((a) => {
-      if (!logged.current.has(a.adId)) {
-        logged.current.add(a.adId);
-        void logAdImpression(a.adId);
-      }
-    });
-  }, [ads]);
+  // Counted once each card is on screen (review M-33), not when the rail renders.
+  const track = useAdImpressions();
 
   // Renders nothing when no vendor has a live campaign in this block, same rule
   // as SponsoredRail: a sponsored rail with no sponsors should be absent, not
@@ -272,7 +265,7 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
         {/* Card body and Call Now are siblings, not nested buttons — the
             old markup nested a button inside a Link, which is invalid. */}
         {ads.map((a) => (
-          <div key={a.adId} className="shrink-0 w-32 lg:w-48">
+          <div key={a.adId} ref={track(a.adId)} className="shrink-0 w-32 lg:w-48">
             <button onClick={() => onOpen(a)} className="w-full text-left">
               <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
                 {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? a.title} className="w-full h-full object-cover" loading="lazy" />}
@@ -415,7 +408,9 @@ const NewArrivals = () => {
   // "Looking for these?": the six live listings with the most recent demand. Not de-duplicated
   // against Today's New In below: on a small catalogue its first page holds every listing, and
   // leaving those out would leave this row empty.
-  const { data: lookingFor = [] } = useFeedSlice({ sort: "trending" }, LOOKING_FOR_COUNT);
+  // The hero's trending slice, shared (review M-31): one request for both.
+  const { data: trending = [] } = useFeedSlice({ sort: "trending" }, HOME_TRENDING_COUNT);
+  const lookingFor = useMemo(() => trending.slice(0, LOOKING_FOR_COUNT), [trending]);
 
   // Next page as the buyer nears the end of what's loaded.
   useEffect(() => {

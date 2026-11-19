@@ -20,7 +20,8 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 export default function OverseasLeads() {
   const reduced = useReducedMotion();
   const { user } = useAuth();
-  const { data: rfqs = [], isLoading } = useOpenRfqs(user?.id);
+  const { data: open, isLoading } = useOpenRfqs(user?.id);
+  const rfqs = open?.leads ?? [];
   const { data: count } = useOverseasLeadCount(user?.id);
   const mine = rfqs.filter((r) => r.overseas);
   const vip = count?.tier === "vip";

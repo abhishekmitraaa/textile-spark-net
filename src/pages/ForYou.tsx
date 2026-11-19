@@ -1,5 +1,6 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAdImpressions } from "@/hooks/useAdImpressions";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useT } from "@/lib/i18n";
@@ -16,7 +17,7 @@ import { type ProductCardData } from "@/lib/queries/products";
 import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForYouRanking, usePrefCategoryMap } from "@/lib/queries/forYou";
-import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useAdSlotBlocks, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { interestLabel, OTHER_INTEREST_ID, tidyOtherInterest } from "@/lib/buyerCategories";
 import {
@@ -180,18 +181,8 @@ const PRODUCTS_PER_RECENT_VIEW = 16; // 8 mobile rows / 4 desktop rows
 function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
   const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
-  const logged = useRef<Set<string>>(new Set());
-
-  // Impressions fire once per ad per mount, matching SponsoredRail. Vendors are
-  // billed against these, so a re-render must not inflate them.
-  useEffect(() => {
-    ads.forEach((a) => {
-      if (!logged.current.has(a.adId)) {
-        logged.current.add(a.adId);
-        void logAdImpression(a.adId);
-      }
-    });
-  }, [ads]);
+  // Once per ad per mount, when the card is on screen (review M-33), matching SponsoredRail.
+  const track = useAdImpressions();
 
   if (ads.length === 0) return null;
 
@@ -222,6 +213,7 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
         {ads.map((a) => (
           <button
             key={a.adId}
+            ref={track(a.adId)}
             onClick={() => open(a)}
             className="relative aspect-[4/5] rounded-xl lg:rounded-2xl overflow-hidden bg-gray-100 text-left"
           >

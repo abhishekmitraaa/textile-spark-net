@@ -1,6 +1,5 @@
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,7 +7,7 @@ import {
   ImageIcon, Video, FileText, Download, DollarSign, Package, Clock,
   FlaskConical, Layers, CalendarClock, Check,
 } from "lucide-react";
-import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
+import { fmtMoney, samplingText, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
 import { cn } from "@/lib/utils";
 import { quoteRatingText } from "@/lib/quotesData";
 
@@ -159,7 +158,7 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
                   <QuoteStat icon={DollarSign} label="Price/Unit" value={showBoth(quote.pricePerUnit, fmtMoney(quote.currency, quote.pricePerUnit), quote.currency)} />
                   <QuoteStat icon={Package} label="MOQ" value={`${quote.moq.toLocaleString()} Units`} />
                   <QuoteStat icon={Clock} label="Lead Time" value={quote.leadTime} />
-                  <QuoteStat icon={FlaskConical} label="Sampling Cost" value={quote.sampling == null ? "Not specified" : showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
+                  <QuoteStat icon={FlaskConical} label="Sampling Cost" value={samplingText(quote, showBoth)} />
                   <QuoteStat icon={Star} label="Rating" value={quoteRatingText(quote)} />
                   <QuoteStat icon={CalendarClock} label="Sample Timeline" value={quote.sampleTimeline} />
                   <QuoteStat icon={Layers} label="Fabric" value={quote.fabric} />

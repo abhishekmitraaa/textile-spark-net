@@ -1,5 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
+import { normaliseSocialLink } from "@/lib/socialLinks";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -58,25 +59,13 @@ function normalizeUrl(v: string) {
   return `https://${t.replace(/^@/, "")}`;
 }
 
-/** What is saved: a full web address, an @handle turned into its profile's address (review M-50: sellers are shown
- *  only http(s) addresses, chat_buyer_social()). */
-const HANDLE_SITES: Partial<Record<keyof SocialLinks, (h: string) => string>> = {
-  x: (h) => `https://x.com/${h}`,
-  instagram: (h) => `https://instagram.com/${h}`,
-  youtube: (h) => `https://youtube.com/@${h}`,
-  facebook: (h) => `https://facebook.com/${h}`,
-};
-function savedLink(key: keyof SocialLinks, v: string): string {
+/** What is saved: the seller's link rules (normaliseSocialLink, src/lib/socialLinks.ts), so a seller's buyer card
+ *  shows each link under its own platform (review M-50; the code review of batch 3 found an "Instagram" box saving
+ *  "@cosora.in" as https://cosora.in, and any address passing as Facebook). "" when empty, null when it doesn't fit. */
+function savedLink(key: keyof SocialLinks, v: string): string | null {
   const t = v.trim();
   if (!t) return "";
-  if (/^https?:\/\//i.test(t)) return t;
-  // A handle ("@brand" or "brand", no dot): its platform's address, where one exists. Otherwise kept as typed, which
-  // sellers aren't shown (only http(s) addresses are), rather than "https://brand", a host that doesn't exist.
-  if (!t.includes(".") && !t.includes("/")) {
-    const site = HANDLE_SITES[key];
-    return site ? site(t.replace(/^@/, "")) : t;
-  }
-  return normalizeUrl(t);
+  return normaliseSocialLink(key, t);
 }
 
 const ProfileSocialLinks = () => {
@@ -103,9 +92,18 @@ const ProfileSocialLinks = () => {
     setSaving(true);
     try {
       if (user) {
-        const links = Object.fromEntries(
-          (Object.keys(draft) as (keyof SocialLinks)[]).map((k) => [k, savedLink(k, draft[k] || "")]),
-        ) as unknown as SocialLinks;
+        const keys = Object.keys(draft) as (keyof SocialLinks)[];
+        const bad = keys.filter((k) => savedLink(k, draft[k] || "") === null);
+        if (bad.length) {
+          const label = CHANNELS.find((c) => c.key === bad[0])?.label ?? "this";
+          toast.error(`Check the ${label} link`, {
+            description: bad[0] === "other"
+              ? "Enter a website address, like yourbrand.com. Social profiles go in their own boxes."
+              : `Enter a ${label} address or @handle.`,
+          });
+          return;
+        }
+        const links = Object.fromEntries(keys.map((k) => [k, savedLink(k, draft[k] || "") ?? ""])) as unknown as SocialLinks;
         await saveSetting(user.id, "social", links);
         setDraft(links);
         queryClient.invalidateQueries({ queryKey: ["profile_settings", user.id] });

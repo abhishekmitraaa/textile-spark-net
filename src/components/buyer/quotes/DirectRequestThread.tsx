@@ -7,7 +7,7 @@ import {
   ArrowLeft, BadgeCheck, Star, MapPin, MessageCircle, Phone, Clock, DollarSign,
   Package, FlaskConical, Check, X, Star as StarIcon, ChevronRight,
 } from "lucide-react";
-import { fmtMoney, type QuoteStatus, type Rfq, type VendorQuote } from "@/lib/quotesData";
+import { fmtMoney, samplingText, type QuoteStatus, type Rfq, type VendorQuote } from "@/lib/quotesData";
 import { cn } from "@/lib/utils";
 import RfqThumb from "@/components/RfqThumb";
 
@@ -198,7 +198,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
             <StatCell icon={DollarSign} label="Price/Unit" value={showBoth(quote.pricePerUnit, fmtMoney(quote.currency, quote.pricePerUnit), quote.currency)} />
             <StatCell icon={Package} label="MOQ" value={`${quote.moq.toLocaleString()} units`} />
             <StatCell icon={Clock} label="Lead Time" value={quote.leadTime} />
-            <StatCell icon={FlaskConical} label="Sampling" value={quote.sampling == null ? "Not specified" : showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
+            <StatCell icon={FlaskConical} label="Sampling" value={samplingText(quote, showBoth)} />
           </div>
           <ConvertedPriceNote className="mt-2" />
 

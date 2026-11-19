@@ -110,6 +110,17 @@ export function quoteRatingText(q: Pick<VendorQuote, "rating" | "ratingCount">):
   return q.rating > 0 ? `${q.rating.toFixed(1)} (${q.ratingCount})` : "No reviews yet";
 }
 
+/**
+ * A quote's sampling cost as shown to the buyer (review M-41: an unstated cost read as ₹0), through the display
+ * currency's `showBoth`. One rule for every quote screen.
+ */
+export function samplingText<T>(
+  q: Pick<VendorQuote, "sampling" | "currency">,
+  showBoth: (amount: number, inrText: string, currency: string) => T,
+): T | "Not specified" {
+  return q.sampling == null ? "Not specified" : showBoth(q.sampling, fmtMoney(q.currency, q.sampling), q.currency);
+}
+
 /** What a seller can change on a quote, as stored. */
 export interface QuoteTerms {
   currency: string;

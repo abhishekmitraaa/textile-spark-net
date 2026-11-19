@@ -1,10 +1,11 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAdImpressions } from "@/hooks/useAdImpressions";
 import { useNavigate } from "react-router-dom";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Brand } from "@/lib/followingStore";
-import { logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { AdMark } from "@/components/buyer/SponsoredNote";
 import BrandAvatar from "@/components/buyer/BrandAvatar";
@@ -101,16 +102,9 @@ export default function NewBrandsCarousel({
     return out;
   }, [organic, sponsored, byId]);
 
-  // Impressions fire once per campaign per mount. Vendors are billed against
-  // these, so a re-render or a swipe back must not inflate them.
-  const logged = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    slides.forEach((s) => {
-      if (s.kind !== "ad" || logged.current.has(s.ad.adId)) return;
-      logged.current.add(s.ad.adId);
-      void logAdImpression(s.ad.adId);
-    });
-  }, [slides]);
+  // Once per campaign per mount, when its slide is swiped into view (review M-33): a re-render or a swipe back
+  // doesn't count again, and a slide never shown isn't counted.
+  const track = useAdImpressions();
 
   const onScroll = () => {
     const el = trackRef.current;
@@ -145,7 +139,7 @@ export default function NewBrandsCarousel({
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {slides.map((slide) => {
-          if (slide.kind === "ad") return <SponsoredSlide key={slide.key} ad={slide.ad} brand={slide.brand} onOpen={openAd} />;
+          if (slide.kind === "ad") return <SponsoredSlide key={slide.key} ad={slide.ad} brand={slide.brand} onOpen={openAd} trackRef={track(slide.ad.adId)} />;
           const brand = slide.brand;
           const following = brand.isFollowing;
           return (
@@ -235,11 +229,12 @@ export default function NewBrandsCarousel({
  * inventing a logo.
  */
 function SponsoredSlide({
-  ad, brand, onOpen,
+  ad, brand, onOpen, trackRef,
 }: {
   ad: ActiveAd;
   brand: Brand | undefined;
   onOpen: (ad: ActiveAd) => void;
+  trackRef: (el: Element | null) => void;
 }) {
   const { showText } = useDisplayCurrency();
   const name = ad.vendorName ?? brand?.name ?? "Sponsored brand";
@@ -252,7 +247,7 @@ function SponsoredSlide({
   ].filter((t): t is { name: string; price: string | null; image: string } => Boolean(t));
 
   return (
-    <div className="snap-center shrink-0 w-full">
+    <div ref={trackRef} className="snap-center shrink-0 w-full">
       <div className="rounded-xl bg-white overflow-hidden border border-gray-100">
         <div className="flex items-center gap-2.5 p-3">
           <button onClick={() => onOpen(ad)} className="shrink-0">

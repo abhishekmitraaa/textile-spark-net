@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { attributeDetails, type Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
@@ -6,7 +6,7 @@ import { shrinkImage } from "@/lib/shrinkImage";
 import { ownStorageUrl } from "@/lib/storageUrl";
 import { ensureConversation } from "@/lib/queries/chat";
 import { UNTARGETED, type Rfq, type VendorQuote, type QuoteStatus, type QuoteTerms, type SizeQty } from "@/lib/quotesData";
-import { chunks } from "@/lib/chunks";
+import { allPages, chunks } from "@/lib/chunks";
 
 // SizeQty lives with the other quote types (quotesData is the JSX-free type
 // home). Re-exported here because callers already import it from this module.
@@ -160,11 +160,12 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
   const rfqIds = rfqRows.map((r) => r.id);
 
   const quoteRows: RawQuote[] = [];
-  // 20 requirements a request: PostgREST stops at 1,000 rows without saying so (code review 2026-11-19).
+  // 20 requirements a request, each read to its end: PostgREST stops at 1,000 rows without saying so (code reviews
+  // 2026-11-19; 20 popular requirements can hold more than 1,000 quotes).
   await Promise.all(chunks(rfqIds, 20).map(async (group) => {
-    const { data, error: qErr } = await supabase.from("quotes").select("*").in("rfq_id", group);
-    if (qErr) throw qErr;
-    quoteRows.push(...((data ?? []) as RawQuote[]));
+    const rows = await allPages<RawQuote>((from, to) =>
+      supabase.from("quotes").select("*").in("rfq_id", group).order("id").range(from, to) as unknown as PromiseLike<{ data: RawQuote[] | null; error: unknown }>);
+    quoteRows.push(...rows);
   }));
   // One batched vendor lookup covering BOTH sources: the vendors who quoted,
   // and the target vendor of every targeted request. The second set matters on
@@ -188,9 +189,9 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
   const productIds = [...new Set(rfqRows.filter((r) => !ownStorageUrl(r.image) && r.product_id).map((r) => r.product_id as string))];
   const images: { product_id: string; url: string; position: number }[] = [];
   await Promise.all(chunks(productIds, 20).map(async (group) => {
-    const { data, error: iErr } = await supabase.from("product_images").select("product_id, url, position").in("product_id", group);
-    if (iErr) throw iErr;
-    images.push(...(data ?? []));
+    images.push(...await allPages<{ product_id: string; url: string; position: number }>((from, to) =>
+      supabase.from("product_images").select("product_id, url, position, id").in("product_id", group).order("id").range(from, to) as unknown as
+        PromiseLike<{ data: { product_id: string; url: string; position: number }[] | null; error: unknown }>));
   }));
   for (const img of images.sort((a, b) => a.position - b.position)) {
     if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
@@ -581,40 +582,68 @@ export interface LeadRfq {
   /** When it stops taking quotes. */
   expiresAt: string | null;
 }
-async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
-  const { data, error } = await supabase
-    .from("rfqs").select(OPEN_LEAD_COLUMNS).eq("status", "active")
-    // Still taking quotes: an open requirement's 7-day deadline, which the buyer can extend (2026-10-19).
-    .gt("expires_at", new Date().toISOString())
-    // Open marketplace only. Targeted requests (vendor_id set) belong to the
-    // Direct Quote Requests inbox, not the shared lead pool. Every pre-existing
-    // RFQ has vendor_id NULL, so this is a no-op for them.
-    .is("vendor_id", null)
-    // Not the seller's own requirements (posted as a buyer): they can't be quoted (enforce_quote_rfq_open,
-    // 2026-10-21), and rfqs_select shows a buyer their own rows, so the pool listed them.
-    .neq("buyer_id", vendorId)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  const rows = (data ?? []) as RawLeadRfq[];
+/** Leads /leads reads at a time, best Fit first; "Show more" asks for the next as many (review M-69). */
+export const LEADS_PAGE = 200;
 
-  const { data: myQuotes } = await supabase.from("quotes").select("rfq_id").eq("vendor_id", vendorId);
-  const quoted = new Set((myQuotes ?? []).map((q) => q.rfq_id));
+export interface OpenLeads {
+  /** The best-fitting `limit` open requirements, best first. */
+  leads: LeadRfq[];
+  /** Every open requirement this seller may quote on: the count Seller Home shows (the same filters, rfqs_select). */
+  total: number;
+}
 
-  // Every vendor gets the same ranking (Mitra, 2026-10-02: leads are the same on
-  // every plan; documentation/rfq-leads-pipeline-design-2026-10-02.md, R2). The
-  // weighting lives in one place server-side (match_vendor_rfqs), the same way
-  // match_products owns product ranking.
-  //
-  // Degrades to the chronological list rather than failing: until both sides
-  // have an embedding, similarity comes back null and score collapses to the
-  // category term alone; a failed RPC leaves every score at 0.
-  let matchOf = new Map<string, { similarity: number | null; categoryMatch: boolean; score: number; near: boolean }>();
-  const { data: scores, error: scoreErr } = await supabase
-    .rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: 200 });
-  if (!scoreErr && scores) {
-    matchOf = new Map((scores as { rfq_id: string; similarity: number | null; category_match: boolean; score: number; near: boolean }[])
-      .map((s) => [s.rfq_id, { similarity: s.similarity, categoryMatch: s.category_match, score: s.score, near: Boolean(s.near) }]));
+// The open marketplace a seller may quote on: active, still taking quotes (the 7-day deadline the buyer can extend,
+// 2026-10-19), not a targeted request (those are the Direct Quote Requests inbox), and not the seller's own
+// requirements posted as a buyer (enforce_quote_rfq_open refuses a quote on them, 2026-10-21). rfqs_select adds the
+// blocks and the overseas rule. seller_home_summary's open_leads is this same set: the four filters below, written
+// out at each read.
+
+/**
+ * The best-fitting open requirements and how many there are (review M-69). It read every open requirement (PostgREST
+ * cuts at 1,000, so the list could disagree with Seller Home's count) and took Fit scores for the top 200 only, so the
+ * rest sorted as 0. Now the order is match_vendor_rfqs' (Fit, over the whole pool), the rows are read by id under
+ * rfqs_select, and the count is the pool's. If the ranking call fails the list is the newest, as before.
+ */
+async function fetchOpenRfqs(vendorId: string, limit: number): Promise<OpenLeads> {
+  const nowIso = new Date().toISOString();
+  type Match = { rfq_id: string; similarity: number | null; category_match: boolean; score: number; near: boolean };
+  const [countRes, scoreRes] = await Promise.all([
+    supabase.from("rfqs").select("id", { count: "exact", head: true })
+      .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId),
+    // Every vendor gets the same ranking (Mitra, 2026-10-02: leads are the same on every plan; R2).
+    supabase.rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: limit }),
+  ]);
+  if (countRes.error) throw countRes.error;
+
+  let rows: RawLeadRfq[];
+  const matchOf = new Map<string, Match>();
+  if (!scoreRes.error && scoreRes.data) {
+    const ranked = scoreRes.data as Match[];
+    for (const m of ranked) matchOf.set(m.rfq_id, m);
+    const parts = await Promise.all(chunks(ranked.map((m) => m.rfq_id), 100).map(async (ids) => {
+      const { data, error } = await supabase.from("rfqs").select(OPEN_LEAD_COLUMNS).in("id", ids)
+        .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId);
+      if (error) throw error;
+      return (data ?? []) as RawLeadRfq[];
+    }));
+    const byId = new Map(parts.flat().map((r) => [r.id, r]));
+    rows = ranked.flatMap((m) => byId.get(m.rfq_id) ?? []);
+  } else {
+    const { data, error } = await supabase.from("rfqs").select(OPEN_LEAD_COLUMNS)
+      .eq("status", "active").gt("expires_at", nowIso).is("vendor_id", null).neq("buyer_id", vendorId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    rows = (data ?? []) as RawLeadRfq[];
   }
+
+  // The seller's quotes on these requirements only (it read every quote the seller ever sent, errors dropped).
+  const quoted = new Set<string>();
+  await Promise.all(chunks(rows.map((r) => r.id), 100).map(async (ids) => {
+    const { data, error } = await supabase.from("quotes").select("rfq_id").eq("vendor_id", vendorId).in("rfq_id", ids);
+    if (error) throw error;
+    for (const q of data ?? []) quoted.add(q.rfq_id);
+  }));
 
   const leads: LeadRfq[] = rows.map((r) => {
     const m = matchOf.get(r.id);
@@ -624,11 +653,11 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
       alreadyQuoted: quoted.has(r.id),
       categoryId: r.category_id ?? null,
-      matched: m?.categoryMatch ?? false,
+      matched: m?.category_match ?? false,
       similarity: m?.similarity ?? null,
       score: m?.score ?? 0,
       strongMatch: (m?.similarity ?? 0) >= STRONG_MATCH_SIMILARITY,
-      near: m?.near ?? false,
+      near: Boolean(m?.near),
       details: attributeDetails(r.attributes),
       overseas: Boolean(r.overseas),
       buyerCountryCode: r.buyer_country_code ?? null,
@@ -638,15 +667,16 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       expiresAt: r.expires_at ?? null,
     };
   });
-
-  // Best fit first; ties keep the created_at desc the query already applied.
-  return leads.sort((a, b) => b.score - a.score);
+  return { leads, total: Math.max(countRes.count ?? 0, leads.length) };
 }
-export function useOpenRfqs(vendorId: string | undefined) {
+
+export function useOpenRfqs(vendorId: string | undefined, limit = LEADS_PAGE) {
   return useQuery({
-    queryKey: ["rfqs", "open", vendorId],
-    queryFn: () => fetchOpenRfqs(vendorId as string),
+    queryKey: ["rfqs", "open", vendorId, limit],
+    queryFn: () => fetchOpenRfqs(vendorId as string, limit),
     enabled: Boolean(vendorId),
+    // "Show more" keeps the list on screen while the longer one loads.
+    placeholderData: keepPreviousData,
   });
 }
 

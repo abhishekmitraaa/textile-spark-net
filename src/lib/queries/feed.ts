@@ -138,6 +138,12 @@ export function useFeed(filters: FeedFilters, { enabled = true }: { enabled?: bo
   };
 }
 
+/**
+ * Home's trending listings: the hero carousel's automatic slides and "Looking for these?" ask for this one slice and
+ * each take what it shows, so the page reads `feed_products('trending')` once (review M-31; it was read twice).
+ */
+export const HOME_TRENDING_COUNT = 8;
+
 /** A fixed-size slice of a feed (a rail, "Top performing", "Recommended"): one request, no paging. */
 export function useFeedSlice(filters: FeedFilters, limit: number, { enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({

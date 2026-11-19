@@ -52,7 +52,7 @@ const Leads = () => {
   const focusRfqId = params.get("rfq");
   const openQ = useOpenRfqs(user?.id);
   const directQ = useDirectQuoteRequests(user?.id);
-  const rfqs = openQ.data ?? [];
+  const rfqs = openQ.data?.leads ?? [];
   const direct = directQ.data ?? [];
   // The open list decides "loading" (as before): a lead linked from Seller Home scrolls into view when it lands, and a
   // placeholder held for the direct requests would then vanish above it and push it off screen.
@@ -121,7 +121,7 @@ const Leads = () => {
                 <ListState kind="error" title="Your requirements couldn't be loaded" onRetry={retry} retrying={openQ.isFetching || directQ.isFetching} />
               )}
               <DirectQuoteRequests focusRfqId={focusRfqId} />
-              <OpenRfqLeads focusRfqId={focusRfqId} />
+              <OpenRfqLeads focusRfqId={focusRfqId} pageShowsError />
 
               {!isLoading && !loadError && !hasLeads && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">

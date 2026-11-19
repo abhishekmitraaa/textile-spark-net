@@ -52,12 +52,11 @@ export function devOnlyVideoCloseUps(): VideoCloseUp[] {
 //
 // What Cosora genuinely has today, and what this function actually uses:
 //
-//   1. VENDOR QUALITY (rating, weighted by review volume) — this is real,
-//      already-present catalogue data. Maps to Instagram's "information
-//      about the creator" signal (follower count / engagement history).
-//      Review count is log-scaled so a vendor with 2.1k reviews isn't
-//      treated as 1000x more trustworthy than one with 1.6k — it's a
-//      damping curve, not a linear multiplier.
+//   1. THE DATABASE'S ORDER (review M-22) — video_closeups_feed(): the tagged
+//      listing's recent demand and the video's own age, on the recent-demand
+//      scale (documentation/ranking.md 4.7). The list arrives in that order and
+//      it is the tiebreak here. It used to be product_videos.rating × review
+//      volume, a seeded number nothing writes.
 //
 //   2. IN-SESSION INTEREST MATCH — if the buyer has bookmarked any video
 //      in a given category during this viewing session, other videos in
@@ -71,39 +70,19 @@ export function devOnlyVideoCloseUps(): VideoCloseUp[] {
 //      back-to-back. Mirrors Instagram's stated goal of mixing creators
 //      rather than over-showing one source.
 //
-//   4. STABLE TIEBREAK — ties fall back to original catalogue order, so
-//      the strip doesn't visually reshuffle on every render once scores
-//      are equal.
+//   4. STABLE TIEBREAK — ties keep the database's order, so the strip
+//      doesn't reshuffle on every render.
 //
 // HONEST LIMITATION: with only 7 demo videos, this is enough to show real
 // reordering behavior (verified separately) but is still a small catalogue
 // relative to a real production inventory.
 // ─────────────────────────────────────────────────────────────
 
-function parseReviewCount(reviews: string): number {
-  // "1.6k" -> 1600, "2.1k" -> 2100, "850" -> 850
-  const match = reviews.match(/^([\d.]+)(k)?$/i);
-  if (!match) return 0;
-  const num = parseFloat(match[1]);
-  return match[2] ? num * 1000 : num;
-}
-
-function vendorQualityScore(video: VideoCloseUp): number {
-  const reviewCount = parseReviewCount(video.reviews);
-  // log-damped review volume so 2.1k vs 1.6k reviews isn't a huge swing,
-  // but a vendor with meaningfully more reviews still edges ahead.
-  const reviewWeight = Math.log10(reviewCount + 1);
-  return video.rating * reviewWeight;
-}
-
 export function rankVideoCloseUps(videos: VideoCloseUp[], interestedCategories: Set<string>): VideoCloseUp[] {
-  const INTEREST_BOOST = 2.5; // flat additive bonus for an in-session category match
-
-  const scored = videos.map((video, originalIndex) => {
-    let score = vendorQualityScore(video);
-    if (interestedCategories.has(video.category)) score += INTEREST_BOOST;
-    return { video, score, originalIndex };
-  });
+  // The buyer's interests first, otherwise the order the list arrived in (the database's).
+  const scored = videos.map((video, originalIndex) => ({
+    video, score: interestedCategories.has(video.category) ? 1 : 0, originalIndex,
+  }));
 
   // Sort by score descending, stable tiebreak on original order.
   scored.sort((a, b) => {

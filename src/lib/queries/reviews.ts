@@ -94,11 +94,7 @@ async function fetchVendorReviews(vendorId: string, limit = REVIEW_PAGE): Promis
     createdAt: r.created_at,
   }));
   const count = Number(stats?.count ?? 0);
-  const byStars = new Map((stats?.breakdown ?? []).map((b) => [b.stars, Number(b.count)]));
-  const breakdown = [5, 4, 3, 2, 1].map((stars) => {
-    const n = byStars.get(stars) ?? 0;
-    return { stars, count: n, percent: count ? Math.round((n / count) * 100) : 0 };
-  });
+  const breakdown = bucketsFrom(count, stats?.breakdown);
   return { reviews, avg: stats?.avg != null ? Number(stats.avg) : 0, count, breakdown, productCount: Number(stats?.product_count ?? 0) };
 }
 
@@ -107,6 +103,33 @@ export function useVendorReviews(vendorId: string | undefined, limit = REVIEW_PA
     queryKey: ["reviews", "vendor", vendorId, limit],
     queryFn: () => fetchVendorReviews(vendorId as string, limit),
     enabled: Boolean(vendorId),
+  });
+}
+
+/**
+ * A seller's store-review count and average only (vendor_review_stats), for a page that shows the numbers and no
+ * reviews: the product page downloaded 100 reviews for them (review M-25). Shares the ["reviews"] key family, so a
+ * review written or reported refreshes it with the rest.
+ */
+export function useVendorReviewStats(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["reviews", "vendor_stats", vendorId],
+    queryFn: async (): Promise<{ avg: number; count: number }> => {
+      const { data, error } = await supabase.rpc("vendor_review_stats", { p_vendor: vendorId as string });
+      if (error) throw error;
+      const stats = data as unknown as ReviewStats | null;
+      return { avg: stats?.avg != null ? Number(stats.avg) : 0, count: Number(stats?.count ?? 0) };
+    },
+    enabled: Boolean(vendorId),
+  });
+}
+
+/** The 5..1 buckets from a stats row's breakdown, as percentages of `count`. */
+function bucketsFrom(count: number, breakdown: { stars: number; count: number }[] | null | undefined): RatingBucket[] {
+  const byStars = new Map((breakdown ?? []).map((b) => [b.stars, Number(b.count)]));
+  return [5, 4, 3, 2, 1].map((stars) => {
+    const n = byStars.get(stars) ?? 0;
+    return { stars, count: n, percent: count ? Math.round((n / count) * 100) : 0 };
   });
 }
 
@@ -146,13 +169,21 @@ interface RawProductReview {
   created_at: string;
 }
 
+// The newest REVIEW_PAGE reviews, and the count, average and breakdown over all of them from the database
+// (product_review_summary; review M-24: every review was read and averaged in the browser).
 async function fetchProductReviews(productId: string): Promise<ProductReviewsData> {
-  const { data, error } = await supabase
-    .from("product_reviews")
-    .select("id, rating, body, buyer_id, reviewer_name, size_bought, photos, reply_body, replied_at, created_at")
-    .eq("product_id", productId)
-    .order("created_at", { ascending: false });
+  const [{ data, error }, { data: statsRaw, error: statsError }] = await Promise.all([
+    supabase
+      .from("product_reviews")
+      .select("id, rating, body, buyer_id, reviewer_name, size_bought, photos, reply_body, replied_at, created_at")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(REVIEW_PAGE),
+    supabase.rpc("product_review_summary", { p_product: productId }),
+  ]);
   if (error) throw error;
+  if (statsError) throw statsError;
   const rows = (data ?? []) as RawProductReview[];
   const reviews: ProductReview[] = rows.map((r) => ({
     id: r.id,
@@ -166,9 +197,9 @@ async function fetchProductReviews(productId: string): Promise<ProductReviewsDat
     repliedAt: r.replied_at,
     createdAt: r.created_at,
   }));
-  const ratings = rows.map((r) => r.rating);
-  const avg = ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 0;
-  return { reviews, avg, count: ratings.length, breakdown: buildBreakdown(ratings) };
+  const stats = statsRaw as unknown as { count: number; avg: number | null; breakdown: { stars: number; count: number }[] | null } | null;
+  const count = Number(stats?.count ?? 0);
+  return { reviews, avg: stats?.avg != null ? Number(stats.avg) : 0, count, breakdown: bucketsFrom(count, stats?.breakdown) };
 }
 
 export function useProductReviews(productId: string | undefined) {
@@ -258,7 +289,8 @@ async function fetchServiceReviews(kind: ServiceKind, serviceId: string): Promis
     .select("id, rating, body, buyer_id, reviewer_name, created_at")
     .eq("service_kind", kind)
     .eq("service_id", serviceId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(REVIEW_PAGE); // no page shows these since the sample profiles lost their reviews (H-13); bounded anyway
   if (error) throw error;
   const rows = (data ?? []) as RawServiceReview[];
   const reviews: VendorReview[] = rows.map((r) => ({

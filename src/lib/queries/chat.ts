@@ -335,9 +335,17 @@ export function useChatThread(otherId: string | undefined) {
       setMemberState({ starred: Boolean(ms?.starred_at), archived: Boolean(ms?.archived_at), clearedAt });
       clearedAtRef.current = clearedAt;
 
-      // Through the hub: the newest page again on each chat event (the merge keeps each message once).
+      // Through the hub: a chat event carries no content and may be another chat's, so the conversation's status and
+      // last message time are read first (one row), and the newest page only when that time moved (code review of
+      // batch 3: two reads per event, whichever chat it was). The merge keeps each message once.
       if (hubLive) {
-        onHubChat.current = () => {
+        let lastSeenAt: string | null | undefined;
+        onHubChat.current = async () => {
+          const { data: c } = await supabase.from("conversations").select("status, last_message_at").eq("id", conv.id).maybeSingle();
+          if (cancelled || !c) return;
+          applyStatus((c.status as ConversationStatus) ?? "active");
+          if (lastSeenAt !== undefined && c.last_message_at === lastSeenAt) return;
+          lastSeenAt = c.last_message_at;
           // The clear line as it is now: "Clear chat" moves it after this effect ran (code review 2026-11-19).
           const clearedNow = clearedAtRef.current;
           let fresh = supabase.from("messages").select(THREAD_COLUMNS).eq("conversation_id", conv.id);
@@ -356,7 +364,6 @@ export function useChatThread(otherId: string | undefined) {
               setMessages((prev) => mergeMessages(prev, rows));
               if (arrived && document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
             });
-          void refreshStatus();
         };
       }
 

@@ -9,6 +9,8 @@ import { BusinessProfileScore } from "@/components/dashboard/BusinessProfileScor
 import { SellerQuickActionsGrid } from "@/components/dashboard/SellerQuickActionsGrid";
 import { useAuth } from "@/contexts/AuthContext";
 import { profileScoreSignals, useVendorDashboard } from "@/lib/queries/vendorDashboard";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSellerHomeChats, sellerHomeChatsKey } from "@/lib/queries/sellerHome";
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { NextStepCard } from "@/components/dashboard/NextStepCard";
 import { GettingStartedCard } from "@/components/dashboard/GettingStartedCard";
@@ -58,7 +60,16 @@ const SellerHome = () => {
 
   const topProducts = home?.topProducts ?? [];
   const recentLeads = home?.recentLeads ?? [];
-  const recentMessages = home?.recentChats ?? [];
+  // The summary's chats on load; after a chat event, the chats read on their own (seller_home_chats, review M-68),
+  // whichever is newer. Never fetched by this hook itself: chatUnread's hub handler fills it.
+  const chatsQuery = useQuery({
+    queryKey: sellerHomeChatsKey(user?.id ?? ""),
+    queryFn: fetchSellerHomeChats,
+    enabled: false,
+  });
+  const recentMessages = chatsQuery.data && chatsQuery.dataUpdatedAt > dashQuery.dataUpdatedAt
+    ? chatsQuery.data
+    : home?.recentChats ?? [];
   const when = (iso: string) => {
     const d = new Date(iso);
     return d.toDateString() === new Date().toDateString()

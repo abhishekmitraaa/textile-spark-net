@@ -4765,6 +4765,16 @@ export type Database = {
         Args: { ad: string; p_session?: string }
         Returns: undefined
       }
+      ad_impressions: {
+        Args: { p_ads: string[]; p_session?: string }
+        Returns: undefined
+      }
+      product_review_summary: { Args: { p_product: string }; Returns: Json }
+      seller_home_chats: { Args: never; Returns: Json }
+      video_closeups_feed: {
+        Args: { p_limit?: number }
+        Returns: { video_id: string }[]
+      }
       ad_is_bumped: {
         Args: { a: Database["public"]["Tables"]["advertisements"]["Row"] }
         Returns: boolean

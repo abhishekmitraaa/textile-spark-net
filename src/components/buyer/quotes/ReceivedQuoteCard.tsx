@@ -3,7 +3,7 @@ import {
   BadgeCheck, Star, MapPin, Clock, DollarSign, Package, FlaskConical,
   MessageCircle, Phone, Eye, X, Star as StarIcon, Check,
 } from "lucide-react";
-import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
+import { fmtMoney, samplingText, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
 import { cn } from "@/lib/utils";
 import { quoteRatingText } from "@/lib/quotesData";
 
@@ -95,7 +95,7 @@ export default function ReceivedQuoteCard({
         <StatCell icon={DollarSign} label="Price/Unit" value={showBoth(q.pricePerUnit, fmtMoney(q.currency, q.pricePerUnit), q.currency)} />
         <StatCell icon={Package} label="MOQ" value={`${q.moq.toLocaleString()} units`} />
         <StatCell icon={Clock} label="Lead Time" value={q.leadTime} />
-        <StatCell icon={FlaskConical} label="Sampling" value={q.sampling == null ? "Not specified" : showBoth(q.sampling, fmtMoney(q.currency, q.sampling), q.currency)} />
+        <StatCell icon={FlaskConical} label="Sampling" value={samplingText(q, showBoth)} />
       </div>
 
       {/* Comment */}

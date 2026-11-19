@@ -31,7 +31,9 @@ export default function VideoCloseUpsPage() {
   const [isOpen, setIsOpen] = useState(true);
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
 
-  const { data: dbVideos, isPending } = useVideoCloseUps();
+  const { data: dbVideos, isPending, isError, refetch, isFetching } = useVideoCloseUps();
+  // A failed read is its own state, never "No video close-ups yet" (review M-21).
+  const readFailed = isError && !dbVideos;
   const usingDevFallback = !dbVideos?.length;
   const catalogue = usingDevFallback ? devOnlyVideoCloseUps() : dbVideos;
 
@@ -108,7 +110,7 @@ export default function VideoCloseUpsPage() {
   // Nothing to show: either still fetching, or genuinely no live videos. The
   // viewer would render null in both cases, stranding the buyer on a blank
   // page, so this route owns those states itself.
-  if (isPending || waitingForShared || rankedVideoCloseUps.length === 0) {
+  if (isPending || waitingForShared || readFailed || rankedVideoCloseUps.length === 0) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
@@ -120,6 +122,21 @@ export default function VideoCloseUpsPage() {
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
           {isPending || waitingForShared ? (
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+          ) : readFailed ? (
+            <>
+              <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                <Clapperboard className="w-6 h-6 text-gray-300" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">Couldn't load video close-ups</p>
+              <p className="mt-1.5 text-sm text-gray-500 max-w-xs">Check your connection and try again.</p>
+              <button
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                className="mt-6 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white active:scale-[0.99] disabled:opacity-60"
+              >
+                {isFetching ? "Trying again…" : "Try again"}
+              </button>
+            </>
           ) : (
             <>
               <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">

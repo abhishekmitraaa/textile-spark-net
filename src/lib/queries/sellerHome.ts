@@ -137,15 +137,28 @@ export function sellerHomeFrom(raw: Raw | null): SellerHome | null {
       direct: x.direct === true,
       quoted: x.quoted === true,
     })),
-    recentChats: ((raw.recent_chats ?? []) as Raw[]).map((x) => ({
-      otherId: String(x.other_id),
-      name: String(x.name ?? "User"),
-      avatar: str(x.avatar),
-      lastMessage: str(x.last_message),
-      lastMessageAt: String(x.last_message_at),
-      unread: num(x.unread),
-    })),
+    recentChats: chatsFrom(raw.recent_chats),
   };
+}
+
+function chatsFrom(raw: unknown): SellerHomeChat[] {
+  return ((raw ?? []) as Raw[]).map((x) => ({
+    otherId: String(x.other_id),
+    name: String(x.name ?? "User"),
+    avatar: str(x.avatar),
+    lastMessage: str(x.last_message),
+    lastMessageAt: String(x.last_message_at),
+    unread: num(x.unread),
+  }));
+}
+
+/** Seller Home's three recent chats alone (seller_home_chats). */
+export const sellerHomeChatsKey = (userId: string) => ["seller_home_chats", userId] as const;
+
+export async function fetchSellerHomeChats(): Promise<SellerHomeChat[]> {
+  const { data, error } = await supabase.rpc("seller_home_chats");
+  if (error) throw error;
+  return chatsFrom(data);
 }
 
 /** One call for the whole page. Throws on error (an error is never shown as zeros). */

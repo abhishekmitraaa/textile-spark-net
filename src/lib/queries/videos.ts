@@ -102,18 +102,25 @@ function toCloseUp(v: RawVideo): VideoCloseUp {
 }
 
 async function fetchVideoCloseUps(): Promise<VideoCloseUp[]> {
-  // Single round-trip: the brand name is embedded via the
-  // product_videos_vendor_profile_fkey constraint. This used to be two queries
-  // — the rows, then a separate `in("id", vendorIds)` against vendor_profiles
-  // joined in memory — because the only FK pointed at `profiles`.
+  // The order is the database's (review M-22): the tagged listing's recent demand and the video's own age, on the
+  // recent-demand scale (video_closeups_feed, documentation/ranking.md 4.7). It used to be the most viewed ever, so
+  // a new video never showed. The rows are then read by id under product_videos' own read rules, with the brand
+  // name embedded through product_videos_vendor_profile_fkey.
+  const { data: order, error: orderError } = await supabase.rpc("video_closeups_feed", { p_limit: FEED_LIMIT });
+  if (orderError) throw orderError;
+  const ids = ((order ?? []) as { video_id: string }[]).map((r) => r.video_id);
+  if (!ids.length) return [];
   const { data, error } = await supabase
     .from("product_videos")
     .select(VIDEO_COLUMNS)
-    .eq("status", "live")
-    .order("views_count", { ascending: false })
-    .limit(FEED_LIMIT);
+    .in("id", ids)
+    .eq("status", "live");
   if (error) throw error;
-  return ((data ?? []) as unknown as RawVideo[]).map(toCloseUp);
+  const byId = new Map(((data ?? []) as unknown as RawVideo[]).map((v) => [v.id, v]));
+  return ids.flatMap((id) => {
+    const v = byId.get(id);
+    return v ? [toCloseUp(v)] : [];
+  });
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

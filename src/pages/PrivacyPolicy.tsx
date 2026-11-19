@@ -1,5 +1,6 @@
 
 import { ArrowLeft } from "lucide-react";
+import { SUPPORT_PHONE_LABEL } from "@/lib/supportContact";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { CLARITY_ENABLED } from "@/lib/analytics/clarity";
 import { useStepBack } from "@/hooks/useStepBack";
@@ -101,7 +102,7 @@ const SECTIONS: Section[] = [
   {
     heading: "9. Deleting your account",
     paragraphs: [
-      "A buyer can ask to delete their account from Profile › Help. It is confirmed with a code sent to your email or WhatsApp; sending that code isn't set up yet, so until it is, call Cosora Support on +91 88155 78226 to ask. We then wait 14 days in case you change your mind, and remove your name, contact details and photo, your saved items, followed and saved sellers and notifications, and your support messages and files. Requirements, messages and reviews other people took part in stay, without your name on them.",
+      `A buyer can ask to delete their account from Profile › Help. It is confirmed with a code sent to your email or WhatsApp; sending that code isn't set up yet, so until it is, call Cosora Support on ${SUPPORT_PHONE_LABEL} to ask. We then wait 14 days in case you change your mind, and remove your name, contact details and photo, your saved items, followed and saved sellers and notifications, and your support messages and files. Requirements, messages and reviews other people took part in stay, without your name on them.`,
       "Sellers and anyone with an open matter should contact support to close their account.",
     ],
   },

@@ -1,8 +1,9 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
+import { useAdImpressions } from "@/hooks/useAdImpressions";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useActiveAds, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, adSlotBlock, type AdSlotId } from "@/lib/adSlots";
 import SponsoredNote, { AdMark } from "@/components/buyer/SponsoredNote";
@@ -68,16 +69,8 @@ export default function SponsoredRail({
     [slot, window, block],
   );
   const heading = label ?? spec?.label ?? "Featured products";
-  const logged = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    ads.forEach((a) => {
-      if (!logged.current.has(a.adId)) {
-        logged.current.add(a.adId);
-        void logAdImpression(a.adId);
-      }
-    });
-  }, [ads]);
+  // Counted once each card is on screen (review M-33), not when the rail renders.
+  const track = useAdImpressions();
 
   if (ads.length === 0) return null;
 
@@ -112,6 +105,7 @@ export default function SponsoredRail({
         {ads.map((a) => (
           <motion.button
             key={a.adId}
+            ref={track(a.adId)}
             onClick={() => open(a)}
             whileTap={reduced ? undefined : { scale: 0.97 }}
             transition={{ duration: 0.13, ease: E }}

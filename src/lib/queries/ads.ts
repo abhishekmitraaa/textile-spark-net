@@ -521,10 +521,38 @@ export { isProfileGoalAd, adDestination, PROFILE_GOAL_PLACEMENTS } from "@/lib/a
 // count one viewer and suppress another. Signed-in viewers are keyed on
 // auth.uid() inside the RPC and the session id is ignored.
 //
-// Past the daily cap the ad STILL RENDERS; only the counting stops (Phase 3.6).
-export async function logAdImpression(adId: string): Promise<void> {
-  await supabase.rpc("ad_impression", { ad: adId, p_session: sessionId() ?? undefined });
+// Every view of a running campaign is counted, with no cap (Mitra, 2026-11-18).
+//
+// Impressions are gathered for a second and sent in one ad_impressions() call (review M-33): a page showing a rail
+// of ads made one request per ad. Call it when the ad is on screen (useAdImpressions()), never on mount. A tab going
+// to the background sends what is waiting.
+const IMPRESSION_BATCH_MS = 1000;
+const IMPRESSION_BATCH_MAX = 48; // ad_impressions() refuses more in one call
+const pendingImpressions: string[] = [];
+let impressionTimer: ReturnType<typeof setTimeout> | null = null;
+let flushOnHide = false;
+
+function flushImpressions(): void {
+  if (impressionTimer) clearTimeout(impressionTimer);
+  impressionTimer = null;
+  while (pendingImpressions.length) {
+    const ads = pendingImpressions.splice(0, IMPRESSION_BATCH_MAX);
+    // A supabase-js call is sent only once it is awaited or then'd.
+    supabase.rpc("ad_impressions", { p_ads: ads, p_session: sessionId() ?? undefined }).then(() => undefined, () => undefined);
+  }
+}
+
+export function logAdImpression(adId: string): void {
+  pendingImpressions.push(adId);
   void logEngagement({ eventType: "ad_impression", adId, source: "ad" });
+  if (!flushOnHide && typeof document !== "undefined") {
+    flushOnHide = true;
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushImpressions();
+    });
+  }
+  if (pendingImpressions.length >= IMPRESSION_BATCH_MAX) flushImpressions();
+  else if (!impressionTimer) impressionTimer = setTimeout(flushImpressions, IMPRESSION_BATCH_MS);
 }
 
 export async function logAdClick(adId: string): Promise<void> {

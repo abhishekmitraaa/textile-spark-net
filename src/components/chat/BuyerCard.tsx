@@ -2,12 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 import { errorMessage } from "@/lib/errorMessage";
+import { SOCIAL_PLATFORMS, normaliseSocialLink } from "@/lib/socialLinks";
 
 interface Card { name: string; company: string | null; city: string | null; member_since: string }
 
-const LINK_LABELS: Record<string, string> = {
-  facebook: "Facebook", x: "X", linkedin: "LinkedIn", youtube: "YouTube", instagram: "Instagram", other: "Website",
-};
 
 /**
  * The buyer a seller is chatting with (Seller Home audit SH-107; Mitra, 2026-11-17, "Small buyer card"): name,
@@ -30,8 +28,10 @@ export function BuyerCard({ buyerId, open, onOpenChange }: { buyerId: string; op
     queryFn: async (): Promise<[string, string][]> => {
       const { data, error } = await supabase.rpc("chat_buyer_social", { p_other: buyerId });
       if (error) throw error;
+      // The seller's link rules again (chat_buyer_social applies them too): each link under its own platform.
       return Object.entries((data ?? {}) as Record<string, string>)
-        .filter(([, url]) => /^https?:\/\//i.test(url));
+        .map(([key, url]): [string, string | null] => [key, normaliseSocialLink(key, url)])
+        .filter((e): e is [string, string] => e[1] !== null);
     },
     enabled: open && Boolean(buyerId),
   });
@@ -61,7 +61,7 @@ export function BuyerCard({ buyerId, open, onOpenChange }: { buyerId: string; op
                   {(links.data ?? []).map(([key, url]) => (
                     <a key={key} href={url} target="_blank" rel="noopener noreferrer nofollow ugc"
                       className="rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-brand-vendor hover:underline">
-                      {LINK_LABELS[key] ?? "Link"}
+                      {SOCIAL_PLATFORMS.find((p) => p.key === key)?.label ?? "Link"}
                     </a>
                   ))}
                 </dd>

@@ -451,7 +451,7 @@ const VendorProfile = () => {
                 </div>
                 <div>
                   <p className="text-[10px] text-white/70 uppercase tracking-wider leading-none">All Items</p>
-                  <p className="text-lg font-bold text-white leading-tight">{vpProducts.length}</p>
+                  <p className="text-lg font-bold text-white leading-tight">{vendor.liveCount}</p>
                 </div>
               </div>
               {/* Wraps on a phone: the International label would otherwise squeeze the business type onto two lines. */}
@@ -1041,7 +1041,12 @@ const VendorProfile = () => {
             </div>
           </div>
 
-          <p className="text-sm font-semibold text-gray-700 mb-3">Product <span className="text-brand-buyer">{vpProducts.length}</span></p>
+          <p className="text-sm font-semibold text-gray-700 mb-3">Product <span className="text-brand-buyer">{vendor.liveCount}</span></p>
+          {vendor.liveCount > vpProducts.length && (
+            <p className="-mt-2 mb-3 text-xs text-gray-500">
+              Showing the newest {vpProducts.length} of {vendor.liveCount} listings.
+            </p>
+          )}
 
           {/* Product grid */}
           <div className={cn("grid", gridCols === 2 ? "grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-3 gap-2 lg:grid-cols-5 xl:grid-cols-6")}>

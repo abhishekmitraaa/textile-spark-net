@@ -69,9 +69,14 @@ export interface VendorProfileData {
   categories: string[];
   /** The registered seller's country (registeredCountry()); outside India shows "International supplier". */
   countryCode: string | null;
+  /** The newest STORE_LISTING_LIMIT live listings (review M-23); `liveCount` is how many the seller has live. */
   products: ProductCardData[];
+  liveCount: number;
   videos: VideoCloseUp[];
 }
+
+/** Listings a store page reads at once: Gold's cap (200). Only a VIP seller can have more; the page then says so. */
+export const STORE_LISTING_LIMIT = 200;
 
 interface RawVid {
   id: string; vendor_id: string; category: string; brand_line: string; price: string | null;
@@ -109,22 +114,31 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     country_code: v.country_code, onboarding_complete: v.onboarding_complete,
   };
 
-  const { data: prods } = await supabase
-    .from("products")
-    .select(PRODUCT_CARD_SELECT)
-    .eq("vendor_id", id)
-    .eq("status", "live")
-    .order("created_at", { ascending: false });
-  const products = ((prods ?? []) as unknown as RawProduct[]).map((p) => mapProductRow(p, vendorMini));
-
-  const { data: vids } = await supabase
-    .from("product_videos")
-    .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, product_id, products ( id, status )")
-    .eq("vendor_id", id)
-    .eq("status", "live")
-    .order("views_count", { ascending: false })
-    .limit(24);
-  const videos: VideoCloseUp[] = ((vids ?? []) as unknown as RawVid[]).map((r) => ({
+  // Bounded, and a failed read is the page's failed state, never an empty store (review M-23). The listings and the
+  // videos are read together.
+  const [prodRes, vidRes] = await Promise.all([
+    supabase
+      .from("products")
+      .select(PRODUCT_CARD_SELECT, { count: "exact" })
+      .eq("vendor_id", id)
+      .eq("status", "live")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(0, STORE_LISTING_LIMIT - 1),
+    supabase
+      .from("product_videos")
+      .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, product_id, products ( id, status )")
+      .eq("vendor_id", id)
+      .eq("status", "live")
+      .order("views_count", { ascending: false })
+      .limit(24),
+  ]);
+  if (prodRes.error) throw prodRes.error;
+  if (vidRes.error) throw vidRes.error;
+  const prodRows = (prodRes.data ?? []) as unknown as RawProduct[];
+  const products = prodRows.map((p) => mapProductRow(p, vendorMini));
+  const liveCount = Math.max(prodRes.count ?? 0, prodRows.length);
+  const videos: VideoCloseUp[] = ((vidRes.data ?? []) as unknown as RawVid[]).map((r) => ({
     id: r.id,
     vendorId: r.vendor_id,
     category: r.category,
@@ -173,6 +187,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     categories: v.category ?? [],
     countryCode: registeredCountry(vendorMini),
     products,
+    liveCount,
     videos,
   };
 }

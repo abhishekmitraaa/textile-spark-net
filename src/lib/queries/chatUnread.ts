@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHubEvent } from "@/lib/realtimeHub";
+import { fetchSellerHomeChats, sellerHomeChatsKey } from "@/lib/queries/sellerHome";
 
 // ─────────────────────────────────────────────────────────────
 // UNREAD CHAT MESSAGES (2026-10-14; migration 20261014170000_chat_unread.sql).
@@ -51,10 +52,14 @@ export function useChatUnread(): ChatUnread {
   });
 
   // Live-update hub (switch live_updates_hub): a chat event re-reads the counts, and Seller Home's recent chats.
+  // Only the chats (seller_home_chats), and only when Seller Home has been opened: the whole summary counts every
+  // open requirement, and it was re-run on every message (review M-68).
   const live = useHubEvent("chat", () => {
     if (!userId) return;
     void qc.invalidateQueries({ queryKey: chatUnreadKey(userId) });
-    void qc.invalidateQueries({ queryKey: ["vendor_dashboard", userId] });
+    if (qc.getQueryState(["vendor_dashboard", userId])) {
+      void qc.fetchQuery({ queryKey: sellerHomeChatsKey(userId), queryFn: fetchSellerHomeChats, staleTime: 0 }).catch(() => undefined);
+    }
     // The chat list: a new chat or a new last message shows without a reload (review M-44).
     void qc.invalidateQueries({ queryKey: ["conversations", userId] });
   });

@@ -5,7 +5,7 @@ import { Bookmark, BookmarkCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
-import { useFeedSlice } from "@/lib/queries/feed";
+import { HOME_TRENDING_COUNT, useFeedSlice } from "@/lib/queries/feed";
 import type { ProductCardData } from "@/lib/queries/products";
 import { useHeroSlideIds } from "@/lib/siteConfig";
 
@@ -43,7 +43,7 @@ import { useHeroSlideIds } from "@/lib/siteConfig";
 //   3. with no live listings at all, nothing: the section is left out.
 // Both lists come from feed_products, which returns live listings only, so a paused or removed
 // pick drops out on its own.
-const AUTOMATIC_SLIDES = 8;
+const AUTOMATIC_SLIDES = HOME_TRENDING_COUNT; // the slice Home's "Looking for these?" reads too (review M-31)
 
 const AUTO_ADVANCE_MS = 4200;
 // Each slide's size is now driven by HEIGHT (h-full of the stage) with

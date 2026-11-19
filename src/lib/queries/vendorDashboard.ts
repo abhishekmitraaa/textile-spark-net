@@ -304,7 +304,9 @@ export function useProfileScoreState(): ProfileScoreState {
   const { data, isLoading, isError, refetch } = useVendorDashboard(user?.id);
   const retry = () => void refetch();
 
-  if (!user || isError || !data) {
+  // A refresh that failed over loaded data keeps the data (Seller Home shows its own "couldn't refresh" note): the
+  // next-step card would otherwise forget what is in review (code review of batch 3, M-73). Unknown only with no data.
+  if (!user || !data) {
     return { score: null, checks: EMPTY_CHECKS, isLoading: Boolean(user) && isLoading, isError: Boolean(user) && isError, hasVendorRow: false, waiting: {}, retry };
   }
   const review = data.home.review;

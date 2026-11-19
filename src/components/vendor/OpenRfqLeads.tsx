@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Send, Check, Loader2, Sparkles, Globe2, Clock, KanbanSquare, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
+import { LEADS_PAGE, useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
 import { useNow, timeUntil } from "@/lib/queries/overseas";
 import { countryByCode } from "@/data/countries";
 import { useLang } from "@/lib/i18n";
@@ -82,11 +82,21 @@ function OverseasBadge({ code, vipUntil }: { code: string | null; vipUntil: stri
   );
 }
 
-export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }: { overseasOnly?: boolean; focusRfqId?: string | null }) {
+export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null, pageShowsError = false }: {
+  overseasOnly?: boolean; focusRfqId?: string | null;
+  /** The page shows its own failed-read state with Retry (/leads), so the list doesn't repeat it. */
+  pageShowsError?: boolean;
+}) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { data: all = [], isLoading } = useOpenRfqs(user?.id);
+  const [limit, setLimit] = useState(LEADS_PAGE);
+  const leadsQuery = useOpenRfqs(user?.id, limit);
+  const { isLoading, isError, refetch, isFetching } = leadsQuery;
+  const all = leadsQuery.data?.leads ?? [];
+  const total = leadsQuery.data?.total ?? 0;
   const rfqs = overseasOnly ? all.filter((r) => r.overseas) : all;
+  // More open requirements than loaded (review M-69): the best-fitting first, the rest on request.
+  const hasMore = total > all.length;
   // The CRM (subscriptions P8): a vendor whose plan includes it can track a lead from here.
   const { data: entitlements } = useVendorEntitlements(user?.id);
   const crm = Boolean(entitlements?.features.crm_pipeline);
@@ -116,7 +126,25 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }
   const [busy, setBusy] = useState(false);
   useFocusLead(focusRfqId, rfqs, openQuote);
 
-  if (!user || isLoading || rfqs.length === 0) return null;
+  if (!user || isLoading) return null;
+  // A failed read says so (it showed nothing, as if there were no requirements).
+  if (isError && !leadsQuery.data) {
+    if (pageShowsError) return null;
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 lg:p-5 text-sm text-gray-600">
+        <p className="font-semibold text-gray-900">Couldn't load buyer requirements</p>
+        <p className="mt-1">Check your connection and try again.</p>
+        <button
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="mt-3 rounded-lg bg-brand-vendor px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+        >
+          {isFetching ? "Trying again…" : "Try again"}
+        </button>
+      </div>
+    );
+  }
+  if (rfqs.length === 0 && !hasMore) return null;
 
   const submit = async (rfqId: string) => {
     // A price above 0 with at most two decimals, and a whole-number MOQ (SH-081).
@@ -154,7 +182,7 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }
       <div className="flex items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-gray-900 lg:text-base">{overseasOnly ? "Open to you" : "Buyer Requirements"}</h2>
-          <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{rfqs.length} live</span>
+          <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{overseasOnly ? rfqs.length : total} live</span>
         </div>
       </div>
 
@@ -253,6 +281,19 @@ export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }
           </div>
         ))}
       </div>
+      {hasMore && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+          <span>Showing the best {all.length} of {total} open requirements</span>
+          <button
+            type="button"
+            onClick={() => setLimit((n) => n + LEADS_PAGE)}
+            disabled={isFetching}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Show more
+          </button>
+        </div>
+      )}
     </div>
   );
 }

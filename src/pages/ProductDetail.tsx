@@ -13,7 +13,7 @@ import {
   useYouMightLike, useVendorOtherProducts, type ProductCardData,
   type ProductDetail as ProductRow,
 } from "@/lib/queries/products";
-import { useProductReviews, useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { useProductReviews, useVendorReviewStats, useReviewMutations } from "@/lib/queries/reviews";
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { useAuth } from "@/contexts/AuthContext";
@@ -414,8 +414,9 @@ const ProductDetail = () => {
   } = useProductReviews(row?.id);
   // Same rule for the vendor: their rating comes from their `reviews` rows, not
   // vendor_profiles.rating_avg / reviews_count. "Lucknow Chikankari Co." carries
-  // reviews_count = 4,800 with zero rows in `reviews`.
-  const { data: vendorReviews } = useVendorReviews(row?.vendorId);
+  // reviews_count = 4,800 with zero rows in `reviews`. The numbers only, from the database (review M-25: it
+  // downloaded 100 reviews for them).
+  const { data: vendorReviews, isError: vendorStatsFailed } = useVendorReviewStats(row?.vendorId);
   const { submitProductReview } = useReviewMutations();
   const { user } = useAuth();
   const reviewCount = productReviews?.count ?? 0;
@@ -623,7 +624,7 @@ const ProductDetail = () => {
               </div>
               <div className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">
                 {vendorReviews === undefined ? (
-                  <span className="h-3 w-24 animate-pulse rounded bg-gray-100" aria-label="Loading vendor rating" />
+                  vendorStatsFailed ? null : <span className="h-3 w-24 animate-pulse rounded bg-gray-100" aria-label="Loading vendor rating" />
                 ) : vendorReviewCount > 0 ? (
                   <>
                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
