@@ -1472,6 +1472,28 @@ undocumented. Deep technical rationale for each lives in
   links each to /products. A lead carries `quote_id`, and `/quotes?quote=<id>` opens that quote.
 - **An old address redirects, at Vercel and in the app** (2026-11-20, review L-101): /for-you and /service-vendors
   (`AliasRedirect` keeps the query). `documentation/sitemap.md` is regenerated from App.tsx when routes change.
+- **An account's state is read through functions, never the column** (Mitra, 2026-11-20, review L-89, "Close it
+  now"; `20261120140000`, then `20261120140100` withdraws the columns once both apps are live).
+  - `profiles.account_status` and a seller's `vendor_profiles.notifications` / `regional` aren't client-readable.
+    Read `contact_check(other)` (may this account reach that one: it names the other's state only where the caller has
+    a reason to reach them), `my_account_status()`, `my_vendor_settings()`, and in Cosora-Admin
+    `admin_account_statuses(ids)`.
+  - `account_is_active()` / `account_not_deleted()` answer a browser about its own account only (`own_account_only`
+    otherwise); policies pass `(select auth.uid())`. Definer code that needs another account's state reads `profiles`
+    itself, as `vendor_account_in_good_standing()` does: calling the helpers with another id fails inside a request.
+- **A policy reads the caller's ids once, as an array** (2026-11-20, review L-91): `messages`, `quotes` and `rfqs`
+  use `col = any (((select public.my_conversation_ids()))::uuid[])` (also `my_rfq_ids()`, `my_quoted_rfq_ids()`), not
+  `owns_rfq(rfq_id)` per row; the cast is needed. A new policy over these tables does the same, and
+  `scripts/admin-completion/16_rls_equivalence.sql`'s approach (every account's access before and after) proves it.
+- **A requirement past its deadline is closed, and the buyer can reopen it** (Mitra, 2026-11-20, review L-92). The
+  job `rfq-deadline-close` (00:05 India time, `admin.rfqs_close_lapsed()`) sets `status = 'closed'` and `lapsed_at`;
+  `extend_rfq_deadline()` reopens one closed that way (7 days). Only those two write `lapsed_at` (a browser's change
+  is undone). My Quotes shows "Deadline passed" with Extend.
+- **The daily dedupe tables keep 2 days, and the scheduler's history 2 days of successes** (Mitra, 2026-11-20, L-97,
+  L-98): `daily-dedupe-prune` (`admin.daily_dedupe_prune()`: product views, video views, enquiries, ad clicks) and
+  `cron-history-prune` (failures 14 days). A new daily dedupe table goes in the prune.
+- **A SECURITY DEFINER function's search path ends with `pg_temp`** (2026-11-20, review L-93): `set search_path to
+  'public', 'pg_temp'`, or `''` with every name qualified. Without it the temporary schema is searched first.
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

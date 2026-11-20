@@ -1,3 +1,17 @@
+- 2026-11-20 (branch `fix/low-batch5-2026-11-20` in both repos; migrations `20261120140000_low_batch5.sql` and, after
+  both apps are live, `20261120140100_low_batch5_revoke.sql`; plan `documentation/low-bugs-batch5-plan-2026-11-20.md`;
+  **built and checked on the local stack; production rehearsal not yet run (auto mode refused it); not released**)
+  **Buyer review, Low batch 5 of 5: the database items** (L-86–L-98).
+  - Mitra's calls: account state closed now (L-89); lapsed requirements closed daily with Extend for the buyer (L-92);
+    notifications stay in the realtime publication (L-95); dedupe tables and cron successes kept 2 days (L-97, L-98).
+  - Account status and seller settings read through `contact_check`, `my_account_status`, `admin_account_statuses`
+    and `my_vendor_settings`; `account_is_active` / `account_not_deleted` answer a browser about itself only.
+  - Policies: saved tables one per command with the deleted-account guard; messages, quotes and rfqs read the caller's
+    ids once (every account's access unchanged, 11,397 compared). Definers get `pg_temp`; `active_ads` bumps once.
+  - Two unused indexes dropped, two better ones; the empty backup table and two unused functions gone; retired
+    interest rows, the stray language field and self-follows removed.
+  - My Quotes: "Deadline passed" with Extend; no "₹0 - ₹0" budget or "Lowest: ₹0" without quotes. Seller Settings: a
+    failed read shows Try again. Code review (medium): 5 of 5 fixed.
 - 2026-11-20 (branch `fix/low-batch4-2026-11-20` in both repos; migration `20261120130000_low_batch4.sql`;
   plan `documentation/low-bugs-batch4-plan-2026-11-20.md`; **built and checked on the local stack, migration rehearsed
   on production and rolled back; not released**)
