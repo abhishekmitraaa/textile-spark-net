@@ -128,6 +128,8 @@ test.describe("B5 · accepting the Terms is recorded", () => {
     const page = await ctx.newPage();
     try {
       await page.goto(`${BUYER_URL}/terms`);
+      // Pages load as their own files (review M-34): wait for the clauses before reading them.
+      await expect(page.locator("[data-terms-heading]").first()).toBeVisible();
       const full = await page.locator("[data-terms-heading]").allInnerTexts();
       expect(full.length).toBeGreaterThan(10);
       await page.goto(`${BUYER_URL}/auth/terms`);

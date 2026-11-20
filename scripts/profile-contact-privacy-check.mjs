@@ -126,7 +126,9 @@ for (const [fn, args] of [["admin_profile_search", { p_term: "demo" }], ["admin_
 }
 {
   const { error } = await buyer.db.rpc("call_buyer_contact", { p_buyer_id: VENDOR_ID });
-  check("buyer call_buyer_contact(vendor, no RFQ between them) refused", error?.message === "no_rfq_relationship", error?.message ?? "allowed");
+  // A buyer isn't a registered seller, and call_buyer_contact() checks that first (not_a_vendor); either reason is a refusal.
+  check("buyer call_buyer_contact(vendor, no RFQ between them) refused",
+    error?.code === "42501" && ["not_a_vendor", "no_rfq_relationship"].includes(error?.message ?? ""), error?.message ?? "allowed");
 }
 
 // ── demo-vendor ──

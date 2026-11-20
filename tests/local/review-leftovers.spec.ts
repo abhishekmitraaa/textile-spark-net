@@ -63,10 +63,12 @@ test.describe("L-64 · a phone sign-up reads the profile less", () => {
       await page.getByRole("radio", { name: /^BUYER/ }).click();
       await page.getByRole("button", { name: "Continue" }).click();
       await buyerSteps(page);
-      // Sign-in's own load (1), Account Information (1), Terms (1). It was 5 rows, 4 contact reads and 4 admin checks.
+      // Rows: sign-in's own load, Account Information, Terms (it was 5). Admin status: once (it was 4). Contact details:
+      // AuthContext twice and Account Information's own form twice (it fills the form, then reads what it saved).
       expect(reads.row, JSON.stringify(reads)).toBeLessThanOrEqual(3);
       expect(reads.admin, JSON.stringify(reads)).toBe(1);
-      expect(reads.contact, JSON.stringify(reads)).toBeLessThanOrEqual(2);
+      expect(reads.contact, JSON.stringify(reads)).toBeLessThanOrEqual(4);
+      expect(reads.row + reads.admin + reads.contact, JSON.stringify(reads)).toBeLessThanOrEqual(8); // was 13
     } finally {
       await ctx.close();
     }
