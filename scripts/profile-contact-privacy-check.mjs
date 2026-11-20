@@ -49,8 +49,8 @@ const ANON = env.VITE_SUPABASE_ANON_KEY;
 
 const BUYER_ID = "11111111-1111-1111-1111-111111111111";
 const VENDOR_ID = "22222222-2222-2222-2222-222222222222";
-/** Every profiles column a client may read. email, phone and (since review L-89) account_status are left out. */
-const READABLE = "id,full_name,avatar_url,active_role,onboarded,created_at";
+/** Every profiles column a visitor may read (20261114100500 left anon these three; account_status went in L-89). */
+const READABLE = "id,full_name,avatar_url";
 
 const results = [];
 let failures = 0;

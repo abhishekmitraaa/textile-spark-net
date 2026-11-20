@@ -17,7 +17,13 @@ with no need to dictate format, context, or reference each time.
 - Mitra's decisions for High (2026-11-18): H-04 take the demo data off live; H-11 precomputed feed + a scheduled job;
   H-12 thumbnails, then server-made once a browser-made one was found to skip review; H-13 keep Service Vendors / Freelancers but remove the fakes.
 - Reference: 2026-11-18 review sessions (two passes), SESSION-CONTEXT.md.
-- Status: Open (High: H-12's follow-ups; Medium: M-58; Low: all 104). Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
+- Status: Open (High: H-12's follow-ups; Medium: M-58; Low: L-63, L-64). Low batches 1–5 (L-01–L-104 but L-63, L-64) LIVE 2026-11-20
+  (buyer main `1e1fb52`, Cosora-Admin `2cfd65f`; plans `documentation/low-bugs-batch1…5-plan-2026-11-20.md`). Low batch 5
+  follow-ups: (1) `anon` still holds column INSERT/UPDATE grants on `profiles` (account_status included; no policy
+  admits a signed-out write, so hygiene only): revoke them; (2) the production demo fixtures are stale: demo-vendor
+  isn't a registered seller (`call_buyer_contact` answers `not_a_vendor`) and demo-buyer has no Terms record (its test
+  conversation is refused), so `scripts/contact-gate-check.mjs` and three checks of
+  `scripts/profile-contact-privacy-check.mjs` can't pass until they are re-seeded. Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
   `20261119110000`; plans `documentation/medium-bugs-batch1-plan-2026-11-19.md`, `…batch2…`); M-58 left open (needs a
   real Google sign-in to test). Batches 3 (20 items) and 4 (14 items; plans
   `documentation/medium-bugs-batch3-plan-2026-11-19.md`, `…batch4-plan-2026-11-20.md`) LIVE 2026-11-20 with the
@@ -35,10 +41,7 @@ with no need to dictate format, context, or reference each time.
 - M-58 — Google sign-up: Back shows Home 4–5 times. AuthCallback.tsx:43
 
 **Low**
-- L-63, L-64, L-68..L-71 — Register: an unfinished account's old role wins (plausible; Register/OtpVerify, sign-in files: needs Mitra); ~15–18 profile reads per sign-up (AuthContext, sign-in file: needs Mitra); "Work with us" → cosora.in/careers 404; overseas pending: Back from home shows pending again; buyer frame flashes after Buyer→Seller→Back (plausible); /auth/callback not Clarity-masked (plausible).
-- L-72..L-85 — Seller home: "0 under review / 0 accepted" while loading; leads "0 pcs", "pcs" vs units, budget without /unit; direct request shows a placeholder, not the listing picture; Top Products price no unit; "View quote" can't show the quote; no rejection reason, paused listings invisible; "FREE" badge always on Upload Catalogue; alerts card ignores live channels and says "in your categories"; phone sidebar slides on first paint (plausible); closed sidebar links in tab order, close button unlabelled; /products Upload buttons coral; Competitor Ads rounds paise, no error state (CompetitorAds.tsx:29); Getting started layout jump; unread count and my_vendor_private called twice.
-- L-86..L-98 DB — duplicate indexes and 57 unused (products_trgm_idx…); admin.office_photos_before_20261113 and ad_frequency_capped / ad_logging_throttled unused; 10 legacy pref_category_map rows, 1 old regional.language, 1 wrong followers_count; anon reads seller owner_name / notifications / regional and can probe account status; FOR ALL policies on saved_*, insert policies without account guards; per-row function calls in messages/quotes/rfqs policies; 4 expired RFQs still active, 1 registered seller without contract, 35/81 stalled sign-ups; active_ads per-row ad_is_bumped, search_path=public on several definers; featured-impression dedupe lacks viewer_id, product_images index lacks (product_id, position, id); notifications still in the realtime publication; empty tables read every view (service_reviews, product_documents, catalogues, hero_slides on snapshot miss); cron.job_run_details 100 of 142 MB (known); daily view-dedupe tables grow.
-- L-99..L-104 — Dead buyerShellRoutes duplicates (/home/sale, /profile/edit, /profile/business-details); /privacy and help guides missing from the SEO sitemap; duplicate aliases without a canonical (/for-you, /service-vendors, /post-requirement, /chat, /auth/login); sitemap.md stale (97 routes, wrong components, missing pages); claude.md says the seller RFQ card reads NOTIFICATION_DELIVERY_LIVE, unused score code; blog proxy and /go/post-rfq have no changelog entry.
+- L-63, L-64 — Register: an unfinished account's old role wins (plausible; Register/OtpVerify, sign-in files: needs Mitra); ~15–18 profile reads per sign-up (AuthContext, sign-in file: needs Mitra).
 
 ### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
 - Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.

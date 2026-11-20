@@ -1,6 +1,7 @@
 - 2026-11-20 (branch `fix/low-batch5-2026-11-20` in both repos; migrations `20261120140000_low_batch5.sql` and, after
   both apps are live, `20261120140100_low_batch5_revoke.sql`; plan `documentation/low-bugs-batch5-plan-2026-11-20.md`;
-  **built and checked on the local stack; production rehearsal not yet run (auto mode refused it); not released**)
+  **LIVE 2026-11-20**: rehearsed on production and rolled back, applied with the CLI, buyer main `1e1fb52`, Cosora-Admin
+  `2cfd65f`; live bundles checked, then the revoke applied; checked on production as the demo buyer)
   **Buyer review, Low batch 5 of 5: the database items** (L-86–L-98).
   - Mitra's calls: account state closed now (L-89); lapsed requirements closed daily with Extend for the buyer (L-92);
     notifications stay in the realtime publication (L-95); dedupe tables and cron successes kept 2 days (L-97, L-98).
@@ -14,7 +15,7 @@
     failed read shows Try again. Code review (medium): 5 of 5 fixed.
 - 2026-11-20 (branch `fix/low-batch4-2026-11-20` in both repos; migration `20261120130000_low_batch4.sql`;
   plan `documentation/low-bugs-batch4-plan-2026-11-20.md`; **built and checked on the local stack, migration rehearsed
-  on production and rolled back; not released**)
+  on production and rolled back; **LIVE 2026-11-20**: migration applied with the CLI, shipped with batch 5)
   **Buyer review, Low batch 4 of 5: Seller Home, the careers page, sign-up leftovers, routes and docs** (L-68–L-85,
   L-99–L-104).
   - Mitra's call: a careers page behind the `careers_page` switch, off; Cosora-Admin › Feature switches turns it on.
