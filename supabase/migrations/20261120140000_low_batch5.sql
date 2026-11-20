@@ -163,6 +163,9 @@ create or replace function public.vendor_account_in_good_standing(p_vendor uuid)
 as $function$
   select coalesce((select account_status = 'active' from public.profiles where id = p_vendor), false);
 $function$;
+-- Already closed to browsers on production (checked 2026-11-20); said here so a rewrite can't open it.
+revoke all on function public.vendor_account_in_good_standing(uuid) from public, anon, authenticated;
+grant execute on function public.vendor_account_in_good_standing(uuid) to service_role;
 
 -- messages_insert read the sender's account_status as the sender; account_is_active() reads it as the owner, with the
 -- same answer (no row → not active), so the policy keeps working once the column is withdrawn.
@@ -472,6 +475,10 @@ begin
   if (select p.prosrc from pg_proc p where p.oid = 'public.vendor_account_in_good_standing(uuid)'::regprocedure) ~ 'account_is_active'
      or (select p.prosrc from pg_proc p where p.oid = 'public.account_is_active(uuid)'::regprocedure) !~ 'own_account_only' then
     raise exception 'low_batch5: account status helpers';
+  end if;
+  if has_function_privilege('anon', 'public.vendor_account_in_good_standing(uuid)', 'execute')
+     or has_function_privilege('authenticated', 'public.vendor_account_in_good_standing(uuid)', 'execute') then
+    raise exception 'low_batch5: vendor_account_in_good_standing is browser-callable';
   end if;
   if exists (select 1 from public.follows where follower_id = vendor_id) then
     raise exception 'low_batch5: self-follows left';
