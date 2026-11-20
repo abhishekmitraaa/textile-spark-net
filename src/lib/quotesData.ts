@@ -40,6 +40,8 @@ export interface Rfq {
   /** When an open requirement stops taking quotes (7 days from approval; the buyer can extend it). Null on a
    *  direct request. Optional so the static fixtures need no change. */
   expiresAt?: string | null;
+  /** Closed by the daily job for passing its deadline (review L-92): "Extend 7 days" reopens it. */
+  lapsed?: boolean;
   newCount: number;         // "N new" badge
   lowest: number;           // lowest quote (₹) shown on the request card
   date: string;             // "March 30, 2024"

@@ -176,20 +176,22 @@ const STORE_COLS =
   "id, brand_name, owner_name, about, business_type, primary_type, category, capabilities, capacity, served_states, " +
   "city, state, state_code, country, website, social, logo_url, banner_url, office_photos, year_established, " +
   "employee_count, annual_turnover, gstin, cin, has_phone, has_whatsapp, is_verified, plan_id, plan_expires_at, " +
-  "ad_verified_until, followers_count, rating_avg, reviews_count, onboarding_complete, notifications, " +
-  "regional, created_at";
+  "ad_verified_until, followers_count, rating_avg, reviews_count, onboarding_complete, created_at";
 
 async function sellerRecords(userId: string): Promise<Record<string, unknown> | null> {
   // The readable columns, plus the private ones (address, PAN, contact) through my_vendor_private(), which
   // returns only the caller's own row: those columns aren't client-selectable on vendor_profiles.
-  const [{ data: pub, error }, { data: priv, error: privErr }] = await Promise.all([
+  // The seller's settings (notifications, regional) come through my_vendor_settings() (review L-89).
+  const [{ data: pub, error }, { data: priv, error: privErr }, { data: settings, error: setErr }] = await Promise.all([
     supabase.from("vendor_profiles").select(STORE_COLS).eq("id", userId).maybeSingle(),
     supabase.rpc("my_vendor_private"),
+    supabase.rpc("my_vendor_settings" as never),
   ]);
   if (error) throw error;
   if (!pub) return null;
   if (privErr) throw privErr;
-  const store = { ...(pub as unknown as Row), ...((priv ?? [])[0] ?? {}) };
+  if (setErr) throw setErr;
+  const store = { ...(pub as unknown as Row), ...((priv ?? [])[0] ?? {}), ...((settings as Row | null) ?? {}) };
   const [listings, quotesSent, catalogues, videos, documents, invoices, adOrders, pipeline, notes, followups] = await Promise.all([
     allPages((from, to) => supabase.from("products").select("*, product_images ( url, position )").eq("vendor_id", userId)
       .order("created_at", { ascending: true }).order("id").range(from, to)),
@@ -266,18 +268,21 @@ async function supportRequests(): Promise<Row[]> {
 export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
   // email and phone are not client-selectable on profiles (MPF-3); the export
   // takes them from my_contact_info() and keeps the object's original key order.
-  const [{ data: p, error: pErr }, contact, { data: buyerProfile, error: bErr }] = await Promise.all([
+  // account_status is read through my_account_status() (review L-89: the column isn't client-readable).
+  const [{ data: p, error: pErr }, contact, { data: buyerProfile, error: bErr }, { data: status, error: sErr }] = await Promise.all([
     supabase.from("profiles")
-      .select("id, full_name, avatar_url, active_role, onboarded, account_status, created_at")
+      .select("id, full_name, avatar_url, active_role, onboarded, created_at")
       .eq("id", userId).maybeSingle(),
     fetchMyContactInfo(),
     supabase.from("buyer_profiles").select("*").eq("id", userId).maybeSingle(),
+    supabase.rpc("my_account_status" as never),
   ]);
   if (pErr) throw pErr;
   if (bErr) throw bErr;
+  if (sErr) throw sErr;
   const profile = p && {
     id: p.id, full_name: p.full_name, email: contact.email, phone: contact.phone, avatar_url: p.avatar_url,
-    active_role: p.active_role, onboarded: p.onboarded, account_status: p.account_status, created_at: p.created_at,
+    active_role: p.active_role, onboarded: p.onboarded, account_status: (status as string | null) ?? null, created_at: p.created_at,
   };
 
   const rfqs = await myRfqs(userId);

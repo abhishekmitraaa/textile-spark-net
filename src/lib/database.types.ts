@@ -2511,6 +2511,7 @@ export type Database = {
           embedding: unknown
           expires_at: string | null
           id: string
+          lapsed_at: string | null
           image: string | null
           images: string[] | null
           overseas: boolean
@@ -2543,6 +2544,7 @@ export type Database = {
           embedding?: unknown
           expires_at?: string | null
           id?: string
+          lapsed_at?: string | null
           image?: string | null
           images?: string[] | null
           overseas?: boolean
@@ -2575,6 +2577,7 @@ export type Database = {
           embedding?: unknown
           expires_at?: string | null
           id?: string
+          lapsed_at?: string | null
           image?: string | null
           images?: string[] | null
           overseas?: boolean

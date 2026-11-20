@@ -267,55 +267,8 @@ export function useVendorProductReviews(vendorId: string | undefined, limit = RE
 // id + kind (no FK) and the aggregate is computed client-side.
 export type ServiceKind = "service_vendor" | "freelancer" | "photographer";
 
-export interface ServiceReviewsData {
-  reviews: VendorReview[]; // reuses the vendor review display shape (no reply)
-  avg: number;
-  count: number;
-  breakdown: RatingBucket[];
-}
-
-interface RawServiceReview {
-  id: string;
-  rating: number;
-  body: string | null;
-  buyer_id: string | null;
-  reviewer_name: string | null;
-  created_at: string;
-}
-
-async function fetchServiceReviews(kind: ServiceKind, serviceId: string): Promise<ServiceReviewsData> {
-  const { data, error } = await supabase
-    .from("service_reviews")
-    .select("id, rating, body, buyer_id, reviewer_name, created_at")
-    .eq("service_kind", kind)
-    .eq("service_id", serviceId)
-    .order("created_at", { ascending: false })
-    .limit(REVIEW_PAGE); // no page shows these since the sample profiles lost their reviews (H-13); bounded anyway
-  if (error) throw error;
-  const rows = (data ?? []) as RawServiceReview[];
-  const reviews: VendorReview[] = rows.map((r) => ({
-    id: r.id,
-    rating: r.rating,
-    body: r.body,
-    buyerId: r.buyer_id,
-    reviewerName: r.reviewer_name ?? "Cosora Buyer",
-    reviewerCompany: null,
-    replyBody: null,
-    repliedAt: null,
-    createdAt: r.created_at,
-  }));
-  const ratings = rows.map((r) => r.rating);
-  const avg = ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 0;
-  return { reviews, avg, count: ratings.length, breakdown: buildBreakdown(ratings) };
-}
-
-export function useServiceReviews(kind: ServiceKind, serviceId: string | undefined) {
-  return useQuery({
-    queryKey: ["service_reviews", kind, serviceId],
-    queryFn: () => fetchServiceReviews(kind, serviceId as string),
-    enabled: Boolean(serviceId),
-  });
-}
+// No page reads a service's reviews any more (review L-96: the sample profiles lost them in H-13, and the reader
+// still queried an empty table). Buyers' own service reviews stay in My Reviews and the data export.
 
 // ── Buyer's own reviews (My Reviews page) — vendor + product + service ────
 export interface MyReviewItem {

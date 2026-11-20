@@ -174,6 +174,8 @@ const VendorSettings = () => {
 
   const toggleNotif = async (key: keyof VendorNotificationSettings, v: boolean) => {
     if (!user) { toast.error("Sign in to change notification settings"); return; }
+    // Saving over settings that never loaded would store the defaults (review M-49).
+    if (!settings) { toast.error("Your settings haven't loaded yet"); return; }
     const prev = notif;
     const next = { ...notif, [key]: v };
     setNotif(next); // optimistic

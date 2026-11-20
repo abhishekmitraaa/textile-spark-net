@@ -334,11 +334,11 @@ const MyQuotes = () => {
                             <span className={cn(
                               "rounded-full px-2 py-0.5 text-[10px] font-bold",
                               r.removedReason != null ? "bg-red-50 text-red-600"
-                                : r.status === "active" && pastDeadline(r.expiresAt) ? "bg-amber-50 text-amber-700"
+                                : (r.status === "active" && pastDeadline(r.expiresAt)) || r.lapsed ? "bg-amber-50 text-amber-700"
                                 : r.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"
                             )}>
                               {r.removedReason != null ? "Removed by Cosora"
-                                : r.status === "active" && pastDeadline(r.expiresAt) ? "Deadline passed"
+                                : (r.status === "active" && pastDeadline(r.expiresAt)) || r.lapsed ? "Deadline passed"
                                 : r.status === "active" ? "Active" : "Closed"}
                             </span>
                             {r.newCount > 0 && (
@@ -355,7 +355,11 @@ const MyQuotes = () => {
                             )}
                           </div>
                           <h3 data-no-translate className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">{r.title}</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">{r.units} units • {showText(`₹${r.priceMin} - ₹${r.priceMax}/unit`)}</p>
+                          {/* No budget stated is left out, never "₹0 - ₹0" (as DirectRequestThread does). */}
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {r.units} units
+                            {(r.priceMin > 0 || r.priceMax > 0) && <> • {showText(`₹${r.priceMin} - ₹${r.priceMax}/unit`)}</>}
+                          </p>
                           {/* Cosora removed it (RFQ/leads R3): say so, and why, in the admin's words. */}
                           {r.removedReason != null && (
                             <p className="mt-1 text-xs text-red-600">
@@ -379,7 +383,7 @@ const MyQuotes = () => {
                         ) : (
                           <>
                             <span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {rq.length} quotes</span>
-                            <span>Lowest: <span className="font-bold text-gray-800">{show(r.lowest, `₹${r.lowest}`)}</span></span>
+                            <span>Lowest: <span className="font-bold text-gray-800">{rq.length > 0 ? show(r.lowest, `₹${r.lowest}`) : "—"}</span></span>
                           </>
                         )}
                         <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {r.date}</span>
@@ -441,14 +445,15 @@ const MyQuotes = () => {
               <div className="rounded-xl bg-brand-buyer/5 border border-brand-buyer/15 px-3.5 py-2.5 mb-4">
                 <p data-no-translate className="text-sm font-bold text-gray-900">{rfq.title}</p>
                 {/* The 7-day deadline the form promises, and its extend option (2026-10-19). */}
-                {rfq.status === "active" && rfq.removedReason == null && rfq.expiresAt && (
+                {/* Also on one the daily job closed for passing its deadline, which Extend reopens (review L-92). */}
+                {(rfq.status === "active" || rfq.lapsed) && rfq.removedReason == null && rfq.expiresAt && (
                   <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
                     <p className={cn("text-xs", pastDeadline(rfq.expiresAt) ? "text-amber-700" : "text-gray-500")} data-testid="rfq-deadline">
                       {pastDeadline(rfq.expiresAt)
                         ? `Deadline passed on ${fmtDeadline(rfq.expiresAt)}. Sellers can't send new quotes.`
                         : `Taking quotes until ${fmtDeadline(rfq.expiresAt)}`}
                     </p>
-                    {canExtendDeadline(rfq.expiresAt) && (
+                    {(rfq.lapsed || canExtendDeadline(rfq.expiresAt)) && (
                       <button
                         type="button"
                         onClick={() => extend(rfq.id)}

@@ -455,11 +455,11 @@ export function useVendorSettings(id: string | undefined) {
   return useQuery({
     queryKey: ["vendor_settings", id],
     queryFn: async (): Promise<VendorSettings> => {
-      const { data } = await supabase
-        .from("vendor_profiles")
-        .select("notifications, regional")
-        .eq("id", id as string)
-        .maybeSingle();
+      // The seller's own settings, through my_vendor_settings() (review L-89: the columns aren't client-readable).
+      // A failed read is an error, never the defaults: a toggle saves the whole object (review M-49).
+      const { data: raw, error } = await supabase.rpc("my_vendor_settings" as never);
+      if (error) throw error;
+      const data = raw as { notifications?: unknown; regional?: unknown } | null;
       return {
         notifications: { ...DEFAULT_VENDOR_NOTIFICATIONS, ...((data?.notifications as Partial<VendorNotificationSettings>) ?? {}) },
         regional: { ...DEFAULT_VENDOR_REGIONAL, ...((data?.regional as Partial<VendorRegionalSettings>) ?? {}) },

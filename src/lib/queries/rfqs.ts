@@ -36,6 +36,8 @@ interface RawRfq {
   attributes: Record<string, unknown> | null;
   // When an open requirement stops taking quotes (7 days, extendable; 2026-10-19). Null on a direct request.
   expires_at: string | null;
+  // When the daily job closed it for passing that deadline (review L-92); extending reopens it.
+  lapsed_at?: string | null;
 }
 
 // Every rfqs read names its columns rather than using select("*"), because the
@@ -48,7 +50,7 @@ interface RawRfq {
 // select string at the TYPE level to shape the result, and a `string` it cannot
 // read statically degrades every one of these queries to GenericStringError[].
 const RFQ_COLUMNS =
-  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes, expires_at" as const;
+  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes, expires_at, lapsed_at" as const;
 
 // The vendor's lead pool also reads how a requirement is marked overseas (subscriptions P7):
 // RFQ_COLUMNS plus the three columns the database stamps. Only this read needs them, so a
@@ -111,6 +113,7 @@ function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor, product
     image: ownStorageUrl(r.image) || productCover || ownStorageUrl(r.customization_images?.[0]) || "",
     status: r.status, removedReason: r.removed_at ? (r.removed_reason ?? "") : null,
     expiresAt: r.expires_at ?? null,
+    lapsed: r.status === "closed" && Boolean(r.lapsed_at),
     newCount: quotes.filter((q) => q.status === "pending").length,
     lowest: prices.length ? Math.min(...prices) : 0,
     date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),

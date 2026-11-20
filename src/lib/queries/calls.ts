@@ -102,7 +102,8 @@ export function toastBlock(copy: BlockCopy, navigate: (to: string) => void) {
 // refactor — this is what the Call Now button has always said.
 const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
   caller_suspended: { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this.", support: true },
-  target_suspended: { title: "Calling is unavailable", description: "This account is currently suspended." },
+  // The other account's status isn't named (review L-89): suspended or deleted reads the same.
+  target_suspended: { title: "Calling is unavailable", description: "This account can't be contacted right now." },
   under_review: { title: "This chat is under review — calling is paused", description: "Our team will follow up." },
   blocked: { title: "Calling is unavailable", description: "One of you has blocked the other." },
   check_failed: { title: "Couldn't check right now", description: "Check your connection and try again." },
@@ -112,7 +113,7 @@ const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
 // can't I see this" rather than "why can't I call".
 const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
   caller_suspended: { title: "Contact details aren't available", description: "Your account is suspended. Contact support to resolve this.", support: true },
-  target_suspended: { title: "Contact details aren't available", description: "This account is currently suspended." },
+  target_suspended: { title: "Contact details aren't available", description: "This account can't be contacted right now." },
   under_review: { title: "This chat is under review", description: "Contact details aren't available right now. Our team will follow up." },
   blocked: { title: "Contact details aren't available", description: "One of you has blocked the other." },
   check_failed: { title: "Contact details didn't load", description: "Check your connection and try again." },
@@ -123,22 +124,14 @@ export async function callGate(meId: string | undefined, otherId: string): Promi
   // (call_vendor_contact). Nothing is read for them, because account_status is not visitor-readable once migration
   // 20261114100500 is applied (buyer sign-up audit item 14a).
   if (!meId) return null;
-  // Both account statuses in one round trip. profiles_select is `true` and
-  // account_status is readable to signed-in accounts, so the other party's status is
-  // readable; their email and phone are not (MPF-3).
-  const ids = meId !== otherId ? [meId, otherId] : [otherId];
+  // One answer from the database (review L-89, contact_check()): the caller's own suspension, or whether the other
+  // account can be reached at all, never the other's status (account_status isn't readable to other accounts).
   // A read that fails is "couldn't check", never "allowed" (review L-31). The database refuses a blocked or suspended
   // contact on its own; this only decides what the screen says.
-  const { data: rows, error: rowsError } = await supabase.from("profiles").select("id, account_status").in("id", ids);
-  if (rowsError) return "check_failed";
-  const statusOf = (id: string) => rows?.find((r) => r.id === id)?.account_status ?? "active";
-
-  if (meId && statusOf(meId) === "suspended") {
-    return "caller_suspended";
-  }
-  if (statusOf(otherId) === "suspended") {
-    return "target_suspended";
-  }
+  const { data: verdict, error: checkError } = await supabase.rpc("contact_check" as never, { p_other: otherId } as never);
+  if (checkError) return "check_failed";
+  if (verdict === "caller_suspended") return "caller_suspended";
+  if (verdict === "target_unavailable") return "target_suspended";
 
   // A plain SELECT on the canonical (sorted) pair — deliberately NOT
   // ensureConversation(), which would CREATE a row as a side effect of merely
