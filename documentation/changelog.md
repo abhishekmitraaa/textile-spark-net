@@ -1,5 +1,5 @@
 - 2026-11-20 (branch `fix/medium-batch4-2026-11-20`, on batch 3; migration `20261120100000_medium_batch4.sql`;
-  plan `documentation/medium-bugs-batch4-plan-2026-11-20.md`; **built and checked on the local stack, not released**)
+  plan `documentation/medium-bugs-batch4-plan-2026-11-20.md`; **LIVE 2026-11-20**, migrations via the CLI, not in the ledger)
   **Buyer review, Medium batch 4 of 4: speed and database** (M-21–M-25, M-31–M-37, M-68, M-69, M-75).
   - Mitra's calls: deleted sellers' listings to draft; the views job; names left readable.
   - Views queued and folded every minute; impressions only when on screen, batched; Standing joined once.
@@ -10,7 +10,7 @@
   - Batch 3 code review fixed here (buyer links, quotes paging, chat re-reads, Seller Home on a failed refresh).
   - Batch 4 code review: 8 of 10 fixed; found the summary patch would have failed on production's CRLF bodies.
 - 2026-11-19 (branch `fix/medium-batch3-2026-11-19`; migration `20261119120000_medium_batch3.sql`;
-  plan `documentation/medium-bugs-batch3-plan-2026-11-19.md`; **built and checked on the local stack, not released**)
+  plan `documentation/medium-bugs-batch3-plan-2026-11-19.md`; **LIVE 2026-11-20**, migrations via the CLI, not in the ledger)
   **Buyer review, Medium batch 3 of 4: quotes, chat, profile, Seller Home** (M-39–M-42, M-44–M-47, M-49–M-52, M-65–M-67,
   M-70–M-74).
   - Mitra's call: a buyer's web links on the seller's buyer card (`chat_buyer_social`).

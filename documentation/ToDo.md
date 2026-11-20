@@ -19,10 +19,9 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-11-18 review sessions (two passes), SESSION-CONTEXT.md.
 - Status: Open. Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
   `20261119110000`; plans `documentation/medium-bugs-batch1-plan-2026-11-19.md`, `…batch2…`); M-58 left open (needs a
-  real Google sign-in to test). Follow-up `20261119110100` (the Terms check's message exemption no longer trusts
-  `admin.is_real_seller`) is written and applied locally, waiting to be applied to production. Batch 3 (20 items,
-  `fix/medium-batch3-2026-11-19`) and batch 4 (14 items, `fix/medium-batch4-2026-11-20`, on batch 3; plan
-  `documentation/medium-bugs-batch4-plan-2026-11-20.md`) are built and checked locally, not released. M-36 needed no
+  real Google sign-in to test). Batches 3 (20 items) and 4 (14 items; plans
+  `documentation/medium-bugs-batch3-plan-2026-11-19.md`, `…batch4-plan-2026-11-20.md`) LIVE 2026-11-20 with the
+  follow-up (migrations `20261119110100`, `20261119120000`, `20261120100000` via the CLI, not in the ledger). M-36 needed no
   change (no service or freelancer page shows reviews since H-13). Batch 4 follow-ups: (1) the product page still makes
   ~20 of its own requests (listing, related, recently viewed, the seller block each read separately): one data function
   for the page (M-25's request count); (2) engagement events are still one request per ad shown: a batch function for
@@ -32,45 +31,11 @@ with no need to dictate format, context, or reference each time.
 - H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
 
 **Medium — buyer home and browsing**
-- M-21 — Video Close-Ups shows a failed read as "No video close-ups yet". VideoCloseUpsPage.tsx:122
-- M-22 known — Reel = 30 lifetime-most-viewed only; ranked on product_videos.rating, never written. videos.ts:49
-- M-23 — Seller page reads listings and videos unbounded, errors dropped. vendor.ts:112-127
-- M-24 — Product/service reviews unbounded, averages in the browser. reviews.ts:150
-- M-25 — Product page downloads 100 store reviews for an average; ~18 requests per view. ProductDetail.tsx:416
-- M-31 — ~15–20 requests per Home view, trending computed twice, mostly identical for everyone.
-- M-32 DB — top_vendors / new_brand_suggestions call vendor_standing once per seller.
-- M-33 — One ad_impression call per ad, including unseen rails.
-- M-34 — ~110 pages in the first bundle; only 2 lazy. App.tsx
-- M-35 — Each view rewrites products.views_count and purges daily rows inside the request.
-- M-37 DB latent — Listings of suspended/deleted sellers stay in feed_products, new_brand_suggestions, active_ads, for_you_products.
 
 **Medium — requirements, quotes, chats, profile**
-- M-39 — My Quotes' "Payment Terms" is thrown away. QuoteDetailsModal.tsx:171
-- M-40 — "Avg. response ~2 hours" invented; "★ 0 (0)"; unknown sampling cost shows ₹0. QuoteDetailsModal.tsx:195
-- M-41 — My Quotes hides read errors, `.in(rfq_id)` unchunked, no paging. rfqs.ts:154
-- M-42 live — My Quotes signed out shows "0 Active RFQs" and no Sign in.
-- M-44 — Chat list doesn't update on a new chat (hub handler refreshes counts only). chatUnread.ts:54
-- M-45 plausible — One postgres_changes channel per open chat/support thread (scale). chat.ts, support.ts
-- M-46 DB — chat_unread_counts calls auth.uid() bare (8× per row).
-- M-47 — Edit profile phone is free text and is what sellers dial. ProfileEdit.tsx:84
-- M-49 — JSON settings pages save the whole object over a failed read (defaults saved as values). profile.ts:186-199
-- M-50 — Buyer social links promise visibility; nobody sees them. ProfileSocialLinks.tsx:102
-- M-51 plausible — Privacy Policy promises a deletion code that can't be sent while channels are unconfigured.
-- M-52 — Regional settings still write the retired regional.language. ProfileAccountPrefs.tsx:62
 
 **Medium — sign-up, registration, seller home, database**
 - M-58 — Google sign-up: Back shows Home 4–5 times. AuthCallback.tsx:43
-- M-65 — Recent Leads pins already-quoted direct requests.
-- M-66 — Seller home stale after KYC sign/replace, product delete, onboarding, approval notices. Kyc.tsx:496
-- M-67 — One failed refresh replaces a working seller home with the error screen. SellerHome.tsx:79-80
-- M-68 — seller_home_summary cost grows with every open RFQ; re-runs on every chat message.
-- M-69 plausible — /leads loads every open RFQ (1,000 cap) and can disagree with the home count.
-- M-70 live — Onboarding banner "0% commission" / "only 10 minutes"; first button "Edit details".
-- M-71 — Built-in banner promises "proven strategies"; stretched 427 px; may show another marketplace's app.
-- M-72 — My Store promises "get verified" for completing the profile. MyStore.tsx:388
-- M-73 — Next-step card ignores items in review. NextStepCard.tsx:11
-- M-74 — Top Products / Recent Messages rows not keyboard-openable. SellerHome.tsx:196
-- M-75 DB — Anyone can list every account's name; logo/banner/avatar URLs accept any URL (tracking pixel on the seller home); messages.sender_id cascades on delete; missing indexes saved_folders(buyer_id), engagement_events(product_id, viewer_id), messages(sender_id), conversation_reads(user_id) + 6 (64 unindexed FKs); seeded products.rating_avg ranks several feeds.
 
 **Low**
 - L-01..L-07 — Bottom-bar Home not highlighted on 4/5 tabs; "✦" stuck on NEW ARRIVALS, tab bar copied 5×; end-of-feed message wrong past 984 listings; offset paging can skip rows (plausible); carousel mouse drag opens product (plausible); "Today's New In" is paid-first; Following drops followed sellers past 500.
