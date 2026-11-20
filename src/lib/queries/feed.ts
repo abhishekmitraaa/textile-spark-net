@@ -41,6 +41,13 @@ export type SupplierLocation = "india" | "international";
 export const FEED_PAGE_SIZE = 24;
 /** feed_products' deepest offset is 960: 41 pages of 24. */
 const MAX_PAGES = 41;
+/**
+ * Each page after the first starts this many listings early (review L-04). Pages are read by offset over an order
+ * that can change while the buyer scrolls: a listing leaving the feed moves the rest up one, and the next page would
+ * start past one the buyer never saw. Reading a few again (then dropped as duplicates) covers that for up to this many
+ * moves between two pages.
+ */
+const PAGE_OVERLAP = 4;
 
 interface FeedRow {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
@@ -108,10 +115,17 @@ function feedKey(f: FeedFilters) {
 export function useFeed(filters: FeedFilters, { enabled = true }: { enabled?: boolean } = {}) {
   const q = useInfiniteQuery({
     queryKey: feedKey(filters),
-    queryFn: ({ pageParam }) => fetchFeedPage(filters, pageParam as number, FEED_PAGE_SIZE),
+    queryFn: ({ pageParam }) => {
+      const at = pageParam as number;
+      return at === 0
+        ? fetchFeedPage(filters, 0, FEED_PAGE_SIZE)
+        : fetchFeedPage(filters, at - PAGE_OVERLAP, FEED_PAGE_SIZE + PAGE_OVERLAP);
+    },
     initialPageParam: 0,
-    getNextPageParam: (last, pages) =>
-      last.length < FEED_PAGE_SIZE || pages.length >= MAX_PAGES ? undefined : pages.length * FEED_PAGE_SIZE,
+    getNextPageParam: (last, pages) => {
+      const asked = pages.length === 1 ? FEED_PAGE_SIZE : FEED_PAGE_SIZE + PAGE_OVERLAP;
+      return last.length < asked || pages.length >= MAX_PAGES ? undefined : pages.length * FEED_PAGE_SIZE;
+    },
     enabled,
     // A revisit within 5 minutes shows the pages already read; it used to refetch every loaded page one after another
     // once they were a minute old (2026-11-19, review M-30). Leaving and coming back later starts fresh (gcTime).
@@ -127,8 +141,13 @@ export function useFeed(filters: FeedFilters, { enabled = true }: { enabled?: bo
       items.push(p);
     }
   }
+  // Stopped at feed_products' depth, not at the end of the feed (review L-03: "You've seen everything" past 984).
+  const pages = q.data?.pages ?? [];
+  const lastPage = pages[pages.length - 1];
+  const capped = pages.length >= MAX_PAGES && Boolean(lastPage) && lastPage.length >= FEED_PAGE_SIZE + PAGE_OVERLAP;
   return {
     items,
+    capped,
     isPending: q.isPending && enabled,
     isError: q.isError,
     refetch: q.refetch,

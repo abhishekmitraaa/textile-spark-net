@@ -1,6 +1,8 @@
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CardSpecs } from "@/components/buyer/CardSpecs";
+import { RatingChip } from "@/components/buyer/RatingChip";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import * as SliderPrimitive from "@radix-ui/react-slider";
@@ -208,35 +210,34 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      <Link
-        to={`/product/${p.id}`}
-        onClick={openFromSearch}
-        className="relative aspect-[4/5] block bg-gray-100"
-      >
-        <CardPhotos primary={p.image} secondary={p.secondaryImage} alt={p.name} hovered={hovered} />
-        {p.verified && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-0 left-0 h-5 lg:h-6 w-auto" />}
-        {/* Subscriptions P10: the seal's Gold and VIP variants, and the Featured tag. */}
-        {tiers && (p.sealTier === "gold" || p.sealTier === "vip") && (
-          <span title={SEAL_TIER_LABEL[p.sealTier]} data-testid="seal-tier"
-            className={cn("absolute left-0 rounded-r-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white lg:text-[9px]",
-              p.verified ? "top-5 lg:top-6" : "top-0", p.sealTier === "vip" ? "bg-amber-500" : "bg-yellow-600")}>
-            {p.sealTier === "vip" ? "VIP" : "Gold"}
-          </span>
-        )}
-        {featured && (
-          <span data-testid="featured-tag" className="absolute bottom-7 left-2 rounded-full bg-gray-900/80 px-1.5 py-0.5 text-[9px] font-bold text-white">Featured</span>
-        )}
-        <button onClick={(e) => { e.preventDefault(); openSaveModal({ id: p.id, vendorId: p.vendorId, name: p.name, manufacturer: p.manufacturer, location: p.location, price: `₹${p.priceValue}`, priceValue: p.priceValue, moq: p.moq, image: p.image }); }}
-          aria-label={isSaved ? "Edit saved folders" : "Save product"}
-          className={cn("absolute top-2 right-2 bg-white/90 rounded-full flex items-center justify-center shadow-sm", compact ? "w-6 h-6" : "w-7 h-7")}>
-          {isSaved ? <BookmarkCheck className={cn("text-brand-buyer fill-brand-buyer/15", compact ? "w-3 h-3" : "w-3.5 h-3.5")} /> : <Bookmark className={cn("text-gray-500", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />}
-        </button>
-        <div className="absolute bottom-2 left-2 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 py-0.5">
-          <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
-          <span className="text-[9px] font-bold text-gray-800">{p.rating.toFixed(1)}</span>
-          <span className="text-[9px] text-gray-400">| {p.enquiries}</span>
-        </div>
-      </Link>
+      <div className="relative aspect-[4/5] bg-gray-100">
+        {/* The Save button sits beside the photo's link, not inside it (review L-12). */}
+        <Link
+          to={`/product/${p.id}`}
+          onClick={openFromSearch}
+          className="absolute inset-0 block"
+        >
+          <CardPhotos primary={p.image} secondary={p.secondaryImage} alt={p.name} hovered={hovered} />
+          {p.verified && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-0 left-0 h-5 lg:h-6 w-auto" />}
+          {/* Subscriptions P10: the seal's Gold and VIP variants, and the Featured tag. */}
+          {tiers && (p.sealTier === "gold" || p.sealTier === "vip") && (
+            <span title={SEAL_TIER_LABEL[p.sealTier]} data-testid="seal-tier"
+              className={cn("absolute left-0 rounded-r-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white lg:text-[9px]",
+                p.verified ? "top-5 lg:top-6" : "top-0", p.sealTier === "vip" ? "bg-amber-500" : "bg-yellow-600")}>
+              {p.sealTier === "vip" ? "VIP" : "Gold"}
+            </span>
+          )}
+          {featured && (
+            <span data-testid="featured-tag" className="absolute bottom-7 left-2 rounded-full bg-gray-900/80 px-1.5 py-0.5 text-[9px] font-bold text-white">Featured</span>
+          )}
+          <RatingChip rating={p.rating} className="absolute bottom-2 left-2" size="xs" />
+        </Link>
+          <button onClick={(e) => { e.preventDefault(); openSaveModal({ id: p.id, vendorId: p.vendorId, name: p.name, manufacturer: p.manufacturer, location: p.location, price: `₹${p.priceValue}`, priceValue: p.priceValue, moq: p.moq, image: p.image }); }}
+            aria-label={isSaved ? "Edit saved folders" : "Save product"}
+            className={cn("absolute top-2 right-2 bg-white/90 rounded-full flex items-center justify-center shadow-sm", compact ? "w-6 h-6" : "w-7 h-7")}>
+            {isSaved ? <BookmarkCheck className={cn("text-brand-buyer fill-brand-buyer/15", compact ? "w-3 h-3" : "w-3.5 h-3.5")} /> : <Bookmark className={cn("text-gray-500", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />}
+          </button>
+      </div>
       <div className={cn("relative flex flex-col flex-1", compact ? "p-1.5" : "p-2 lg:p-3")}>
         <CardLinkOverlay to={`/product/${p.id}`} onClick={openFromSearch} />
         <p className={cn("font-bold text-brand-buyer leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq}{p.views && <> | {p.views}</>}</p>
@@ -248,8 +249,7 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
         <InternationalSupplierTag countryCode={p.vendorCountryCode} className={cn("mt-0.5 self-start", compact ? "text-[8px]" : "text-[9px] lg:text-[10px]")} />
         {!compact && (
           <>
-            <p className="text-[10px] lg:text-[11px] text-gray-500 mt-0.5">Fabric: {p.fabric} | GSM: {p.gsm}</p>
-            <p className="text-[10px] lg:text-[11px] text-gray-500">Fit Type: {p.fit}</p>
+            <CardSpecs fabric={p.fabric} gsm={p.gsm} fit={p.fit} className="mt-0.5" lineClassName="text-[10px] lg:text-[11px]" />
           </>
         )}
         <button onClick={() => callVendor(p.vendorId, p.name)}

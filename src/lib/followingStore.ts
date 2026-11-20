@@ -30,6 +30,8 @@ export interface Brand {
   isFollowing: boolean;
   isHidden: boolean;
   isAd?: boolean;
+  /** When the buyer followed (my_followed_brands); absent for suggestions and signed-out local follows. */
+  followedAt?: string;
   topProducts: BrandTopProduct[];
 }
 

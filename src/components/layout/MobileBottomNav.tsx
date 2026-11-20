@@ -18,6 +18,7 @@ import { useT } from "@/lib/i18n";
 import { usePublishedHeight } from "@/hooks/usePublishedHeight";
 import { badgeLabel, useChatUnread } from "@/lib/queries/chatUnread";
 import { useDisplayRole } from "@/contexts/DisplaySideContext";
+import { homeTabOf } from "@/components/buyer/HomeTabs";
 
 interface MobileBottomNavProps {
   /**
@@ -99,7 +100,10 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
           const isActive =
             item.href === "/my-store"
               ? location.pathname === "/my-store" || location.pathname.startsWith("/business-profile")
-              : location.pathname === item.href;
+              // Home is lit on every Home tab, not only New Arrivals (review L-01).
+              : item.href === "/home/new-arrivals"
+                ? homeTabOf(location.pathname) !== null
+                : location.pathname === item.href;
           const Icon = item.icon;
 
           if (item.isCenter) {

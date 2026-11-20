@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { HomeTabs } from "@/components/buyer/HomeTabs";
+
 import { useUrlFlag, useUrlState } from "@/hooks/useUrlState";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
@@ -58,13 +60,8 @@ import {
 import { cn } from "@/lib/utils";
 import { BackDropdownMenu } from "@/components/ui/back-dropdown-menu";
 
-const HOME_TABS = [
-  { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
-  { label: "TRENDS", href: "/home/trends" },
-  { label: "SALE", href: "/home/sale" },
-  { label: "FOR YOU", href: "/home/for-you" },
-  { label: "FOLLOWINGS", href: "/home/followings" },
-];
+/** feed_products refuses more sellers than this in one feed (review L-07). */
+const FOLLOWED_FEED_MAX = 500;
 
 type GenderFilter = "all" | Gender;
 type SortKey = "newest" | "price-asc" | "price-desc" | "rating";
@@ -296,11 +293,21 @@ const Following = () => {
 
   // The followed sellers' listings and Cosora-wide Most Popular, a page at a time from feed_products
   // (2026-10-14). They were the whole catalogue filtered in the browser, so past 1,000 live
-  // listings a followed seller's older listings disappeared. Sellers in groups of at most 500.
-  const followedIds = useMemo(
-    () => (verifiedOnly ? followed.filter((b) => b.verified) : followed).map((b) => b.id).sort().slice(0, 500),
+  // listings a followed seller's older listings disappeared. feed_products takes at most FOLLOWED_FEED_MAX sellers:
+  // past that, the most recently followed, and the page says so (review L-07: it kept the first 500 by id, silently).
+  const followedPool = useMemo(
+    () => (verifiedOnly ? followed.filter((b) => b.verified) : followed),
     [followed, verifiedOnly],
   );
+  const followedIds = useMemo(
+    () => [...followedPool]
+      .sort((a, b) => (b.followedAt ?? "").localeCompare(a.followedAt ?? "") || a.id.localeCompare(b.id))
+      .slice(0, FOLLOWED_FEED_MAX)
+      .map((b) => b.id)
+      .sort(),
+    [followedPool],
+  );
+  const followedCut = followedPool.length > FOLLOWED_FEED_MAX;
   const hasFollowed = followedIds.length > 0;
   const genderParam = gender === "all" ? null : gender;
 
@@ -357,25 +364,7 @@ const Following = () => {
 
   return (
     <BuyerShell>
-      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
-        {/* Home tabs */}
-        <div className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
-          {HOME_TABS.map((tab) => (
-            <Link
-              key={tab.href}
-              to={tab.href}
-              className={cn(
-                "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                tab.href === "/home/followings"
-                  ? "text-brand-buyer border-brand-buyer"
-                  : "text-gray-400 border-transparent hover:text-gray-600"
-              )}
-            >
-              {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <HomeTabs />
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-6 lg:space-y-8">
 
@@ -463,6 +452,11 @@ const Following = () => {
             sort={sort} setSort={setSort}
             verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
           />
+          {followedCut && (
+            <p className="mt-2 text-xs text-gray-500">
+              Showing new listings from the {FOLLOWED_FEED_MAX} sellers you followed most recently, of {followedPool.length}.
+            </p>
+          )}
           {hasFollowed && newInFeed.isPending ? (
             <p className="py-6 text-center text-sm text-gray-400">Loading…</p>
           ) : newIn.length > 0 ? (

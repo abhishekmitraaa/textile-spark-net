@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { Bookmark, BookmarkCheck, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
@@ -61,7 +61,10 @@ const AUTO_ADVANCE_MS = 4200;
 // needing separate tuning per breakpoint.
 const SIDE_OFFSET_PCT = 96;
 const PEEK_SCALE = 0.74;
-const PEEK_OPACITY = 0.4;
+// The side cards were 0.4 over the grey stage and read as washed out on a laptop (review L-20).
+const PEEK_OPACITY = 0.7;
+// A pointer that moved this far while pressed was a drag, not a tap (review L-05).
+const DRAG_CLICK_PX = 6;
 const SWIPE_OFFSET_PX = 60;       // min absolute drag distance to count as a swipe
 const SWIPE_VELOCITY = 500;       // px/s velocity threshold for a fast flick
 
@@ -72,9 +75,11 @@ interface SlideProps {
   offset: number;            // shortest-path distance from active index
   saved: boolean;
   reducedMotion: boolean;
+  /** True while a drag that just ended should swallow the click it ends in. */
+  wasDragged: () => boolean;
 }
 
-function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
+function Slide({ slide, offset, saved, reducedMotion, wasDragged }: SlideProps) {
   const { showText } = useDisplayCurrency();
   const isActive = offset === 0;
   const isVisible = Math.abs(offset) <= 1;
@@ -98,10 +103,14 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
       }
       aria-hidden={!isActive}
     >
+      {/* The link and the Save button are siblings: a button inside a link is two controls in one (review L-12). */}
+      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gray-200 shadow-lg">
       <Link
         to={`/product/${slide.id}`}
-        className="block relative w-full h-full rounded-2xl overflow-hidden bg-gray-200 shadow-lg"
+        className="absolute inset-0 block"
         tabIndex={isActive ? 0 : -1}
+        draggable={false}
+        onClick={(e) => { if (wasDragged()) e.preventDefault(); }}
       >
         <img
           src={slide.image}
@@ -111,9 +120,20 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
           draggable={false}
         />
 
+
+        {/* Bottom gradient + product info */}
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent pointer-events-none" />
+        <div className="absolute bottom-3 left-3 right-3 text-white">
+          {slide.categoryName && (
+            <p className="text-[11px] lg:text-xs uppercase tracking-wider opacity-80 truncate">{slide.categoryName}</p>
+          )}
+          <p data-no-translate className="text-sm lg:text-base font-semibold leading-snug line-clamp-1">{slide.name}</p>
+          <p className="text-lg lg:text-xl font-bold leading-tight">{showText(slide.price)}</p>
+          {slide.moq && <p className="text-[10px] lg:text-xs opacity-90">MOQ: {slide.moq}</p>}
+        </div>
+      </Link>
         <button
-          onClick={e => {
-            e.preventDefault();
+          onClick={() => {
             openSaveModal({
               id: slide.id, vendorId: slide.vendorId, name: slide.name, manufacturer: slide.manufacturer,
               location: slide.location, price: slide.price, priceValue: slide.priceValue, moq: slide.moq,
@@ -129,18 +149,7 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
             ? <BookmarkCheck className="w-4 h-4 text-brand-buyer fill-brand-buyer/15" />
             : <Bookmark className="w-4 h-4 text-gray-600" />}
         </button>
-
-        {/* Bottom gradient + product info */}
-        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent pointer-events-none" />
-        <div className="absolute bottom-3 left-3 right-3 text-white">
-          {slide.categoryName && (
-            <p className="text-[11px] lg:text-xs uppercase tracking-wider opacity-80 truncate">{slide.categoryName}</p>
-          )}
-          <p data-no-translate className="text-sm lg:text-base font-semibold leading-snug line-clamp-1">{slide.name}</p>
-          <p className="text-lg lg:text-xl font-bold leading-tight">{showText(slide.price)}</p>
-          {slide.moq && <p className="text-[10px] lg:text-xs opacity-90">MOQ: {slide.moq}</p>}
-        </div>
-      </Link>
+      </div>
     </motion.div>
   );
 }
@@ -151,6 +160,10 @@ export default function EverydayFashionHero() {
   const prefersReducedMotion = useReducedMotion() ?? false;
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Paused by the buyer's own button (review L-13: a phone has no hover, so nothing could stop it); hover, focus and a
+  // drag pause it for the moment only.
+  const [userPaused, setUserPaused] = useState(false);
+  const dragged = useRef(false);
   const savedState = useSaved();
 
   const picked = useHeroSlideIds();
@@ -183,12 +196,12 @@ export default function EverydayFashionHero() {
   // Auto-advance interval. Cleared on unmount, paused on hover/drag,
   // suspended entirely for users who prefer reduced motion.
   useEffect(() => {
-    if (prefersReducedMotion || paused || total < 2) return;
+    if (prefersReducedMotion || paused || userPaused || total < 2) return;
     const id = window.setInterval(goNext, AUTO_ADVANCE_MS);
     return () => window.clearInterval(id);
     // goNext is stable (no deps); ignore lint complaint about leaving it out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused, prefersReducedMotion, total]);
+  }, [paused, userPaused, prefersReducedMotion, total]);
 
   // Compute shortest-path offset for each slide so wrap-around feels smooth.
   const offsetFor = (i: number): number => {
@@ -226,6 +239,7 @@ export default function EverydayFashionHero() {
         dragElastic={0.18}
         dragMomentum={false}
         onDragStart={() => setPaused(true)}
+        onDrag={(_, info) => { if (Math.abs(info.offset.x) > DRAG_CLICK_PX) dragged.current = true; }}
         onDragEnd={(_, info) => {
           const { offset, velocity } = info;
           const flick = offset.x * velocity.x;
@@ -235,6 +249,8 @@ export default function EverydayFashionHero() {
             goPrev();
           }
           setPaused(false);
+          // The click that ends this drag comes next; let it see the drag, then forget it.
+          window.setTimeout(() => { dragged.current = false; }, 0);
         }}
       >
         {loading && (
@@ -247,14 +263,25 @@ export default function EverydayFashionHero() {
             offset={offsetFor(i)}
             saved={Boolean(savedState.products[slide.id])}
             reducedMotion={prefersReducedMotion}
+            wasDragged={() => dragged.current}
           />
         ))}
       </motion.div>
 
       {/* Counter + dot indicators */}
       <footer className="flex items-center justify-between px-4 lg:px-6 py-3 lg:py-4">
-        {/* Dot indicators (clickable) */}
+        {/* Pause / play, then the dot indicators (clickable) */}
         <div className="flex items-center gap-1.5">
+          {total > 1 && !prefersReducedMotion && (
+            <button
+              type="button"
+              onClick={() => setUserPaused((p) => !p)}
+              aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
+              className="mr-1 flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+            >
+              {userPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+            </button>
+          )}
           {slides.map((s, i) => (
             <button
               key={s.id}

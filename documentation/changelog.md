@@ -1,3 +1,13 @@
+- 2026-11-20 (branch `fix/low-batch1-2026-11-20`; no migration; plan `documentation/low-bugs-batch1-plan-2026-11-20.md`;
+  **built and checked on the local stack, not released**)
+  **Buyer review, Low batch 1 of 6: buyer Home and feeds** (L-01–L-08, L-10–L-17, L-19, L-20, L-22, L-23).
+  - Mitra's call: paid-plan sellers' new listings stay first in Today's New In.
+  - One Home tab strip (the open tab marked, taps replace history, fits a 360 px phone); Home lit on every tab.
+  - Feeds: an honest end past 984, overlapping pages, Following's 500 most recent sellers with a note.
+  - Cards: one rating chip, specs only when stated, Save beside the link, Call Now aligned.
+  - Carousel: no click after a drag, a pause button, less faded side cards; the drawer is a dialog; labels; a laptop
+    chat badge; no dead Brand Picks arrow; Video Close-Ups row ends in the full page; one requirement card.
+  - No spotlight request with its switch off; no duplicate live subscriptions while the hub joins.
 - 2026-11-20 **ToDo.md brought up to date** (docs only). Removed as done: Service Vendors' generated phone numbers
   (Call removed in H-13), the Discount sort and buyer Notifications wording, the renewal reminder (P4, live), and the
   MPF-16 and MPF-17 FAQ entries (built and live; what is left has its own entries). Corrected from production: the

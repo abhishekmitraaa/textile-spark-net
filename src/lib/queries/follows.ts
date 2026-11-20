@@ -53,7 +53,7 @@ function toBrand(v: RawVendorRow, extra: Pick<Brand, "items" | "isFollowing" | "
 interface RawFollowedRow {
   vendor_id: string; brand_name: string | null; city: string | null; logo_url: string | null;
   followers_count: number; live_count: number; is_verified: boolean; plan_id: string | null;
-  plan_expires_at: string | null; ad_verified_until: string | null; hidden: boolean;
+  plan_expires_at: string | null; ad_verified_until: string | null; hidden: boolean; followed_at: string | null;
 }
 
 /**
@@ -72,6 +72,7 @@ async function fetchBrands(): Promise<Brand[]> {
     { items: r.live_count, isFollowing: true, topProducts: [] }),
     verified: trustSealFromParts(r.is_verified, r.plan_expires_at, r.ad_verified_until),
     isHidden: r.hidden,
+    followedAt: r.followed_at ?? undefined,
   }));
 }
 

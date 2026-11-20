@@ -1,7 +1,10 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CardSpecs } from "@/components/buyer/CardSpecs";
+import { RatingChip } from "@/components/buyer/RatingChip";
 import { useAdImpressions } from "@/hooks/useAdImpressions";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { HomeTabs } from "@/components/buyer/HomeTabs";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
@@ -54,7 +57,6 @@ interface Product {
   verified?: boolean;
 }
 
-
 // NOTE: videoUrl values are freely-licensed public sample clips
 // (Google's GCS sample-videos bucket), used here only as stand-ins so
 // playback is genuinely testable. Swap for real vendor-uploaded video
@@ -100,14 +102,6 @@ const LOOKING_FOR_COUNT = 6;
 // the full ranked list; this just caps how many images the feed page fetches.
 const VIDEO_RAIL_MAX = 12;
 
-const HOME_TABS = [
-  { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
-  { label: "TRENDS",       href: "/home/trends" },
-  { label: "SALE",         href: "/home/sale" },
-  { label: "FOR YOU",      href: "/home/for-you" },
-  { label: "FOLLOWINGS",   href: "/home/followings" },
-];
-
 // ─────────────────────────────────────────────────────────────
 // PRODUCT CARD — standard card format used across all listing pages
 // ─────────────────────────────────────────────────────────────
@@ -125,32 +119,30 @@ function ProductCard({ product }: { product: Product }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Link to={`/product/${product.id}`} className="relative aspect-[4/5] block bg-gray-100">
-        <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
-        <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
-
-        {product.verified && (
-          <img
-            src={trustedSeal}
-            alt="TrustedSEAL verified vendor"
-            className="absolute top-2 lg:top-3 left-2 lg:left-3 h-4 lg:h-5 w-auto rounded shadow-sm"
-          />
-        )}
-
-        <button
-          onClick={e => { e.preventDefault(); openSaveModal(product); }}
-          className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
-          aria-label={saved ? "Edit saved folders" : "Save product"}
-        >
-          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
-        </button>
-
-        <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
-          <Star className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-yellow-400 fill-yellow-400" />
-          <span className="text-[9px] lg:text-xs font-bold text-gray-800">{product.rating}</span>
-          <span className="text-[9px] lg:text-xs text-gray-400">| {product.enquiries}</span>
-        </div>
-      </Link>
+      <div className="relative aspect-[4/5] bg-gray-100">
+        {/* The Save button sits beside the photo's link, not inside it (review L-12). */}
+        <Link to={`/product/${product.id}`} className="absolute inset-0 block">
+          <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
+          <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
+  
+          {product.verified && (
+            <img
+              src={trustedSeal}
+              alt="TrustedSEAL verified vendor"
+              className="absolute top-2 lg:top-3 left-2 lg:left-3 h-4 lg:h-5 w-auto rounded shadow-sm"
+            />
+          )}
+  
+          <RatingChip rating={product.rating} className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3" />
+        </Link>
+          <button
+            onClick={e => { e.preventDefault(); openSaveModal(product); }}
+            className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
+            aria-label={saved ? "Edit saved folders" : "Save product"}
+          >
+            {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          </button>
+      </div>
 
       <div className="relative p-2 lg:p-3.5 flex flex-col flex-1">
         <CardLinkOverlay to={`/product/${product.id}`} />
@@ -165,8 +157,7 @@ function ProductCard({ product }: { product: Product }) {
           <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
         </div>
         <InternationalSupplierTag countryCode={product.vendorCountryCode} className="mt-1 self-start text-[9px] lg:text-[10px]" />
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
+        <CardSpecs fabric={product.fabric} gsm={product.gsm} fit={product.fitType} className="mt-1 lg:mt-1.5" lineClassName="text-[10px] lg:text-xs" />
 
         {/* Spacer absorbs uneven text height so every Call Now aligns at the card's bottom edge */}
         <div className="flex-1" />
@@ -192,16 +183,12 @@ function LookingForCard({ product, className }: { product: Product; className?: 
   return (
     <div className={cn("relative rounded-lg overflow-hidden border border-gray-100 bg-white flex flex-col", className)}>
       <CardLinkOverlay to={`/product/${product.id}`} />
-      <div className="relative aspect-square bg-gray-100">
+      {/* The photo is the card's link for a keyboard and a screen reader (review L-11); the text's overlay link is
+          mouse and touch only. */}
+      <Link to={`/product/${product.id}`} className="relative block aspect-square bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-buyer">
         <img src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
-        {/* A star only for a listing with reviews: rating_avg is 0 until the first one. */}
-        {product.rating > 0 && (
-          <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
-            <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
-            <span className="text-[7px] lg:text-[10px] font-bold">{product.rating.toFixed(1)}</span>
-          </div>
-        )}
-      </div>
+        <RatingChip rating={product.rating} size="xs" className="absolute bottom-1 left-1" />
+      </Link>
       <div className="p-1.5 lg:p-2.5 flex flex-col flex-1">
         <p className="text-[9px] lg:text-xs font-bold text-brand-buyer leading-tight">{showText(product.price)} | MOQ: {product.moq}</p>
         <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">
@@ -246,8 +233,8 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
   return (
     <div>
       <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
+        {/* No arrow: there's no page of every Brand Pick for it to open (review L-14). */}
         <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
-        <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
       </div>
       {/* The lowercase "sponsored" that used to sit here, above the rail in
           text-gray-300, is replaced by the shared SponsoredNote below the
@@ -433,13 +420,8 @@ const NewArrivals = () => {
   // (2026-11-18 review, H-01).
   const displayProducts = products;
 
-  // Interleave a Submit Requirement card every 5 rows. A row is `cols` cards on
-  // mobile but `desktopCols` on desktop, so the insert positions differ per
-  // breakpoint: every (cols*5) products on mobile, every (desktopCols*5) on
-  // desktop. Cards at a multiple of the desktop interval show on both; the
-  // in-between mobile multiples are mobile-only (`lg:hidden`, so they collapse
-  // out of the desktop grid and leave no gap). Net: mobile sees a card every 5
-  // mobile rows, desktop every 5 desktop rows.
+  // One Submit Requirement card after 5 rows (review L-22). A row is `cols` cards on a phone but `desktopCols` on a
+  // laptop, so each has its own position (the other's is hidden there).
   const mobileInterval = cols * 5;         // 10 (2-col) or 15 (3-col)
   const desktopInterval = desktopCols * 5; // 20 (2-col) or 30 (3-col)
 
@@ -474,13 +456,16 @@ const NewArrivals = () => {
     feedNodes.push(<ProductCard key={product.id} product={product} />);
     const n = i + 1;
     if (n >= displayProducts.length) return; // never trail the last loaded product
-    if (n % desktopInterval === 0) {
+    // Once per device, not every 5 rows (review L-22: "Looking for products?" twice on the first screens): after the
+    // first 5 rows on a phone, the first 5 rows on a laptop.
+    if (n === desktopInterval) {
       feedNodes.push(
-        <div key={`req-${i}`} className="col-span-full lg:max-w-4xl lg:mx-auto my-2 lg:my-4">
+        <div key={`req-${i}`} className="col-span-full hidden lg:block lg:max-w-4xl lg:mx-auto lg:my-4">
           <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
         </div>
       );
-    } else if (n % mobileInterval === 0) {
+    }
+    if (n === mobileInterval) {
       feedNodes.push(
         <div key={`req-m-${i}`} className="col-span-full lg:hidden my-2">
           <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
@@ -503,40 +488,7 @@ const NewArrivals = () => {
 
   return (
     <BuyerShell>
-      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
-        {/* ── Home tabs ── */}
-        {/* A tablist, and now labelled as one. These were plain links: a
-            screen reader got five destinations with no indication of which one
-            the user was on, and the active style was hardcoded to
-            /home/new-arrivals rather than derived from the route — correct only
-            because this strip happens to render on that page. */}
-        <div
-          role="tablist"
-          aria-label="Buyer home"
-          className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide"
-        >
-          {HOME_TABS.map(tab => {
-            const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-            return (
-              <Link
-                key={tab.href}
-                to={tab.href}
-                role="tab"
-                aria-selected={isActive}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                  isActive
-                    ? "text-brand-buyer border-brand-buyer"
-                    : "text-gray-400 border-transparent hover:text-gray-600"
-                )}
-              >
-                {isActive && "✦ "}{t(tab.label)}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      <HomeTabs />
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 space-y-5 lg:space-y-10 pb-4">
 
@@ -649,6 +601,16 @@ const NewArrivals = () => {
                 </div>
               </button>
             ))}
+            {/* The row ends in the full page, so one or two videos don't sit alone in an empty row (review L-20). */}
+            <Link
+              to="/video-closeups"
+              className="shrink-0 w-36 lg:w-56 aspect-[3/4] rounded-md border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 text-center px-3 hover:bg-gray-100"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm">
+                <Play className="h-4 w-4 text-gray-900 fill-gray-900" />
+              </span>
+              <span className="text-xs lg:text-sm font-bold text-gray-800">Watch all Video Close-Ups</span>
+            </Link>
           </div>
           </>
           )}
@@ -680,12 +642,16 @@ const NewArrivals = () => {
             <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
               <button
                 onClick={() => setViewMode("2-col")}
+                aria-label="Two products per row"
+                aria-pressed={viewMode === "2-col"}
                 className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "2-col" ? "bg-brand-buyer text-white" : "text-gray-400")}
               >
                 <Grid2X2 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
               </button>
               <button
                 onClick={() => setViewMode("3-col")}
+                aria-label="Three products per row"
+                aria-pressed={viewMode === "3-col"}
                 className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "3-col" ? "bg-brand-buyer text-white" : "text-gray-400")}
               >
                 <Grid3X3 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
@@ -708,6 +674,7 @@ const NewArrivals = () => {
               : products.length === 0 ? "No products yet. Suppliers' new listings appear here."
               : feed.isFetchingNextPage ? "Loading more products..."
               : feed.hasNextPage ? "Scroll for more"
+              : feed.capped ? <>That's the newest {products.length}. <Link to="/categories" className="font-semibold text-brand-buyer">Browse by category</Link> for more.</>
               : "You've seen everything new"}
           </div>
         </div>

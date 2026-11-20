@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RatingChip } from "@/components/buyer/RatingChip";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion } from "framer-motion";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
@@ -62,47 +63,45 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
       onMouseLeave={() => setHovered(false)}
       className={cn("group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg", className)}
     >
-      <Link
-        to={`/product/${product.id}`}
-        className="relative block aspect-[4/5] overflow-hidden bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/25 via-transparent to-transparent" />
-        <div className="absolute bottom-2 left-2 rounded-full bg-foreground/70 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-background backdrop-blur-sm">
-          COSORA
-        </div>
-
-        {product.verified && (
-          <Badge className="absolute left-2 top-2 bg-accent text-accent-foreground hover:bg-accent" title={tier ? SEAL_TIER_LABEL[tier] : undefined}>
-            <BadgeCheck className="mr-1 h-3 w-3" />
-            {tier === "vip" ? "TradeSEAL · VIP" : tier === "gold" ? "TradeSEAL · Gold" : "TradeSEAL"}
-          </Badge>
-        )}
-
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            openSaveModal(product);
-          }}
-          className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
-          aria-label={saved ? "Edit saved folders" : "Save product"}
+      <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+        {/* The Save button sits beside the photo's link, not inside it (review L-12). */}
+        <Link
+          to={`/product/${product.id}`}
+          className="absolute inset-0 block focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          {saved
-            ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" />
-            : <Bookmark className="h-4 w-4 text-muted-foreground" />}
-        </button>
-
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between rounded-xl bg-background/90 px-3 py-2 text-xs backdrop-blur-sm">
-          <div className="flex items-center gap-1 font-medium text-foreground">
-            <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-            <span>{product.rating.toFixed(1)}</span>
-            <span className="text-muted-foreground">| {product.enquiries}</span>
+          <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/25 via-transparent to-transparent" />
+          <div className="absolute bottom-2 left-2 rounded-full bg-foreground/70 px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] text-background backdrop-blur-sm">
+            COSORA
           </div>
-          {product.views && <span className="text-muted-foreground">{product.views}</span>}
-        </div>
-      </Link>
+  
+          {product.verified && (
+            <Badge className="absolute left-2 top-2 bg-accent text-accent-foreground hover:bg-accent" title={tier ? SEAL_TIER_LABEL[tier] : undefined}>
+              <BadgeCheck className="mr-1 h-3 w-3" />
+              {tier === "vip" ? "TradeSEAL · VIP" : tier === "gold" ? "TradeSEAL · Gold" : "TradeSEAL"}
+            </Badge>
+          )}
+  
+          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between rounded-xl bg-background/90 px-3 py-2 text-xs backdrop-blur-sm">
+            <RatingChip rating={product.rating} className="bg-transparent px-0 py-0" />
+            {product.views && <span className="text-muted-foreground">{product.views}</span>}
+          </div>
+        </Link>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              openSaveModal(product);
+            }}
+            className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
+            aria-label={saved ? "Edit saved folders" : "Save product"}
+          >
+            {saved
+              ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" />
+              : <Bookmark className="h-4 w-4 text-muted-foreground" />}
+          </button>
+      </div>
 
       <div className="flex flex-col gap-2 p-3">
         <div className="flex items-start justify-between gap-2">

@@ -1,7 +1,10 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useCategoryPicture } from "@/hooks/useCategoryPicture";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CardSpecs } from "@/components/buyer/CardSpecs";
+import { RatingChip } from "@/components/buyer/RatingChip";
 import { Link, useNavigate } from "react-router-dom";
+import { HomeTabs } from "@/components/buyer/HomeTabs";
 import { useT } from "@/lib/i18n";
 import BuyerTopBar from "@/components/buyer/BuyerTopBar";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -202,14 +205,6 @@ const HOT_KEYWORDS: Record<string, HotKeyword[]> = {
   ],
 };
 
-const HOME_TABS = [
-  { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
-  { label: "TRENDS", href: "/home/trends" },
-  { label: "SALE", href: "/home/sale" },
-  { label: "FOR YOU", href: "/home/for-you" },
-  { label: "FOLLOWINGS", href: "/home/followings" },
-];
-
 // ─────────────────────────────────────────────────────────────
 // COMPACT PRODUCT CARD — matches the listing card used across buyer pages
 // ─────────────────────────────────────────────────────────────
@@ -223,30 +218,28 @@ function ProductCard({ product }: { product: CompactProduct }) {
 
   return (
     <div
-      className="rounded-xl border border-gray-200 overflow-hidden bg-white"
+      className="h-full flex flex-col rounded-xl border border-gray-200 overflow-hidden bg-white"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Link to={`/product/${product.id}`} className="relative aspect-[4/5] block bg-gray-100">
-        <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
-        <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
+      <div className="relative aspect-[4/5] bg-gray-100">
+        {/* The Save button sits beside the photo's link, not inside it (review L-12). */}
+        <Link to={`/product/${product.id}`} className="absolute inset-0 block">
+          <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
+          <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
+  
+          <RatingChip rating={product.rating} className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3" />
+        </Link>
+          <button
+            onClick={(e) => { e.preventDefault(); openSaveModal(product); }}
+            className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
+            aria-label={saved ? "Edit saved folders" : "Save product"}
+          >
+            {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          </button>
+      </div>
 
-        <button
-          onClick={(e) => { e.preventDefault(); openSaveModal(product); }}
-          className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
-          aria-label={saved ? "Edit saved folders" : "Save product"}
-        >
-          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
-        </button>
-
-        <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
-          <Star className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-yellow-400 fill-yellow-400" />
-          <span className="text-[9px] lg:text-xs font-bold text-gray-800">{product.rating.toFixed(1)}</span>
-          <span className="text-[9px] lg:text-xs text-gray-400">| {product.enquiries}</span>
-        </div>
-      </Link>
-
-      <div className="relative p-2 lg:p-3.5">
+      <div className="relative flex flex-1 flex-col p-2 lg:p-3.5">
         <CardLinkOverlay to={`/product/${product.id}`} />
         <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
           {showText(product.price)} | {product.moq}{product.views && <> | {product.views}</>}
@@ -259,9 +252,10 @@ function ProductCard({ product }: { product: CompactProduct }) {
           <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
         </div>
         <InternationalSupplierTag countryCode={product.vendorCountryCode} className="mt-1 self-start text-[9px] lg:text-[10px]" />
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
+        <CardSpecs fabric={product.fabric} gsm={product.gsm} fit={product.fitType} className="mt-1 lg:mt-1.5" lineClassName="text-[10px] lg:text-xs" />
 
+        {/* Spacer: every Call Now sits at the card's bottom edge (review L-19). */}
+        <div className="flex-1" />
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
           className="relative z-10 mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
@@ -402,25 +396,7 @@ const Trends = () => {
     <div className="min-h-screen bg-white">
       <BuyerTopBar />
 
-      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
-        {/* ── Home tabs ── */}
-        <div className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
-          {HOME_TABS.map((tab) => (
-            <Link
-              key={tab.href}
-              to={tab.href}
-              className={cn(
-                "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                tab.href === "/home/trends"
-                  ? "text-brand-buyer border-brand-buyer"
-                  : "text-gray-400 border-transparent hover:text-gray-600"
-              )}
-            >
-              {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <HomeTabs />
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-6 lg:space-y-10">
 

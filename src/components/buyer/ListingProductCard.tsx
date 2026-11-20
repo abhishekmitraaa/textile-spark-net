@@ -1,5 +1,7 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useState } from "react";
+import { CardSpecs } from "@/components/buyer/CardSpecs";
+import { RatingChip } from "@/components/buyer/RatingChip";
 import { Link } from "react-router-dom";
 import { Bookmark, BookmarkCheck, MapPin, Phone, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,24 +39,22 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Link to={`/product/${product.id}`} className="relative aspect-[4/5] block bg-gray-100">
-        <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
-        <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
-
-        <button
-          onClick={(e) => { e.preventDefault(); openSaveModal(product); }}
-          className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
-          aria-label={isSaved ? "Edit saved folders" : "Save product"}
-        >
-          {isSaved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
-        </button>
-
-        <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
-          <Star className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-yellow-400 fill-yellow-400" />
-          <span className="text-[9px] lg:text-xs font-bold text-gray-800">{product.rating.toFixed(1)}</span>
-          <span className="text-[9px] lg:text-xs text-gray-400">| {product.enquiries}</span>
-        </div>
-      </Link>
+      <div className="relative aspect-[4/5] bg-gray-100">
+        {/* The Save button sits beside the photo's link, not inside it (review L-12). */}
+        <Link to={`/product/${product.id}`} className="absolute inset-0 block">
+          <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
+          <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
+  
+          <RatingChip rating={product.rating} className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3" />
+        </Link>
+          <button
+            onClick={(e) => { e.preventDefault(); openSaveModal(product); }}
+            className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
+            aria-label={isSaved ? "Edit saved folders" : "Save product"}
+          >
+            {isSaved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          </button>
+      </div>
 
       <div className="relative p-2 lg:p-3.5 flex flex-col flex-1">
         <CardLinkOverlay to={`/product/${product.id}`} />
@@ -69,8 +69,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
           <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
         </div>
         <InternationalSupplierTag countryCode={product.vendorCountryCode} className="mt-1 self-start text-[9px] lg:text-[10px]" />
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
+        <CardSpecs fabric={product.fabric} gsm={product.gsm} fit={product.fitType} className="mt-1 lg:mt-1.5" lineClassName="text-[10px] lg:text-xs" />
 
         {/* Spacer absorbs uneven text height so every Call Now aligns at the card's bottom edge */}
         <div className="flex-1" />

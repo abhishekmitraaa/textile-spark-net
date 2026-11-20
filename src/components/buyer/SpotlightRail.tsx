@@ -14,7 +14,7 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 
 export default function SpotlightRail({ categoryId, className }: { categoryId?: string | null; className?: string }) {
   const on = useFeaturedListingsOn();
-  const { data: ids = [] } = useSpotlight(on ? (categoryId ?? null) : undefined);
+  const { data: ids = [] } = useSpotlight(categoryId ?? null, 8, { enabled: on });
   const { showText } = useDisplayCurrency();
   const { data: cards = {} } = useQuery({
     queryKey: ["spotlight_cards", ids],

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Bookmark, MoreVertical, X, Globe, ChevronRight, Bell } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Search, Bookmark, MoreVertical, ChevronRight, Bell, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadCount } from "@/lib/queries/notifications";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -15,6 +15,7 @@ import { useCurrencySetting } from "@/hooks/useCurrencySetting";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useOverlayState } from "@/hooks/useBackCloses";
+import { badgeLabel, useChatUnread } from "@/lib/queries/chatUnread";
 
 function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
@@ -41,23 +42,14 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
     { label: "Blogs",             href: "/blogs", external: true },
   ];
 
+  // A dialog (review L-10): focus moves in and stays, Escape and the backdrop close it, and a screen reader hears
+  // "Menu, dialog". It was a pair of positioned divs. Above the phone's bottom bar (z-50), as before.
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/40"
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
-            transition={{ type: "tween", duration: 0.25 }}
-            className="fixed inset-y-0 left-0 z-[71] w-72 bg-white flex flex-col"
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+    <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent side="left" overlayClassName="z-[70] bg-black/40" className="z-[71] flex w-72 flex-col gap-0 bg-white p-0 sm:max-w-none">
+            <SheetTitle className="sr-only">{t("Menu")}</SheetTitle>
+            <div className="flex items-center justify-between px-5 py-4 pr-12 border-b border-gray-100">
               <CosoraLogo height={19} />
-              <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
 
             {/* Switch mode */}
@@ -133,10 +125,8 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
               <button onClick={() => { onClose(); navigate("/profile"); }} className="text-sm text-gray-700 block py-1.5">{t("My Profile")}</button>
               <button onClick={() => { onClose(); navigate("/profile/help"); }} className="text-sm text-gray-700 block py-1.5">{t("Help & Support")}</button>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -152,7 +142,7 @@ export default function BuyerTopBar() {
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 lg:px-6">
         <div className="flex items-center gap-3 py-3 max-w-2xl lg:max-w-6xl mx-auto">
           {/* Logo */}
-          <button onClick={() => navigate("/home/new-arrivals")} className="shrink-0">
+          <button onClick={() => navigate("/home/new-arrivals")} className="shrink-0" aria-label={t("Cosora home")}>
             <CosoraLogo height={20} />
           </button>
 
@@ -171,13 +161,17 @@ export default function BuyerTopBar() {
           {/* Notifications, for a signed-in buyer (2026-10-17: a requirement's review is told here). */}
           {user && <BuyerBell onOpen={() => navigate("/notifications")} />}
 
+          {/* Chats with their unread count on a laptop, where the phone's bottom bar (which carries it) is hidden
+              (review L-14). The count is useChatUnread's, so the two can't disagree. */}
+          {user && <ChatsButton onOpen={() => navigate("/chats")} />}
+
           {/* Bookmark */}
-          <button onClick={() => navigate("/saved")} className="p-1.5 shrink-0">
+          <button onClick={() => navigate("/saved")} className="p-1.5 shrink-0" aria-label={t("Saved products")}>
             <Bookmark className="w-5 h-5 text-gray-700" />
           </button>
 
           {/* 3-dot menu */}
-          <button onClick={() => setDrawerOpen(true)} className="p-1.5 shrink-0">
+          <button onClick={() => setDrawerOpen(true)} className="p-1.5 shrink-0" aria-label={t("Menu")} aria-haspopup="dialog" aria-expanded={drawerOpen}>
             <MoreVertical className="w-5 h-5 text-gray-700" />
           </button>
         </div>
@@ -203,6 +197,26 @@ function BuyerBell({ onOpen }: { onOpen: () => void }) {
       {unread > 0 && (
         <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-buyer px-1 text-[9px] font-bold text-white tabular-nums">
           {unread > 99 ? "99+" : unread}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function ChatsButton({ onOpen }: { onOpen: () => void }) {
+  const t = useT();
+  const unread = useChatUnread().total;
+  const label = badgeLabel(unread);
+  return (
+    <button
+      onClick={onOpen}
+      aria-label={label ? `${t("Chats")}, ${unread} ${t("unread")}` : t("Chats")}
+      className="relative hidden lg:flex p-1.5 shrink-0"
+    >
+      <MessageCircle className="w-5 h-5 text-gray-700" />
+      {label && (
+        <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brand-buyer text-white text-[10px] font-bold leading-4 text-center">
+          {label}
         </span>
       )}
     </button>

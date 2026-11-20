@@ -52,11 +52,15 @@ export function useFeaturedListings(categoryId: string | null | undefined) {
   });
 }
 
-/** VIP sellers' products for the Spotlight rail (in a category when given). */
-export function useSpotlight(categoryId: string | null | undefined, limit = 8) {
+/**
+ * VIP sellers' products for the Spotlight rail (in a category when given). `enabled: false` asks nothing: the rail
+ * passes the visitor's switch, so a visitor it's off for makes no request (review L-16: it asked for every category).
+ */
+export function useSpotlight(categoryId: string | null | undefined, limit = 8, { enabled = true }: { enabled?: boolean } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["spotlight_listings", categoryId ?? "all", limit, user?.id ?? "anon"],
+    enabled,
     staleTime: 10 * 60 * 1000,
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await supabase.rpc("spotlight_listings", {

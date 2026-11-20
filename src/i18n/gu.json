@@ -9191,5 +9191,18 @@
  "A buyer can ask to delete their account from Profile › Help. It is confirmed with a code sent to your email or WhatsApp; sending that code isn't set up yet, so until it is, call Cosora Support on {0} to ask. We then wait 14 days in case you change your mind, and remove your name, contact details and photo, your saved items, followed and saved sellers and notifications, and your support messages and files. Requirements, messages and reviews other people took part in stay, without your name on them.": "ખરીદનાર પ્રોફાઇલ › મદદમાંથી પોતાનું ખાતું કાઢી નાખવા કહી શકે છે. તેની પુષ્ટિ તમારા ઇમેઇલ અથવા વોટ્સએપ પર મોકલેલા કોડથી થાય છે; તે કોડ મોકલવાનું હજી શરૂ થયું નથી, તેથી ત્યાં સુધી કોસોરા સપોર્ટને {0} પર કૉલ કરો. પછી અમે 14 દિવસ રાહ જોઈએ છીએ, જેથી તમે તમારો વિચાર બદલી શકો, અને તમારું નામ, સંપર્ક વિગતો અને ફોટો, સેવ કરેલી વસ્તુઓ, ફોલો અને સેવ કરેલા વેચાણકર્તાઓ અને સૂચનાઓ, અને તમારા સપોર્ટ સંદેશા અને ફાઇલો દૂર કરીએ છીએ. જે જરૂરિયાતો, સંદેશા અને સમીક્ષાઓમાં બીજા લોકો સામેલ હતા, તે તમારા નામ વગર રહે છે.",
  "Check the {0} link": "{0} લિંક તપાસો",
  "Enter a website address, like yourbrand.com. Social profiles go in their own boxes.": "વેબસાઇટનું સરનામું દાખલ કરો, જેમ કે yourbrand.com. સોશિયલ પ્રોફાઇલ પોતપોતાના બોક્સમાં મૂકો.",
- "Enter a {0} address or @handle.": "{0} સરનામું અથવા @handle દાખલ કરો."
+ "Enter a {0} address or @handle.": "{0} સરનામું અથવા @handle દાખલ કરો.",
+ "Menu": "મેનુ",
+ "Cosora home": "કોસોરા હોમ",
+ "Saved products": "સેવ કરેલા પ્રોડક્ટ",
+ "unread": "વાંચ્યા વગરના",
+ "GSM:": "GSM:",
+ "Rated {0} out of 5": "5 માંથી {0} રેટિંગ",
+ "Watch all Video Close-Ups": "બધા વીડિયો ક્લોઝ-અપ જુઓ",
+ "Two products per row": "દરેક હરોળમાં બે પ્રોડક્ટ",
+ "Three products per row": "દરેક હરોળમાં ત્રણ પ્રોડક્ટ",
+ "That's the newest": "આ સૌથી નવા",
+ "for more.": "વધુ જોવા માટે.",
+ "Showing new listings from the": "એ",
+ "sellers you followed most recently, of": "વિક્રેતાઓની નવી લિસ્ટિંગ, જેમને તમે તાજેતરમાં ફોલો કર્યા, કુલ"
 }

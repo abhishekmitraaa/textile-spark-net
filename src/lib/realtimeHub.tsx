@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFeatureFlag } from "@/lib/queries/featureFlags";
+import { useFeatureFlags } from "@/lib/queries/featureFlags";
 
 // ─────────────────────────────────────────────────────────────
 // LIVE-UPDATE HUB (seller home fixes T9; SH-030, SH-031, SH-036; migration 20261116100400_live_updates_hub.sql).
@@ -19,9 +19,16 @@ import { useFeatureFlag } from "@/lib/queries/featureFlags";
 export type HubEvent = "notifications" | "chat";
 
 const DEBOUNCE_MS = 300;
+/** How long callers wait for the hub before opening their own subscriptions. */
+const HUB_WAIT_MS = 5000;
 
 interface Hub {
-  /** True once the account's channel is open; until then callers keep their own subscriptions. */
+  /**
+   * True once the account's channel is open, and also while it is expected shortly (the switch still loading, or the
+   * channel joining, for at most HUB_WAIT_MS): callers keep their own subscriptions only when this is false (review
+   * L-17: they opened one each, then closed it a moment later when the hub joined). The hub re-reads both events when
+   * it joins, so nothing is missed meanwhile.
+   */
   live: boolean;
   subscribe: (event: HubEvent, handler: () => void) => () => void;
 }
@@ -31,8 +38,20 @@ const HubContext = createContext<Hub>({ live: false, subscribe: () => () => {} }
 export function RealtimeHubProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id;
-  const on = useFeatureFlag("live_updates_hub") === true;
+  const flags = useFeatureFlags();
+  const flag = flags.data ? Boolean(flags.data.live_updates_hub) : undefined;
+  const on = flag === true;
   const [live, setLive] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+  // A fresh wait per account; past it, callers fall back whatever the hub is doing.
+  useEffect(() => {
+    setGaveUp(false);
+    if (!userId) return;
+    const t = setTimeout(() => setGaveUp(true), HUB_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [userId]);
+  const waiting = Boolean(userId) && !gaveUp && ((flag === undefined && !flags.isError) || (on && joining));
   const handlers = useRef(new Map<HubEvent, Set<() => void>>());
 
   const subscribe = useCallback((event: HubEvent, handler: () => void) => {
@@ -47,8 +66,10 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId || !on) {
       setLive(false);
+      setJoining(false);
       return;
     }
+    setJoining(true);
     let cancelled = false;
     let channel: RealtimeChannel | null = null;
     const timers = new Map<HubEvent, ReturnType<typeof setTimeout>>();
@@ -77,12 +98,14 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
           if (cancelled) return;
           if (status === "SUBSCRIBED") {
             setLive(true);
+            setJoining(false);
             // Anything that changed between the first reads and the channel joining.
             fire("notifications");
             fire("chat");
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
             // Back to the per-hook subscriptions until it joins again.
             setLive(false);
+            setJoining(false);
           }
         });
     })();
@@ -96,7 +119,7 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
     };
   }, [userId, on]);
 
-  const value = useMemo(() => ({ live, subscribe }), [live, subscribe]);
+  const value = useMemo(() => ({ live: live || waiting, subscribe }), [live, waiting, subscribe]);
   return <HubContext.Provider value={value}>{children}</HubContext.Provider>;
 }
 

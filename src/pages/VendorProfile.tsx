@@ -2,6 +2,7 @@ import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import StoreHeroBackground, { STORE_HERO_BOX } from "@/components/StoreHeroBackground";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useState } from "react";
+import { CardSpecs } from "@/components/buyer/CardSpecs";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supportChatHref } from "@/lib/supportContact";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -1084,8 +1085,7 @@ const VendorProfile = () => {
                       <MapPin className={cn("text-gray-500 shrink-0", gridCols === 2 ? "h-2.5 w-2.5" : "h-2 w-2")} />
                       <span className={cn("font-bold text-gray-700 truncate", gridCols === 2 ? "text-[10px]" : "text-[8px]")}>{product.location}</span>
                     </div>
-                    <p className={cn("text-gray-500 mt-0.5", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>Fabric: {product.fabric} | GSM: {product.gsm}</p>
-                    <p className={cn("text-gray-500", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>Fit Type: {product.fit}</p>
+                    <CardSpecs fabric={product.fabric} gsm={product.gsm} fit={product.fit} className="mt-0.5" lineClassName={cn(gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")} />
                     <button onClick={() => callVendor(vendorId, product.name)}
                       className={cn(ABOVE_CARD_LINK, "mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
                       <Phone className={gridCols === 2 ? "h-3 w-3" : "h-2.5 w-2.5"} /> Call Now

@@ -1413,6 +1413,16 @@ undocumented. Deep technical rationale for each lives in
 - **A function patched by anchored text normalises line endings first** (2026-11-20): production's stored bodies carry
   CRLF (30 functions, migrations applied from Windows), so `replace(pg_get_functiondef(…), E'\r\n', E'\n')` before
   matching anchors that span lines, and test the patch on a CRLF copy.
+- **One Home tab strip** (2026-11-20, review L-02, L-15): `<HomeTabs>` on every Home page; the open tab is marked from
+  the address (`homeTabOf()`, which the bottom bar's Home uses too) and a tab tap replaces the history entry. A new Home
+  tab goes in `HOME_TABS` only.
+- **A product card's rating, specs and Save follow one pattern** (2026-11-20, review L-08, L-12, L-19): `<RatingChip>`
+  (nothing without a rating), `<CardSpecs>` (only the specs the listing states), and the Save button beside the photo's
+  link, never inside it. A new card uses them.
+- **A long feed says where it stopped** (2026-11-20, review L-03, L-04): `useFeed().capped` is true at `feed_products`'
+  depth (984); pages after the first overlap the one before by 4 (`PAGE_OVERLAP`).
+- **Callers wait for the live-updates hub before subscribing themselves** (2026-11-20, review L-17): `useHubLive()` /
+  `useHubEvent()` answer true while the switch loads or the channel joins, for at most 5 s (`HUB_WAIT_MS`).
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the
