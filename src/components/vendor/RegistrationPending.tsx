@@ -24,7 +24,9 @@ export function RegistrationPending() {
             <Link to="/kyc">View your documents</Link>
           </Button>
           <Button asChild variant="outline" className="rounded-full">
-            <Link to="/seller-home">Go to seller home</Link>
+            {/* Replaces this entry (review L-69): Back from Seller Home went to /onboarding, which showed this screen
+                again. Now it goes to the page before the registration. */}
+            <Link to="/seller-home" replace>Go to seller home</Link>
           </Button>
         </div>
       </div>

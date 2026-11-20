@@ -45,7 +45,8 @@ const secondaryActions: QuickActionItem[] = [
   // deep link the Profile Score checklist uses for these two tasks.
   { name: "Add Website", icon: Globe, href: "/business-profile?focus=contact-details", color: "text-cyan-600", bgColor: "bg-cyan-100", doneKey: "website" },
   { name: "Add Social Links", icon: Share2, href: "/add-social-links", color: "text-orange-600", bgColor: "bg-orange-100" },
-  { name: "Upload Catalogue", icon: Upload, href: "/upload-catalogue", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
+  // No "FREE" badge (review L-78): every action here is included, so it singled one out for nothing.
+  { name: "Upload Catalogue", icon: Upload, href: "/upload-catalogue", color: "text-green-600", bgColor: "bg-green-100" },
 ];
 
 const tertiaryActions: QuickActionItem[] = [

@@ -1137,6 +1137,12 @@
   - **Not built yet:** the buyer and vendor screens (P3), receipts and the scheduled sweep (P6), content (P5).
   - **Files:** the three migrations, `supabase/functions/support-attachment-verify/index.ts`, `supabase/config.toml`, `scripts/support-role-simulation.sql`, `documentation/{help-feature-plan,securityflags,ToDo,technicalimplementation,sides,sitemap,test}.md`, this file.
 
+- 2026-09-29 (Cosora Journal on this site; commits `2a447c8`, `a261ffa`; entry written 2026-11-20, review L-104, it was
+  missing): **`/blogs` is the Cosora Journal, and its "Post RFQ" links land through `/go/post-rfq`.**
+  - `vercel.json` rewrites `/blogs` and `/blogs/*` to the separate `cosora-blogs` app, so the Journal is served from
+    www.cosora.in and shares its sign-in; `/sitemap.xml` is `api/sitemap.ts` (this site's pages and the Journal's).
+  - `/go/post-rfq` decides where a Journal reader goes: a buyer to the requirement form, a seller to Seller Home; signed
+    out, the form, which asks for sign-in first (since 2026-11-20, review L-36; it sent them to the home page).
 - 2026-09-29 (admin completion, Phase 10: discount codes): **Vendors can enter a discount code when they buy a plan, an ad campaign or the Verified Certificate, and Cosora's team manages the codes in Cosora-Admin.** Mitra's call (2026-09-27): discounts on vendor purchases only (buyers never pay), plans first.
   - **Migration `20260929080502_discount_codes.sql`** (+ `20260929084703_discount_code_save_defaults.sql`):
     - `admin.discount_codes`, `admin.discount_redemptions` (reserved, then confirmed or released), `admin.discount_attempts`.

@@ -108,7 +108,9 @@ interface DashboardSidebarProps {
 export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  // Known on the first render too (review L-80): useIsMobile() answers false until its effect runs, so on a phone the
+  // menu was drawn open and then slid shut on every page load.
+  const isMobile = useIsMobile() || (typeof window !== "undefined" && window.innerWidth < 768);
   const role = useDisplayRole();
   const { user, profile, signOut } = useAuth();
   // Seller-side plan chip in the bottom user area (sourced from the same hook
@@ -183,14 +185,17 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
 
       {/* Sidebar */}
       <aside
+        // Closed on a phone, it is out of the tab order and hidden from screen readers (review L-81): `invisible` once
+        // the slide has finished (visibility is part of the transition), and aria-hidden.
+        aria-hidden={isMobile && !isOpen ? true : undefined}
         className={cn(
-          "fixed left-0 top-0 flex h-screen w-72 flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:w-64",
+          "fixed left-0 top-0 flex h-screen w-72 flex-col bg-sidebar transition-[transform,visibility] duration-300 ease-in-out lg:w-64",
           // On a phone the open menu sits above the bottom bar (z-50), so Sign Out and the plan chip can be tapped (SH-029).
           // On a laptop it stays at z-50, under dialogs and sheets, which portal in later and cover it.
           isMobile
             ? isOpen
               ? "z-[60] translate-x-0"
-              : "z-[60] -translate-x-full"
+              : "z-[60] -translate-x-full invisible"
             : "z-50 translate-x-0"
         )}
       >
@@ -213,7 +218,9 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           </div>
           {isMobile && (
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Close menu"
               className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
             >
               <X size={20} />

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
@@ -177,6 +177,17 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
 
   // "View quote" opens the quote and its request, read-only (SH-082, Mitra: "View only").
   const [viewing, setViewing] = useState<MySubmittedQuote | null>(null);
+  // /quotes?quote=<id> opens that quote (Seller Home's "View quote", review L-76), once; the address then drops it.
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get("quote");
+  useEffect(() => {
+    if (!wanted) return;
+    const q = quotes.find((x) => x.id === wanted);
+    if (q) setViewing(q);
+    const next = new URLSearchParams(params);
+    next.delete("quote");
+    setParams(next, { replace: true });
+  }, [wanted, quotes]); // eslint-disable-line react-hooks/exhaustive-deps
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recent");
   const [sortOpen, setSortOpen] = useState(false);

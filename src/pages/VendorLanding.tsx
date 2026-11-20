@@ -34,6 +34,7 @@ import { SUPPORT_INSTAGRAM } from "@/lib/supportContact";
 import { useOverlayState } from "@/hooks/useBackCloses";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomePath } from "@/hooks/useHomePath";
+import { useCareersPageOn } from "@/lib/queries/careers";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 24 },
@@ -81,7 +82,8 @@ const menuLinks = [
   { label: "Blogs", href: "/seller/blogs" },
   { label: "About Us", href: "/blogs/about" },
   { label: "Contact Us", href: "mailto:hello@cosora.in", external: true },
-  { label: "Work with us!", href: "https://cosora.in/careers", external: true },
+  // The careers page, shown only while its switch is on (Mitra, 2026-11-20, review L-68; it pointed at a 404).
+  { label: "Work with us!", href: "/careers", careers: true },
   { label: "Terms and conditions", href: "/terms" },
   { label: "Report Fraud", href: "/report-fraud" },
   { label: "How it works", href: "#how-it-works" },
@@ -91,6 +93,7 @@ const VendorLanding = () => {
   // Signed in, the header offers the account's home instead of Login (review L-67).
   const { user } = useAuth();
   const home = useHomePath();
+  const careersOn = useCareersPageOn() === true;
   // Back closes the menu (review M-29).
   const [landingMenuOpen, setLandingMenuOpen] = useOverlayState();
   // Seller Registration FAQs are admin-edited in Cosora-Admin (/faqs) and read
@@ -140,7 +143,7 @@ const VendorLanding = () => {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="mt-4 space-y-2">
-                  {menuLinks.map((item) => {
+                  {menuLinks.filter((item) => !("careers" in item) || careersOn).map((item) => {
                     const isExternal = Boolean(item.external);
                     const isHash = item.href.startsWith("#");
                     // /blogs is the Journal app, reverse-proxied onto this

@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Search, Bookmark, MoreVertical, ChevronRight, Bell, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadCount } from "@/lib/queries/notifications";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useDisplayRole } from "@/contexts/DisplaySideContext";
 import { useSwitchRole } from "@/hooks/useSwitchRole";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useT } from "@/lib/i18n";
@@ -19,7 +19,8 @@ import { badgeLabel, useChatUnread } from "@/lib/queries/chatUnread";
 
 function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
-  const { role } = useUserRole();
+  // The side this frame draws (review L-70), so the switch shows Buyer on a buyer page from the first render.
+  const role = useDisplayRole();
   const switchRole = useSwitchRole();
   const t = useT();
   // The same setting as Regional Settings (MPF-11). This picker used to be an

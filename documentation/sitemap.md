@@ -1,256 +1,140 @@
 # Sitemap
 
-All routes/pages/sub-pages, grouped by side. Updated automatically whenever routes change.
+Every route in `src/App.tsx`, grouped by the side `routeSide()` (`src/lib/sellerRoutes.ts`) gives its address.
+Regenerated from the route table: keep it so when a route is added or removed (review L-102, 2026-11-20).
 
-Last updated: 2026-09-05 — 97 routes.
+Last updated: 2026-11-20 — 112 routes (the 404 catch-all `*` not counted).
 
-**Source of truth:** every route is declared in `src/App.tsx`. Routes marked **(shell)** come
-from the `buyerShellRoutes` array at the top of that file and render inside
-`BuyerRouteShell`. Everything else is a direct `<Route>` with its own page component.
+- **Seller** pages render in `DashboardLayout` (the seller frame, whatever the account's side).
+- **Buyer** pages render in `BuyerShell`, or `BuyerFrame` around a page with its own frame (the sign-up gate and the
+  buyer side either way).
+- **Shared** pages keep the side the person came from (Help, chats, notifications, the legal pages, careers).
+- A component of `→ /path` is a redirect. *Wrapped in* names `ClarityMask` (masked from Clarity), `BuyerFrame`,
+  `SignupStep` (a buyer sign-up step), `RegisteredVendorGate`, `TierGate` (a plan feature).
 
----
+## Seller side (33)
 
-## Buyer Side
+| Route | Component | Wrapped in | Notes |
+|---|---|---|---|
+| `/account-manager` | `AccountManager` | ClarityMask, TierGate | Who looks after the seller: messages, a call back, VIP picks and reviews (Silver and above) |
+| `/add-social-links` | `AddSocialLinks` |  |  |
+| `/advertisements` | `Advertisements` |  | Uses `min-[1400px]:` / `min-[1700px]:` variants, not `xl:`/`2xl:` |
+| `/analytics` | `Analytics` |  |  |
+| `/business-profile` | `BusinessProfile` | ClarityMask |  |
+| `/business-profile-score` | `BusinessProfileScorePage` |  |  |
+| `/competitor-ads` | `CompetitorAds` |  | Competitor intelligence loop |
+| `/crm` | `Crm` | ClarityMask, TierGate | The CRM: leads by stage, board or list (Silver and above) |
+| `/crm/analytics` | `CrmAnalytics` | ClarityMask, TierGate | Funnel, win rate, follow-ups kept (Gold and VIP) |
+| `/crm/follow-ups` | `CrmFollowUps` | ClarityMask, TierGate | Follow-ups overdue, today and coming up (Silver and above) |
+| `/kyc` | `Kyc` | ClarityMask |  |
+| `/lead-alerts` | `LeadAlerts` | ClarityMask, TierGate | How the seller is told about matching requirements (paid plans) |
+| `/leads` | `Leads` | ClarityMask | Buyer inquiries |
+| `/my-payments` | `MyPayments` | ClarityMask |  |
+| `/my-payments/receipt/:orderId` | `AdReceiptDetail` | ClarityMask |  |
+| `/my-store` | `MyStore` |  |  |
+| `/my-store/business` | `MyBusiness` | ClarityMask |  |
+| `/my-store/business/tools` | `BusinessTools` |  |  |
+| `/old-advertisements` | `OldAdvertisements` |  |   |
+| `/overseas-leads` | `OverseasLeads` | ClarityMask, TierGate | Requirements from buyers outside India (Gold and VIP; VIP first) |
+| `/products` | `Products` |  |   |
+| `/quotes` | `Quotes` | ClarityMask | Quote requests; shows Total Order Value |
+| `/reviews` | `Reviews` |  |  |
+| `/seller-home` | `SellerHome` |  | Vendor home; carries the role toggle |
+| `/seller/blogs` | `VendorBlogs` |  |   |
+| `/seller/blogs/:blogId` | `VendorBlogArticle` |  |   |
+| `/settings` | `VendorSettings` | ClarityMask | Business, Notifications, Language, Security, Help & Legal |
+| `/subscription` | `Subscription` | ClarityMask | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `mailto:hello@cosora.in?subject=Subscription%20question` (2026-09-25; it opened `/help` from 2026-09-23) |
+| `/subscription/invoice/:id` | `InvoiceDetail` | ClarityMask |   |
+| `/upload` | `Upload` |  |   |
+| `/upload-catalogue` | `UploadCatalogue` |  |   |
+| `/upload-video` | `UploadVideo` |  | TUS resumable, 50 MB / 60 s cap |
+| `/visibility` | `Visibility` | ClarityMask, TierGate | Where the plan places the seller's products, and views in Featured places and the Spotlight (Basic and above) |
 
-Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav` + ToTop) —
-**not** the vendor `DashboardLayout`.
+## Shared (18)
 
-### Discovery feed
-| Route | Component | Notes |
-|---|---|---|
-| `/browse` | `Navigate` | Redirect into the feed |
-| `/home/new-arrivals` | `NewArrivals` | Buyer home; carries the role toggle |
-| `/home/for-you` | `ForYou` | Personalised feed |
-| `/home/for-you/onboarding` | → `/home/for-you` | Redirect: For You's first run is part of the feed (the scaffold card is gone, 2026-11-14) |
-| `/home/trends` | `Trends` | |
-| `/home/sale` **(shell)** | — | Discounted / sale-priced inventory |
-| `/home/followings` | `Following` | Followed brands |
-| `/home/followings/view-all` | `FollowingViewAll` | |
-| `/for-you` | `ForYou` | Legacy alias of `/home/for-you` |
-| `/video-closeups` | `VideoCloseUpsPage` | Product video reel. Never called "Reels" |
-| `/categories` | `Categories` | |
-| `/recently-viewed` | `RecentlyViewed` | |
+| Route | Component | Wrapped in | Notes |
+|---|---|---|---|
+| `/careers` | `Careers` |  |  |
+| `/chat` | `Chat` | BuyerFrame, ClarityMask | Vendor messages |
+| `/chats` | `Chat` | BuyerFrame, ClarityMask |  |
+| `/chats/:vendorId` | `ChatThread` | BuyerFrame, ClarityMask |  |
+| `/cosora-studio` | `CosoraStudio` |  | Photographers. **Listed in both buyer and seller nav**; styled vendor-blue |
+| `/cosora-studio/:id` | → `/cosora-studio` |  |   |
+| `/feedback` | `AppFeedback` | ClarityMask | A bug or an idea; My Store's "App Feedback" |
+| `/grievance` | `Grievance` |  | **Hidden** (P6c, D-15): the not-found page until the Grievance Officer is named in `src/lib/grievance.ts`. Not linked, not in the sitemap |
+| `/help` | `Help` | ClarityMask | Both sidebars' "Help & Support". The same page as `/profile/help`. Seller frame and `seller_help` FAQs for sellers (P5), `buyer_help` for buyers, each in the reader's language when stored. Shows chat and callback only when rollout includes the person (P3) |
+| `/help/callback` | `SupportCallback` | ClarityMask | Book a one-hour slot in support hours |
+| `/help/chat` | `SupportChatStart` | ClarityMask | Start a chat or continue an open one. `?category=&entity_type=&entity_id=` from links (`supportChatHref`) |
+| `/help/guides/:slug` | `HelpGuide` |  | A Quick Guide; public |
+| `/help/requests` | `MyRequests` | ClarityMask | Every request, newest activity first |
+| `/help/requests/:ticketNo` | `SupportThread` | ClarityMask | One request's conversation with Cosora Support, live; files and voice notes |
+| `/notifications` | `Notifications` | ClarityMask | Backed by the `notifications` table; 4 moderation kinds are real, the rest are dev-only samples |
+| `/privacy` | `PrivacyPolicy` |  |  |
+| `/report-fraud` | `ReportFraud` | ClarityMask | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |
+| `/terms` | `TermsConditions` |  |   |
 
-### Search
-| Route | Component |
-|---|---|
-| `/search` | `Search` |
-| `/search/results` | `SearchResults` |
+## Buyer side and public pages (61)
 
-### Products & vendors
-| Route | Component | Notes |
-|---|---|---|
-| `/product/:id` | `ProductDetail` | |
-| `/vendor/:id` | `VendorProfile` | Contact details are gated |
-| `/services` | `ServiceVendors` | Printers, logistics, other service providers. **Sample profiles** (2026-11-18): no contact, ratings or reviews |
-| `/service-vendors` | `ServiceVendors` | Alias of `/services` |
-| `/services/:vendorId` | `ServiceVendorProfile` | Sample profile from app data, no `profiles` row |
-| `/freelancers` | `Freelancers` | Pattern makers, CLO 3D artists, trend researchers. **Sample profiles** (2026-11-18) |
-| `/freelancers/:id` | `FreelancerProfile` | Sample profile from app data, no `profiles` row |
-| `/cosora-studio` | `CosoraStudio` | Photographers. **Listed in both buyer and seller nav**; styled vendor-blue |
-| `/cosora-studio/:id` | `PhotographerProfile` | |
-
-### Requirements (RFQ) & quotes
-| Route | Component | Notes |
-|---|---|---|
-| `/requirement` | redirect | → `/requirement/post-requirement` (2026-11-18: it showed a developer scaffold card) |
-| `/requirement/quick-rfq` | redirect | → `/requirement/post-requirement` (Quick Quote is a sheet there) |
-| `/requirement/post-requirement` | `PostRequirement` | Category select → schema-driven form → success, all inside the page; asks for sign-in before the form |
-| `/requirement/post-requirement/form` | redirect | → `/requirement/post-requirement` |
-| `/requirement/post-requirement/success` | redirect | → `/requirement/my-quotes` |
-| `/requirement/my-quotes` | `MyQuotes` | Also the target of "Track Orders" |
-| `/post-requirement` | `PostRequirement` | Legacy alias |
-
-### Saved
-| Route | Component |
-|---|---|
-| `/saved` | `SavedCollections` |
-| `/saved/:collectionId` | `SavedCollectionDetail` |
-
-### Messaging
-| Route | Component |
-|---|---|
-| `/chats` | `Chat` |
-| `/chats/:vendorId` | `ChatThread` |
-
-### Buyer profile
-| Route | Component | Notes |
-|---|---|---|
-| `/profile` | `Profile` | |
-| `/profile/settings` | `Settings` (`src/pages/Settings.tsx`) | Buyer account & security (2026-09-23): sign-in number, account email, Log Out, download data, delete account, help & legal. The buyer sidebar's "Settings" and `/profile` → "Account & Security" link here. (`/settings` is the vendor's page.) |
-| `/profile/edit` | `ProfileEdit` | Photo + personal details (was the Edit Profile modal's Photo/Personal tabs; the modal is gone). `?focus=city` focuses City — the `/profile` "Add city" nudge links there |
-| `/profile/business-details` | `ProfileBusinessDetails` | Business name/type/website/industry, address with a country list (subscriptions P7), GSTIN, PAN (was the modal's Business tab) |
-| `/profile/interest-preference` | `InterestPreference` | |
-| `/profile/reviews` | `MyReviews` | Fans out across `reviews`, `product_reviews`, `service_reviews` |
-| `/profile/notifications` | `ProfileNotifications` | |
-| `/profile/social-links` | `ProfileSocialLinks` | |
-| `/profile/regional-settings` | `ProfileAccountPrefs` | |
-| `/profile/data-export` | `ProfileAccountPrefs` | |
-| `/profile/terms` | `TermsConditions` | |
-| `/profile/help` | `Help` | FAQ rows come from `public.faqs` (`buyer_help`), edited in Cosora-Admin `/faqs` with no deploy (2026-09-23). Also the Delete my account entry |
-| `/profile/help/chat` | redirect | Redirects to `/help` since Help & Support P1 (2026-10-01); the canned chat it showed is gone |
-
-### Content
-| Route | Component |
-|---|---|
-| `/blogs` **(shell)** | — |
-| `/blogs/:blogId` **(shell)** | — |
-
----
-
-## Vendor Side
-
-Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
-
-### Dashboard & catalogue
-| Route | Component | Notes |
-|---|---|---|
-| `/seller-home` | `SellerHome` | Vendor home; carries the role toggle |
-| `/dashboard` | `Index` | |
-| `/products` | `Products` | |
-| `/upload` | `Upload` | |
-| `/upload-catalogue` | `UploadCatalogue` | |
-| `/upload-video` | `UploadVideo` | TUS resumable, 50 MB / 60 s cap |
-
-### Demand
-| Route | Component | Notes |
-|---|---|---|
-| `/leads` | `Leads` | Buyer inquiries |
-| `/lead-alerts` | `LeadAlerts` | How the seller is told about matching requirements (paid plans; built, not live) |
-| `/overseas-leads` | `OverseasLeads` | Requirements from buyers outside India (Gold and VIP; VIP first; built, not live) |
-| `/crm` | `Crm` | The CRM: leads by stage, board or list (Silver and above; built, not live) |
-| `/crm/follow-ups` | `CrmFollowUps` | Follow-ups overdue, today and coming up (Silver and above; built, not live) |
-| `/crm/analytics` | `CrmAnalytics` | Funnel, win rate, follow-ups kept (Gold and VIP; built, not live) |
-| `/account-manager` | `AccountManager` | Who looks after the seller: messages, a call back, VIP picks and reviews (Silver and above; built, not live) |
-| `/visibility` | `Visibility` | Where the plan places the seller's products, and views in Featured places and the Spotlight (Basic and above; built, not live) |
-| `/catalogue/bulk-import` | `BulkImport` | Add up to 500 products from a spreadsheet (CSV), with a template, a preview and Recent imports (Silver and above; built, not live) |
-| `/quotes` | `Quotes` | Quote requests; shows Total Order Value |
-| `/chat` | `Chat` | Vendor messages |
-
-### Advertising & monetisation
-| Route | Component | Notes |
-|---|---|---|
-| `/advertisements` | `Advertisements` | Uses `min-[1400px]:` / `min-[1700px]:` variants, not `xl:`/`2xl:` |
-| `/old-advertisements` | `OldAdvertisements` | |
-| `/advertisement-slideshow` | `AdvertisementSlideshow` | |
-| `/competitor-ads` | `CompetitorAds` | Competitor intelligence loop |
-| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `mailto:hello@cosora.in?subject=Subscription%20question` (2026-09-25; it opened `/help` from 2026-09-23) |
-| `/subscription/invoice/:id` | `InvoiceDetail` | |
-
-### Store & business profile
-| Route | Component |
-|---|---|
-| `/my-store` | `MyStore` |
-| `/my-store/business` | `MyBusiness` |
-| `/my-store/business/tools` | `BusinessTools` |
-| `/business-profile` | `BusinessProfile` |
-| `/business-profile-score` | `BusinessProfileScorePage` |
-| `/kyc` | `Kyc` |
-| `/add-social-links` | `AddSocialLinks` |
-
-### Insight & reputation
-| Route | Component |
-|---|---|
-| `/analytics` | `Analytics` |
-| `/reviews` | `Reviews` |
-
-### Vendor acquisition & onboarding
-| Route | Component | Notes |
-|---|---|---|
-| `/seller` | `VendorLanding` | Vendor marketing landing. Its FAQ block is `public.faqs` (`seller_registration`), Andy's 10 questions, edited in Cosora-Admin `/faqs` (2026-09-23) |
-| `/register` | `Register` | |
-| `/onboarding` | `Onboarding` | Business details, documents, products, contract |
-
-### Vendor settings & content
-| Route | Component | Notes |
-|---|---|---|
-| `/settings` | `VendorSettings` | Business, Notifications, Language, Security, Help & Legal |
-| `/seller/blogs` | `VendorBlogs` | |
-| `/seller/blogs/:blogId` | `VendorBlogArticle` | |
-
----
-
-## Admin Side
-
-**No admin routes exist in this repo.** The admin panel is built in a **separate repo,
-`Cosora-Admin`**, running against the same Supabase project. This repo contributes the
-server-side surface the panel drives — `approve_vendor_content`,
-`approve_vendor_content_bulk`, `reject_vendor_content`, `set_account_status`,
-`submit_report` — while `resolve_conversation_review` and `regex_probe` are owned by
-Cosora-Admin's own migrations.
-
-Its routes are listed in `Cosora-Admin/README.md`, not here. The one worth knowing from
-this side: **`/videos`** is the Video Closeups moderation queue (added 2026-09-05). It is
-what moves a `product_videos` row from `under_review` to `live`, and therefore the only
-reason anything ever appears in this repo's `/video-closeups` buyer feed.
-
-**`/faqs`** (added 2026-09-23) edits the FAQ rows in this repo's `public.faqs`: the ones on
-`/profile/help` and `/help` (`buyer_help`), on `/subscription` (`subscription`), and on
-the seller landing page `/seller` (`seller_registration`). super_admin and support write
-(support since 2026-09-24), all through `admin_faq_*` RPCs. Edits show on those pages with
-no deploy. Since 2026-09-30 it also has a Quick Guides tab (`public.help_guides`).
-
-**`/category-pictures`** (added 2026-10-14) sets the pictures of `/home/new-arrivals`' "Shop by category" tiles
-and of `/categories`' banners and tiles (`public.category_images`), for super_admin and the Manager role.
-
-**`/new-arrivals-carousel`** (added 2026-10-14) picks the live listings in the carousel at the top of
-`/home/new-arrivals` (`public.hero_slides`), for super_admin and the Manager role.
-
-**`/admin-log`** (added 2026-09-25, MPF-26) lists every admin change and panel sign-in, from
-`admin.audit_log` in this project's database, for super_admin and the Manager role only.
-
-**`/admins`** is for super_admin and, since 2026-09-26, the Manager role, which adds, changes
-and removes teammates in the five team roles only (migration `20260925210601`).
-
-**`/support`** (Help & Support, live 2026-10-01; rollout Off) answers what buyers and vendors
-send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
-`/support/feedback`, `/support/:ticketNo` (one request, e.g. `CS-000001`) and
-`/support/settings`. It reads this project's `public.support_*` tables through the
-`admin_support_*` functions. The buyer and vendor routes that feed it (`/help/chat`,
-`/help/requests`, `/help/callback`, `/feedback`, the `/report-fraud` wizard) are live since
-2026-10-02. While rollout is Off they show the phone and email instead of the forms.
-
----
-
-## Shared / Cross-role
-
-### Entry & auth
-| Route | Component |
-|---|---|
-| `/` | `Landing` |
-| `/login` | `Login` |
-| `/auth/login` | `Login` |
-| `/auth/otp-verify` | `OtpVerify` |
-| `/auth/callback` | `AuthCallback` |
-| `/auth/role-selection` | `RoleSelection` |
-| `/auth/sub-role` | `SubRole` |
-| `/auth/account-info` | `AccountInfo` |
-| `/auth/interest-preference` | `InterestPreference` |
-| `/auth/terms` | `Terms` |
-| `/auth/welcome` | `Welcome` |
-
-### Support, legal & misc
-| Route | Component | Notes |
-|---|---|---|
-| `/notifications` | `Notifications` | Backed by the `notifications` table; 4 moderation kinds are real, the rest are dev-only samples |
-| `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`. Seller frame and `seller_help` FAQs for sellers (P5), `buyer_help` for buyers, each in the reader's language when stored. Shows chat and callback only when rollout includes the person (P3) |
-| `/help/chat` | `SupportChatStart` | Start a chat or continue an open one. `?category=&entity_type=&entity_id=` from links (`supportChatHref`) |
-| `/help/requests` | `MyRequests` | Every request, newest activity first |
-| `/help/requests/:ticketNo` | `SupportThread` | One request's conversation with Cosora Support, live; files and voice notes |
-| `/help/callback` | `SupportCallback` | Book a one-hour slot in support hours |
-| `/help/guides/:slug` | `HelpGuide` | A Quick Guide; public |
-| `/feedback` | `AppFeedback` | A bug or an idea; My Store's "App Feedback" |
-| `/grievance` | `Grievance` | **Hidden** (P6c, D-15): the not-found page until the Grievance Officer is named in `src/lib/grievance.ts`. Not linked, not in the sitemap |
-| `/terms` | `TermsConditions` | |
-| `/about` | redirect | Permanent redirect to `/blogs/about` (`vercel.json`): the About page lives in the Journal (cosora-blogs) since 2026-09-29 |
-| `/about-the-team` | redirect | Permanent redirect to `/blogs/about` (`vercel.json`, 2026-10-12). A page of the website that was on this domain before this app; search engines still list it. The app has no team page |
-| `/home` | redirect | Permanent redirect to `/` (`vercel.json`, 2026-10-12). The old website's home page, still listed by search engines. `/home/...` routes are unaffected |
-| `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |
-| `*` | `NotFound` | Fallback |
-
----
-
-## Routes that do NOT exist (asked for often)
-
-- **`/orders`** — there is no orders route. "Track Orders" → `/requirement/my-quotes`;
-  "View Order Details" → `/chat`.
+| Route | Component | Wrapped in | Notes |
+|---|---|---|---|
+| `/` | `Landing` |  |  |
+| `/advertisement-slideshow` | `AdvertisementSlideshow` |  |   |
+| `/auth/account-info` | `AccountInfo` | SignupStep, ClarityMask |  |
+| `/auth/callback` | `AuthCallback` | ClarityMask |  |
+| `/auth/interest-preference` | `InterestPreference` | SignupStep |  |
+| `/auth/login` | `Login` | ClarityMask |  |
+| `/auth/otp-verify` | `OtpVerify` | ClarityMask |  |
+| `/auth/role-selection` | `RoleSelection` | RegisteredVendorGate, SignupStep |  |
+| `/auth/sub-role` | `SubRole` | SignupStep |  |
+| `/auth/terms` | `Terms` | SignupStep |  |
+| `/auth/welcome` | `Welcome` |  |  |
+| `/browse` | → `/search` |  | Redirect into the feed |
+| `/catalogue/bulk-import` | → `/products` |  | Add up to 500 products from a spreadsheet (CSV), with a template, a preview and Recent imports (Silver and above) |
+| `/categories` | `Categories` |  |   |
+| `/dashboard` | `RoleHomeRedirect` |  |   |
+| `/for-you` | → `/home/for-you` |  | Old address, redirected (vercel.json too) |
+| `/freelancers` | `Freelancers` |  | Pattern makers, CLO 3D artists, trend researchers. **Sample profiles** (2026-11-18) |
+| `/freelancers/:id` | `FreelancerProfile` | BuyerFrame | Sample profile from app data, no `profiles` row |
+| `/go/post-rfq` | `GoPostRfq` |  |  |
+| `/home/followings` | `Following` |  | Followed brands |
+| `/home/followings/view-all` | `FollowingViewAll` | BuyerFrame |   |
+| `/home/for-you` | `ForYou` |  | Personalised feed |
+| `/home/for-you/onboarding` | → `/home/for-you` |  | Redirect: For You's first run is part of the feed (the scaffold card is gone, 2026-11-14) |
+| `/home/new-arrivals` | `NewArrivals` |  | Buyer home; carries the role toggle |
+| `/home/sale` | `Sale` |  | Discounted / sale-priced inventory |
+| `/home/trends` | `Trends` | BuyerFrame |   |
+| `/login` | `Login` | ClarityMask |  |
+| `/onboarding` | `Onboarding` | RegisteredVendorGate, ClarityMask | Business details, documents, products, contract |
+| `/post-requirement` | `PostRequirement` | ClarityMask | Same form as `/requirement/post-requirement`; closed to crawlers (robots.txt) |
+| `/product/:id` | `ProductDetail` |  |   |
+| `/profile` | `Profile` | ClarityMask |   |
+| `/profile/business-details` | `ProfileBusinessDetails` | BuyerFrame, ClarityMask | Business name/type/website/industry, address with a country list (subscriptions P7), GSTIN, PAN (was the modal's Business tab) |
+| `/profile/data-export` | `ProfileAccountPrefs` | BuyerFrame, ClarityMask |   |
+| `/profile/edit` | `ProfileEdit` | BuyerFrame, ClarityMask | Photo + personal details (was the Edit Profile modal's Photo/Personal tabs; the modal is gone). `?focus=city` focuses City — the `/profile` "Add city" nudge links there |
+| `/profile/help` | `Help` | ClarityMask | FAQ rows come from `public.faqs` (`buyer_help`), edited in Cosora-Admin `/faqs` with no deploy (2026-09-23). Also the Delete my account entry |
+| `/profile/help/chat` | → `/help` |  | Redirects to `/help` since Help & Support P1 (2026-10-01); the canned chat it showed is gone |
+| `/profile/interest-preference` | `InterestPreference` | BuyerFrame |   |
+| `/profile/notifications` | `ProfileNotifications` | BuyerFrame |   |
+| `/profile/regional-settings` | `ProfileAccountPrefs` | BuyerFrame, ClarityMask |   |
+| `/profile/reviews` | `MyReviews` | BuyerFrame | Fans out across `reviews`, `product_reviews`, `service_reviews` |
+| `/profile/settings` | `BuyerSettings` | ClarityMask | Buyer account & security (2026-09-23): sign-in number, account email, Log Out, download data, delete account, help & legal. The buyer sidebar's "Settings" and `/profile` → "Account & Security" link here. (`/settings` is the vendor's page.) |
+| `/profile/social-links` | `ProfileSocialLinks` | BuyerFrame, ClarityMask |   |
+| `/profile/terms` | `TermsConditions` |  |   |
+| `/recently-viewed` | `RecentlyViewed` |  |   |
+| `/register` | `Register` | ClarityMask |   |
+| `/requirement` | → `/requirement/post-requirement` |  | → `/requirement/post-requirement` (2026-11-18: it showed a developer scaffold card) |
+| `/requirement/my-quotes` | `MyQuotes` | ClarityMask | Also the target of "Track Orders" |
+| `/requirement/post-requirement` | `PostRequirement` | ClarityMask | Category select → schema-driven form → success, all inside the page; asks for sign-in before the form |
+| `/requirement/post-requirement/form` | → `/requirement/post-requirement` |  | → `/requirement/post-requirement` |
+| `/requirement/post-requirement/success` | → `/requirement/my-quotes` |  | → `/requirement/my-quotes` |
+| `/requirement/quick-rfq` | → `/requirement/post-requirement` |  | → `/requirement/post-requirement` (Quick Quote is a sheet there) |
+| `/saved` | `SavedCollections` |  |  |
+| `/saved/:collectionId` | `SavedCollectionDetail` |  |  |
+| `/search` | `Search` | BuyerFrame |  |
+| `/search/results` | `SearchResults` | BuyerFrame |  |
+| `/seller` | `VendorLanding` |  | Vendor marketing landing. Its FAQ block is `public.faqs` (`seller_registration`), Andy's 10 questions, edited in Cosora-Admin `/faqs` (2026-09-23) |
+| `/service-vendors` | → `/services` |  | Alias of `/services` |
+| `/services` | `ServiceVendors` |  | Printers, logistics, other service providers. **Sample profiles** (2026-11-18): no contact, ratings or reviews |
+| `/services/:vendorId` | `ServiceVendorProfile` | BuyerFrame | Sample profile from app data, no `profiles` row |
+| `/vendor/:id` | `VendorProfile` | BuyerFrame | Contact details are gated |
+| `/video-closeups` | `VideoCloseUpsPage` | BuyerFrame | Product video reel. Never called "Reels" |

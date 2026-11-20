@@ -47,6 +47,16 @@
       "source": "/home",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/for-you",
+      "destination": "/home/for-you",
+      "permanent": true
+    },
+    {
+      "source": "/service-vendors",
+      "destination": "/services",
+      "permanent": true
     }
   ],
   "rewrites": [
@@ -128,6 +138,10 @@
     },
     {
       "source": "/business-profile-score",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/careers",
       "destination": "/index.html"
     },
     {

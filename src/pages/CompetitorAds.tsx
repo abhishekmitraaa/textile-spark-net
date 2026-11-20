@@ -4,6 +4,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBenchmarks } from "@/lib/queries/ads";
 import { logEngagement } from "@/lib/queries/engagement";
+import { priceText } from "@/lib/currency";
+import LoadFailed from "@/components/LoadFailed";
 import {
   TrendingUp, Eye, Star, Package, Users, BarChart2, Megaphone, ShieldCheck, Info,
 } from "lucide-react";
@@ -26,7 +28,8 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 const listContainer = { show: { transition: { staggerChildren: 0.055 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
-const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+// Prices keep their paise (review L-83; claude.md: priceText(), never Math.round).
+const inr = (n: number) => priceText("₹", n);
 
 function BenchmarkBar({ label, yours, peer, unit = "" }: { label: string; yours: number; peer: number; unit?: string }) {
   const max = Math.max(yours, peer, 1);
@@ -56,7 +59,7 @@ const CompetitorAds = () => {
   const reduced = useReducedMotion();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: b, isLoading } = useAdBenchmarks(user?.id);
+  const { data: b, isLoading, isError, refetch } = useAdBenchmarks(user?.id);
 
   const cats = b?.categories ?? [];
   const hasData = Boolean(b?.has_data) && cats.length > 0;
@@ -84,6 +87,11 @@ const CompetitorAds = () => {
 
           {isLoading ? (
             <motion.div variants={section} className="py-16 text-center text-sm text-gray-400">Loading your benchmarks…</motion.div>
+          ) : isError && !b ? (
+            // A failed read isn't "no benchmarks yet" (review L-83).
+            <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <LoadFailed label="Couldn't load your benchmarks" onRetry={() => void refetch()} />
+            </motion.div>
           ) : !hasData ? (
             <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
               <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />

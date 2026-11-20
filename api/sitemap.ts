@@ -54,7 +54,23 @@ const STATIC_ROUTES: { path: string; priority: string; changefreq: string }[] = 
   { path: "/video-closeups", priority: "0.7", changefreq: "daily" },
   { path: "/help", priority: "0.5", changefreq: "monthly" },
   { path: "/terms", priority: "0.3", changefreq: "yearly" },
+  // The Privacy Policy is public and linked from every footer (review L-100: it was missing).
+  { path: "/privacy", priority: "0.3", changefreq: "yearly" },
 ];
+
+/**
+ * The active help guides (/help/guides/:slug; review L-100: they were missing). help_guides is readable to visitors
+ * (help_guides_select_active). Read apart from the blog, so a failure here only leaves the guides out.
+ */
+async function fetchGuides(): Promise<{ slug: string; updated_at: string | null }[]> {
+  const url = process.env.VITE_SUPABASE_URL;
+  const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return [];
+  const supabase = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await supabase.from("help_guides").select("slug,updated_at").eq("active", true).order("position");
+  if (error) return [];
+  return (data ?? []) as { slug: string; updated_at: string | null }[];
+}
 
 /** XML-escape. Slugs are URL-safe today, but a stray & would break the document. */
 function xml(value: string): string {
@@ -181,6 +197,7 @@ export default async function handler(req: Req, res: Res) {
   let categories: Listing[] = [];
   let authors: Listing[] = [];
   let degraded = false;
+  const guidesPromise = fetchGuides().catch(() => []);
   try {
     ({ posts, categories, authors } = await fetchBlog());
   } catch {
@@ -192,6 +209,9 @@ export default async function handler(req: Req, res: Res) {
   const entries = [
     ...STATIC_ROUTES.map((r) =>
       urlEntry(`${ORIGIN}${r.path === "/" ? "/" : r.path}`, undefined, r.changefreq, r.priority),
+    ),
+    ...(await guidesPromise).map((g) =>
+      urlEntry(`${ORIGIN}/help/guides/${encodeURIComponent(g.slug)}`, g.updated_at ?? undefined, "monthly", "0.4"),
     ),
     // The blog index itself, then each category listing. Paginated pages
     // (/blogs/page/N) stay out on purpose: they are near-duplicate listings.

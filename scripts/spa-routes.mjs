@@ -29,8 +29,8 @@ const VERCEL = path.join(root, "vercel.json");
 const SPA_DEST = "/index.html";
 
 /**
- * Every route path literal in App.tsx: `path="/x"` in JSX and `path: "/x"` in the
- * route arrays (buyerShellRoutes). "*" is the NotFound catch-all and "/" is
+ * Every route path literal in App.tsx: `path="/x"` in JSX, and `path: "/x"` should a
+ * route array come back (buyerShellRoutes is gone). "*" is the NotFound catch-all and "/" is
  * served straight from the filesystem, so neither needs a rewrite.
  */
 export function appRoutes() {

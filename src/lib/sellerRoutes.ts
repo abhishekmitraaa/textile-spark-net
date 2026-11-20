@@ -21,6 +21,7 @@ const SHARED_PATHS = [
   "/terms",
   "/privacy",
   "/grievance",
+  "/careers",
 ];
 
 const SELLER_PATHS = [

@@ -485,7 +485,7 @@ const Products = () => {
               <motion.button
                 whileTap={TAP}
                 transition={TAP_T}
-                className="flex items-center gap-2 px-5 py-2.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 bg-brand-vendor hover:bg-brand-vendor/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Upload New Product
               </motion.button>
@@ -498,7 +498,7 @@ const Products = () => {
               <motion.button
                 whileTap={TAP}
                 transition={TAP_T}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-brand-vendor hover:bg-brand-vendor/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Upload New Product
               </motion.button>
@@ -790,7 +790,7 @@ const Products = () => {
             <motion.button
               whileTap={TAP}
               transition={TAP_T}
-              className="flex items-center gap-2 px-6 py-3 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold rounded-full shadow-lg shadow-brand-buyer/30 transition-all hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3 bg-brand-vendor hover:bg-brand-vendor/90 text-white text-sm font-bold rounded-full shadow-lg shadow-brand-vendor/30 transition-all hover:scale-105"
             >
               <Plus className="w-4 h-4" /> Upload New Product
             </motion.button>

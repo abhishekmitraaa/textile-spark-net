@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { AlertCircle, Building2, ChevronRight, Clock, FileSignature, FileText, Package } from "lucide-react";
+import { AlertCircle, Building2, ChevronRight, Clock, FileSignature, FileText, Package, PauseCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { SellerHomeReview } from "@/lib/queries/sellerHome";
 
@@ -22,6 +22,11 @@ export function gettingStartedRows(r: SellerHomeReview): Row[] {
   else if (status === "registered" && !r.contractSigned) rows.push({ key: "sign", label: "Sign the Supplier Agreement", href: "/kyc", Icon: FileSignature, action: true });
   if (r.documentsRejected > 0) rows.push({ key: "doc-rejected", label: "A document needs replacing", href: "/kyc", Icon: AlertCircle, action: true });
   if (r.documentsPending > 0) rows.push({ key: "docs", label: "Your documents are being checked (usually 3–5 days)", href: "/kyc", Icon: FileText, action: false });
+  // Sent back or paused, said here with where to deal with it (review L-77: Seller Home showed neither).
+  if (r.productsRejected === 1) rows.push({ key: "rejected-listings", label: "1 listing needs changes. See Cosora's reason", href: "/products?status=rejected", Icon: AlertCircle, action: true });
+  else if (r.productsRejected > 1) rows.push({ key: "rejected-listings", label: `${r.productsRejected} listings need changes. See Cosora's reasons`, href: "/products?status=rejected", Icon: AlertCircle, action: true });
+  if (r.productsPaused === 1) rows.push({ key: "paused-listings", label: "1 listing is paused: it's over your plan's limit", href: "/products?status=paused", Icon: PauseCircle, action: true });
+  else if (r.productsPaused > 1) rows.push({ key: "paused-listings", label: `${r.productsPaused} listings are paused: they're over your plan's limit`, href: "/products?status=paused", Icon: PauseCircle, action: true });
   if (r.productsInReview === 1) rows.push({ key: "listings", label: "1 listing waiting for review (24–48 hours)", href: "/products", Icon: Package, action: false });
   else if (r.productsInReview > 1) rows.push({ key: "listings", label: `${r.productsInReview} listings waiting for review (24–48 hours)`, href: "/products", Icon: Package, action: false });
   if (r.premisesInReview > 0) rows.push({ key: "premises", label: "Premises photos waiting for review", href: "/business-profile?focus=office-pictures", Icon: Building2, action: false });

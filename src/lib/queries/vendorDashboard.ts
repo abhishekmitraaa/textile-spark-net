@@ -316,7 +316,3 @@ export function useProfileScoreState(): ProfileScoreState {
   return { score: data.profileScore, checks: data.profileChecks, isLoading: false, isError: false, hasVendorRow: true, waiting, retry };
 }
 
-/** Convenience wrapper for callers that only need the number (null when there is none). */
-export function useProfileScore(): number | null {
-  return useProfileScoreState().score;
-}

@@ -93,6 +93,7 @@ const ProfileBusinessDetails = lazyPage(() => import("./pages/ProfileBusinessDet
 const BuyerSettings = lazyPage(() => import("./pages/Settings"));
 const TermsConditions = lazyPage(() => import("./pages/TermsConditions"));
 const PrivacyPolicy = lazyPage(() => import("./pages/PrivacyPolicy"));
+const Careers = lazyPage(() => import("./pages/Careers"));
 // Help & Support P6c (D-15): hidden until the Grievance Officer is named (src/lib/grievance.ts).
 const Grievance = lazyPage(() => import("./pages/Grievance"));
 const SavedCollections = lazyPage(() => import("./pages/SavedCollections"), { warm: true });
@@ -180,7 +181,8 @@ const App = () => (
             <Route path="/login" element={<ClarityMask><Login /></ClarityMask>} />
             <Route path="/auth/login" element={<ClarityMask><Login /></ClarityMask>} />
             <Route path="/auth/otp-verify" element={<ClarityMask><OtpVerify /></ClarityMask>} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* Masked from Clarity like the other sign-in pages (review L-71). The page itself is unchanged. */}
+            <Route path="/auth/callback" element={<ClarityMask><AuthCallback /></ClarityMask>} />
             <Route path="/auth/role-selection" element={<RegisteredVendorGate><SignupStep><RoleSelection /></SignupStep></RegisteredVendorGate>} />
             <Route path="/auth/sub-role" element={<SignupStep><SubRole /></SignupStep>} />
             <Route path="/auth/account-info" element={<SignupStep><ClarityMask><AccountInfo /></ClarityMask></SignupStep>} />
@@ -219,7 +221,8 @@ const App = () => (
             <Route path="/dashboard" element={<RoleHomeRedirect />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/for-you" element={<ForYou />} />
+            {/* Aliases go to the page's one address (review L-101); vercel.json redirects a direct load. */}
+            <Route path="/for-you" element={<Navigate to="/home/for-you" replace />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/leads" element={<ClarityMask><Leads /></ClarityMask>} />
             {/* Belongs to a plan (subscriptions P6): shown only when lead alerts are this vendor's. */}
@@ -255,6 +258,8 @@ const App = () => (
             <Route path="/profile/data-export" element={<BuyerFrame><ClarityMask><ProfileAccountPrefs /></ClarityMask></BuyerFrame>} />
             <Route path="/profile/terms" element={<TermsConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            {/* Behind the careers_page switch; off, it is the 404 page (review L-68). */}
+            <Route path="/careers" element={<Careers />} />
             <Route path="/saved" element={<SavedCollections />} />
             <Route path="/saved/:collectionId" element={<SavedCollectionDetail />} />
             <Route path="/my-store" element={<MyStore />} />
@@ -262,7 +267,7 @@ const App = () => (
             <Route path="/chat" element={<BuyerFrame><ClarityMask><Chat /></ClarityMask></BuyerFrame>} />
             <Route path="/post-requirement" element={<ClarityMask><PostRequirement /></ClarityMask>} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
-            <Route path="/service-vendors" element={<ServiceVendors />} />
+            <Route path="/service-vendors" element={<Navigate to="/services" replace />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<ClarityMask><Help /></ClarityMask>} />
             <Route path="/help/chat" element={<ClarityMask><SupportChatStart /></ClarityMask>} />

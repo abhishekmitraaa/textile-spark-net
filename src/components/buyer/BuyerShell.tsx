@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { routeSide } from "@/lib/sellerRoutes";
+import { DisplaySide } from "@/contexts/DisplaySideContext";
 import BuyerTopBar from "./BuyerTopBar";
 import ToTopButton from "./ToTopButton";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -48,7 +49,14 @@ export function BuyerFrame({ children }: { children: ReactNode }) {
     if (routeSide(pathname) === "buyer" && role === "seller" && vendorRegistered) setRole("buyer");
   }, [pathname, role, vendorRegistered, setRole]);
 
-  return <BuyerSignupGate>{children}</BuyerSignupGate>;
+  // Drawn as the buyer side from the first render (review L-70): until the effect above moved the role, a buyer page
+  // reached by Back from the seller side drew the seller's bottom bar for a moment. The same rule as the effect.
+  const buyerSide = routeSide(pathname) === "buyer" && (role === "buyer" || vendorRegistered);
+  return (
+    <DisplaySide side={buyerSide ? "buyer" : null}>
+      <BuyerSignupGate>{children}</BuyerSignupGate>
+    </DisplaySide>
+  );
 }
 
 export default function BuyerShell({ children }: BuyerShellProps) {

@@ -27,6 +27,9 @@ export interface SellerHomeReview {
   documentsPending: number;
   documentsRejected: number;
   productsInReview: number;
+  /** Listings Cosora sent back, and listings paused over the plan's limit (review L-77, migration 20261120130000). */
+  productsRejected: number;
+  productsPaused: number;
   premisesInReview: number;
 }
 
@@ -51,6 +54,8 @@ export interface SellerHomeLead {
   createdAt: string;
   direct: boolean;
   quoted: boolean;
+  /** The seller's newest quote on it, for "View quote" (review L-76). */
+  quoteId: string | null;
 }
 
 export interface SellerHomeChat {
@@ -113,6 +118,8 @@ export function sellerHomeFrom(raw: Raw | null): SellerHome | null {
       documentsPending: num(r.documents_pending),
       documentsRejected: num(r.documents_rejected),
       productsInReview: num(r.products_in_review),
+      productsRejected: num(r.products_rejected),
+      productsPaused: num(r.products_paused),
       premisesInReview: num(r.premises_in_review),
     },
     topProducts: ((raw.top_products ?? []) as Raw[]).map((x) => ({
@@ -136,6 +143,7 @@ export function sellerHomeFrom(raw: Raw | null): SellerHome | null {
       createdAt: String(x.created_at),
       direct: x.direct === true,
       quoted: x.quoted === true,
+      quoteId: str(x.quote_id),
     })),
     recentChats: chatsFrom(raw.recent_chats),
   };

@@ -18,6 +18,12 @@ import { SellerPromoBanner } from "@/components/dashboard/SellerPromoBanner";
 import { priceText } from "@/lib/currency";
 import { SellerHomeState } from "@/components/dashboard/SellerHomeState";
 import { useProfileScoreState } from "@/lib/queries/vendorDashboard";
+import { useLeadAlerts, type LeadAlertChannel } from "@/lib/queries/leadAlerts";
+
+/** The alert channels by their short names, as /lead-alerts shows them (review L-79). */
+const CHANNEL_SHORT: Record<LeadAlertChannel, string> = {
+  app: "Bell", email: "Email", whatsapp: "WhatsApp", sms: "SMS", digest: "Daily summary",
+};
 
 // Strong ease-out: starts fast, gives instant perceived feedback
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -56,6 +62,9 @@ const SellerHome = () => {
   const listsLoading = Boolean(user) && dashQuery.isPending;
   const { data: entitlements } = useVendorEntitlements(user?.id);
   const alertsEntitled = Boolean(entitlements?.features.lead_alerts);
+  // What is being sent today, read only for a seller the alerts belong to (review L-79: the card ignored it).
+  const { data: leadAlerts } = useLeadAlerts(alertsEntitled ? user?.id : undefined);
+  const liveChannels = leadAlerts?.liveChannels ?? [];
   const reduced = useReducedMotion();
 
   const topProducts = home?.topProducts ?? [];
@@ -78,11 +87,12 @@ const SellerHome = () => {
   };
   const initialsOf = (name: string) => name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
+  // Counts in the second line wait for the data too (review L-72: "0 under review" showed while loading).
   const analysisStats = [
-    { label: "Live Products", value: String(dash?.productsLive ?? 0),  change: `${dash?.productsUnderReview ?? 0} under review`, Icon: Package },
+    { label: "Live Products", value: String(dash?.productsLive ?? 0),  change: listsLoading ? "–" : `${dash?.productsUnderReview ?? 0} under review`, Icon: Package },
     { label: "Open Leads",    value: String((dash?.openLeads ?? 0) + (dash?.directRequests ?? 0)),     change: "Active buyer requirements",                     Icon: Eye },
     { label: "Inquiries",     value: String(dash?.enquiries ?? 0),     change: "Lifetime · from interested buyers",             Icon: TrendingUp },
-    { label: "Your Quotes",   value: String(dash?.quotesSent ?? 0),    change: `${dash?.quotesAccepted ?? 0} accepted`,         Icon: FileText },
+    { label: "Your Quotes",   value: String(dash?.quotesSent ?? 0),    change: listsLoading ? "–" : `${dash?.quotesAccepted ?? 0} accepted`,         Icon: FileText },
   ];
 
   const blocked = loading
@@ -132,11 +142,14 @@ const SellerHome = () => {
               <button onClick={() => void dashQuery.refetch()} className="font-semibold underline">Retry</button>
             </div>
           )}
-        {home?.review && (
+        {home?.review ? (
           <motion.div variants={section} className="lg:col-span-12">
             <GettingStartedCard review={home.review} />
           </motion.div>
-        )}
+        ) : listsLoading ? (
+          // Its place is held while the summary loads (review L-84): it used to appear afterwards and push the page down.
+          <div className="lg:col-span-12 h-24 animate-pulse rounded-2xl bg-brand-vendor/5" aria-hidden />
+        ) : null}
 
         {/* 2. BANNER: Cosora-Admin's scheduled banners, else the two built-in slides (SH-009, SH-087). */}
         <motion.div variants={section} className="lg:col-span-7">
@@ -186,14 +199,29 @@ const SellerHome = () => {
               <div className="flex items-start gap-2.5">
                 <Bell className="w-5 h-5 text-accent mt-0.5 shrink-0" />
                 <div>
+                  {/* Leads aren't filtered by category (they are ranked by fit), so the card doesn't say "in your
+                      categories"; and it names only the channels going out today (review L-79). */}
                   <p className="text-sm font-semibold text-gray-900">
-                    {alertsEntitled ? "Get alerts for new requirements" : "New requirements in your categories"}
+                    {alertsEntitled ? "Get alerts for new requirements" : "New buyer requirements"}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {alertsEntitled
-                      ? "Choose how you hear about requirements that match you."
-                      : "New requirements appear on your Leads page."}
-                  </p>
+                  {alertsEntitled && leadAlerts ? (
+                    liveChannels.length > 0 ? (
+                      <p className="text-xs text-gray-500">
+                        Sent today by:{" "}
+                        {liveChannels.map((c) => (
+                          <span key={c} className="mr-1 inline-block rounded-full bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-700">{CHANNEL_SHORT[c]}</span>
+                        ))}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500">Alerts aren't being sent yet. Choose how you'll hear once they start.</p>
+                    )
+                  ) : (
+                    <p className="text-xs text-gray-500">
+                      {alertsEntitled
+                        ? "Choose how you hear about requirements that match you."
+                        : "New requirements appear on your Leads page, best fit first."}
+                    </p>
+                  )}
                 </div>
               </div>
               <Link
@@ -229,7 +257,11 @@ const SellerHome = () => {
                     <p className="text-xs text-gray-500">{p.inquiries} inquiries</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-gray-900">{p.priceValue != null ? priceText("₹", p.priceValue) : "Price not set"}</p>
+                    {/* With its unit, as on the listing (review L-75). */}
+                    <p className="text-sm font-bold text-gray-900">
+                      {p.priceValue != null ? priceText("₹", p.priceValue) : "Price not set"}
+                      {p.priceValue != null && p.unit && <span className="text-xs font-medium text-gray-500" data-no-translate>{` / ${p.unit}`}</span>}
+                    </p>
                     <p className="text-xs text-gray-400">{p.views.toLocaleString("en-IN")} views</p>
                   </div>
                 </motion.div>
@@ -339,10 +371,13 @@ const SellerHome = () => {
                     <ArrowRight className="w-4 h-4 text-gray-300 shrink-0 mt-1" />
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600 mb-3">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded-full">📦 {(lead.quantity ?? 0).toLocaleString("en-IN")} pcs</span>
+                    {/* As /leads says it: units, a per-unit budget, and nothing for a quantity not given (review L-73). */}
+                    {(lead.quantity ?? 0) > 0 && (
+                      <span className="bg-gray-100 px-2 py-0.5 rounded-full">📦 {`${(lead.quantity ?? 0).toLocaleString("en-IN")} units`}</span>
+                    )}
                     {(lead.budgetMax ?? 0) > 0 && (
                       <span className="bg-gray-100 px-2 py-0.5 rounded-full">
-                        {priceText("₹", lead.budgetMin ?? 0)}–{priceText("₹", lead.budgetMax ?? 0)}
+                        {`${priceText("₹", lead.budgetMin ?? 0)}–${priceText("₹", lead.budgetMax ?? 0)}/unit`}
                       </span>
                     )}
                     <span className="text-gray-400">🕐 {new Date(lead.createdAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</span>
@@ -350,7 +385,8 @@ const SellerHome = () => {
                   <motion.button
                     whileTap={TAP}
                     transition={TAP_T}
-                    onClick={(e) => { e.stopPropagation(); navigate(`/leads?rfq=${lead.id}`); }}
+                    // "View quote" opens the quote itself (review L-76); the lead page has no quote to show.
+                    onClick={(e) => { e.stopPropagation(); navigate(lead.quoteId ? `/quotes?quote=${lead.quoteId}` : `/leads?rfq=${lead.id}`); }}
                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
                   >
                     {lead.quoted ? "View quote" : "Send a quote"}

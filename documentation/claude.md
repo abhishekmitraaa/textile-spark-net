@@ -581,8 +581,8 @@ undocumented. Deep technical rationale for each lives in
     chat-moderation and seller-registration events (`registration_received`, written when a registration is
     submitted, 2026-11-16). **No quote, message or RFQ event notifies anyone.**
   - Every surface that shows the switches, or a summary of them, says so:
-    `/profile/notifications`, Vendor Settings, the `/profile` row ("Not live yet") and the
-    seller home's RFQ card. They all read `NOTIFICATION_DELIVERY_LIVE` in
+    `/profile/notifications`, Vendor Settings and the `/profile` row ("Not live yet"). They all read
+    `NOTIFICATION_DELIVERY_LIVE` in
     `src/lib/notificationDelivery.ts`: the one switch to flip once a sender honours the
     toggles (MPF-12, 2026-09-25). A new surface that mentions notifications reads it too.
   - Building delivery is its own master prompt, not a profile-page change.

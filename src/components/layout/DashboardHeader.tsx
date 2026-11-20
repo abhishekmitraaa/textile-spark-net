@@ -17,10 +17,11 @@ interface DashboardHeaderProps {
 
 const buyerTabs = [
   { name: "New Arrivals", href: "/home/new-arrivals", accent: true },
-  { name: "Trends", href: "/for-you" },
-  { name: "Services", href: "/service-vendors" },
+  // Each tab at its page's one address (review L-101): "Trends" and "Followings" both opened For You through an alias.
+  { name: "Trends", href: "/home/trends" },
+  { name: "Services", href: "/services" },
   { name: "Freelancers", href: "/freelancers" },
-  { name: "Followings", href: "/for-you" },
+  { name: "Followings", href: "/home/followings" },
 ];
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
