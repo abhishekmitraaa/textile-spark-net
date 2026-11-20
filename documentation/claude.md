@@ -616,8 +616,9 @@ undocumented. Deep technical rationale for each lives in
     and anything stored or sent. Prices are set, quoted, paid, settled and invoiced in INR.
   - **Rates:** `public.fx_rates`, refreshed daily by `fx-rates-refresh` (ECB via Frankfurter).
     No key, no secret.
-  - **Timezone:** no date renders in the chosen zone, and Regional Settings says so. Don't claim
-    an effect in copy until one exists.
+  - **Timezone:** there is no timezone picker (Mitra, 2026-11-20, review L-52, "Remove the field"); every time
+    shows in India time. A saved `regional.timezone` stays, read by nothing. Don't bring the picker back without
+    making dates follow it.
 - **GST is `supabase/functions/_shared/gst.ts` (`gstOn`).**
   - Don't write `* 0.18` anywhere. `node scripts/gst-check.mjs` fails if a subscription
     function keeps its own copy.
@@ -1436,6 +1437,31 @@ undocumented. Deep technical rationale for each lives in
   every folder is on the account.
 - **A slow site-config snapshot is waited for, not dropped at 3 s** (2026-11-20, review L-33): one request, 6 s
   (`SNAPSHOT_TIMEOUT_MS`), then the five tables.
+- **A read that failed says so, with Try again** (2026-11-20, review L-41): `<LoadFailed>` (`src/components/LoadFailed.tsx`)
+  on the chat list, the profile forms and the support pages; a count that isn't known shows "–", never 0. Long lists
+  read in pages or say where they stop (the chat list's newest `CHAT_LIST_LIMIT` 500; saves 1,000 at a time).
+- **The buyer Terms are version 2026-11-v2, and an acceptance is recorded once per version** (Mitra, 2026-11-20, review
+  L-55, L-59, "New text, don't re-ask"; `20261120120000`): no "India's premier", effective 20th November 2026. Buyers
+  who accepted v1 aren't asked again (the gate checks a record exists, not its version). The "I agree" tick is kept in
+  the tab for the account that ticked it, and cleared once accepted.
+- **Buyer sign-up ends on a "what next" screen** (2026-11-20, review L-53, L-54): `/auth/welcome` waits for a choice
+  (post a requirement, categories, interests, Home or the page sign-up started from); signed out, unfinished or seller
+  accounts are sent on. The return page is only looked at there, and taken when the buyer chooses.
+- **Every buyer sign-up step uses `<SignupHeader>`** (2026-11-20, review L-57): Back, the logo and "Step N of 5"
+  (not on role selection, where sellers choose too), and every step's button says Continue.
+- **For You's first-run screen keeps its step in the address and its "done" per account** (2026-11-20, review L-61,
+  L-62): `?intro=`, one entry per step, popped when finished; `completedAccounts` in `cosora.buyerPrefs.v1` (an account
+  with saved interests is done everywhere).
+- **A profile photo is uploaded when the profile is saved, not when it is picked** (2026-11-20, review L-48):
+  `shrinkAvatar()` (512 px JPEG) on pick, `uploadAvatar()` on Save, the upload removed if the save fails and the
+  replaced photo removed once it succeeds (`removeOwnAvatar()`, the account's own folder only).
+- **Requirement photos come down only when the write was refused** (2026-11-20, review L-38): `writeRefused()` (a
+  PostgREST error with a code); after a network failure the requirement may be saved, so its photos stay.
+- **The data export holds everything a buyer has** (2026-11-20, review L-46): requirements in review, saved videos,
+  service reviews, the blocks the account made and its newest 100 support requests with their messages (files listed,
+  not included). A new table a buyer writes to goes in `buildAllDataJson()`.
+- **Signed out, account settings ask to sign in** (2026-11-20, review L-50): Notifications and Social links; currency
+  still works on the device and says "on this device".
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

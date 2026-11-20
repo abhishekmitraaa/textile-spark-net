@@ -320,7 +320,8 @@ export default function Onboarding() {
   // id), so nothing is uploaded twice and nothing in use is removed. Kept only while the picked files are unchanged.
   const lastUploads = useRef<{ up: UploadedFiles; sig: string } | null>(null);
   const queryClient = useQueryClient();
-  const overseasOn = useFeatureFlag("overseas_seller_registration") === true;
+  const overseasFlag = useFeatureFlag("overseas_seller_registration");
+  const overseasOn = overseasFlag === true;
   const { data: registration } = useSellerRegistration(user?.id);
   const rejected = registration?.status === "rejected";
   // Picked Seller by mistake (Mitra, 2026-11-19, review M-60: "Allow switch back"): until a registration is submitted,
@@ -627,7 +628,8 @@ export default function Onboarding() {
   // Files aren't refilled (they are attached again).
   const refilled = useRef(false);
   useEffect(() => {
-    if (!rejected || !myStore || refilled.current) return;
+    // Waits for the overseas switch too (code review): refilled before it loaded, an overseas seller kept India.
+    if (!rejected || !myStore || overseasFlag === undefined || refilled.current) return;
     refilled.current = true;
     const code = COUNTRIES.find((c) => c.name === myStore.country)?.code;
     if (code && (code === "IN" || overseasOn)) setCountry(code);
@@ -649,7 +651,7 @@ export default function Onboarding() {
     if (myStore.category?.length) setBusinessCategories(myStore.category);
     if (myStore.pan) setPan(myStore.pan.toUpperCase());
     if (myStore.gstin) { setHasGstin(true); setGstin(myStore.gstin.toUpperCase()); }
-  }, [rejected, myStore, overseasOn]);
+  }, [rejected, myStore, overseasOn, overseasFlag]);
 
   // Real geolocation → reverse-geocode (BigDataCloud, keyless + CORS-friendly) to fill the address step.
   // It fills only what is blank (a typed city stays), and a state only when it is one of the list's: a name the

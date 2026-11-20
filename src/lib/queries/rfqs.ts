@@ -363,6 +363,15 @@ export async function uploadRfqImages(buyerId: string, files: File[]): Promise<s
 }
 
 /**
+ * True when the database answered and refused a write (a PostgREST error carries a code). A network failure has no
+ * code: the write may have gone through, so its photos must stay (code review of review L-38).
+ */
+export function writeRefused(e: unknown): boolean {
+  const code = (e as { code?: unknown } | null)?.code;
+  return typeof code === "string" && code !== "";
+}
+
+/**
  * Takes down requirement photos uploaded for a requirement that was then not written (review L-38). Best effort: a
  * failure leaves the files, as before, and never replaces the error the buyer is shown.
  */

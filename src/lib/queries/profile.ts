@@ -327,13 +327,13 @@ export async function saveAccountInfo(userId: string, before: AccountInfoValues,
 //     links to (/requirement/my-quotes, its "Total Quotes").
 //   • Chats  = conversations the user is a party to, the same filter as the
 //     /chats list (useConversations in queries/chat.ts).
-export interface ProfileStats { quotes: number; chats: number; savedVideos: number }
+export interface ProfileStats { quotes: number; chats: number }
 
 export function useProfileStats(userId: string | undefined) {
   return useQuery({
     queryKey: ["profile_stats", userId],
     queryFn: async (): Promise<ProfileStats> => {
-      const [quotesRes, chatsRes, videosRes] = await Promise.all([
+      const [quotesRes, chatsRes] = await Promise.all([
         supabase
           .from("quotes")
           .select("id, rfqs!inner(buyer_id)", { count: "exact", head: true })
@@ -342,17 +342,30 @@ export function useProfileStats(userId: string | undefined) {
           .from("conversations")
           .select("*", { count: "exact", head: true })
           .or(`user_a.eq.${userId},user_b.eq.${userId}`),
-        // Saved video close-ups count in Profile's "Saved" (review L-51): the live ones, as My Saves lists them.
-        supabase
-          .from("saved_videos")
-          .select("video_id, product_videos!inner(status)", { count: "exact", head: true })
-          .eq("buyer_id", userId as string)
-          .eq("product_videos.status", "live"),
       ]);
       if (quotesRes.error) throw quotesRes.error;
       if (chatsRes.error) throw chatsRes.error;
-      if (videosRes.error) throw videosRes.error;
-      return { quotes: quotesRes.count ?? 0, chats: chatsRes.count ?? 0, savedVideos: videosRes.count ?? 0 };
+      return { quotes: quotesRes.count ?? 0, chats: chatsRes.count ?? 0 };
+    },
+    enabled: Boolean(userId),
+  });
+}
+
+/**
+ * The buyer's saved video close-ups, the live ones as My Saves lists them: part of Profile's "Saved" (review L-51). Its
+ * own query, so a failure here never blanks the Quotes and Chats counts (code review).
+ */
+export function useSavedVideoCount(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["saved_videos", "count", userId],
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from("saved_videos")
+        .select("video_id, product_videos!inner(status)", { count: "exact", head: true })
+        .eq("buyer_id", userId as string)
+        .eq("product_videos.status", "live");
+      if (error) throw error;
+      return count ?? 0;
     },
     enabled: Boolean(userId),
   });

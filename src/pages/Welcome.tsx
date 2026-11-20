@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ClipboardList, Heart, LayoutGrid } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { BUYER_LANDING, landingFor } from "@/lib/returnTo";
+import { BUYER_LANDING, landingFor, peekLandingFor } from "@/lib/returnTo";
 
 /**
  * The end of buyer sign-up: what to do next (review L-53). It used to show the logo for 2 seconds and move on, so most
@@ -16,23 +16,30 @@ import { BUYER_LANDING, landingFor } from "@/lib/returnTo";
 const Welcome = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { session, profile, loading } = useAuth();
-  // The page a prompt or the sign-up gate left for sign-up, taken once (review M-59); New Arrivals otherwise.
-  const [next] = useState(() => landingFor(BUYER_LANDING));
+  const { session, profile, profileError, loading, refreshProfile } = useAuth();
+  // The page a prompt or the sign-up gate left for sign-up (review M-59); New Arrivals otherwise. Only looked at here;
+  // it is taken when the buyer chooses (code review: taken on arrival, a redirect below lost it).
+  const [next] = useState(() => peekLandingFor(BUYER_LANDING));
+  const [retrying, setRetrying] = useState(false);
 
   if (!loading && !session) return <Navigate to="/auth/login" replace />;
   if (!loading && session && profile) {
     if (profile.active_role === "seller") return <Navigate to="/seller-home" replace />;
     if (!profile.onboarded) return <Navigate to="/auth/role-selection" replace />;
   }
-  const ready = !loading && Boolean(profile);
-  const go = (path: string) => navigate(path, { replace: true });
+  // A profile that couldn't be read doesn't hold the buttons (code review: they stayed greyed with no word why).
+  const ready = !loading && Boolean(session);
+  const go = (path: string) => {
+    landingFor(BUYER_LANDING); // the remembered page is used up whichever way the buyer goes
+    navigate(path, { replace: true });
+  };
   const returning = next !== BUYER_LANDING;
 
   const actions = [
     { icon: ClipboardList, label: "Post a requirement", hint: "Tell sellers what you need and get quotes", to: "/requirement/post-requirement" },
     { icon: LayoutGrid, label: "Browse categories", hint: "Fabrics, clothing, trims and services", to: "/categories" },
-    { icon: Heart, label: "Pick your interests", hint: "So For You shows what you source", to: "/home/for-you" },
+    // The interests were just picked at step 4: this changes them (code review: /home/for-you showed the feed).
+    { icon: Heart, label: "Change your interests", hint: "So For You shows what you source", to: "/profile/interest-preference" },
   ];
 
   return (
@@ -49,6 +56,19 @@ const Welcome = () => {
         </div>
         <h1 className="text-white text-lg font-bold">You're all set</h1>
         <p className="mt-1 text-white/80 text-sm">Here's where to start.</p>
+        {!loading && session && !profile && profileError && (
+          <p role="alert" className="mt-3 text-sm text-white">
+            Your account details didn't load.{" "}
+            <button
+              type="button"
+              disabled={retrying}
+              onClick={async () => { setRetrying(true); try { await refreshProfile(); } finally { setRetrying(false); } }}
+              className="font-semibold underline underline-offset-2"
+            >
+              Retry
+            </button>
+          </p>
+        )}
 
         <div className="mt-6 space-y-2.5 text-left">
           {actions.map(({ icon: Icon, label, hint, to }) => (

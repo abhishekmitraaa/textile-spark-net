@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { createRfq, uploadRfqImages, removeRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { createRfq, uploadRfqImages, removeRfqImages, writeRefused, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
 import { quantityFrom, amountFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
@@ -357,8 +357,9 @@ const PostRequirement = () => {
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
       queryClient.invalidateQueries({ queryKey: ["rfq_submissions"] });
     } catch (e) {
-      // Not written: its photos come down again (review L-38). The invalidations above can't throw.
-      void removeRfqImages(images);
+      // Refused by the database: its photos come down again (review L-38). On a network failure the requirement may be
+      // saved, so they stay. An upload that failed has already removed its own.
+      if (writeRefused(e)) void removeRfqImages(images);
       toast.error("Couldn't submit your requirement", { description: errorMessage(e) });
       setSubmitting(false);
       return;

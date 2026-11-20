@@ -15,18 +15,23 @@ import { finishAuthFlow } from "@/lib/authHistory";
 // The "I agree" tick, kept in this tab for this version of the Terms (review L-60): reading the full Terms and coming
 // back used to clear it. It is only the box on screen; acceptance is recorded by accept_buyer_terms when Continue is
 // pressed.
+// It is the account's own (code review: a tick left in the tab must never stand for the next person who signs up in
+// it), and it is cleared once the Terms are accepted.
 const AGREED_KEY = `cosora.termsTicked.${BUYER_TERMS_VERSION}`;
-const readTicked = () => { try { return sessionStorage.getItem(AGREED_KEY) === "1"; } catch { return false; } };
-const writeTicked = (on: boolean) => {
-  try { if (on) sessionStorage.setItem(AGREED_KEY, "1"); else sessionStorage.removeItem(AGREED_KEY); } catch { /* private mode */ }
+const readTicked = (uid: string | undefined) => {
+  try { return Boolean(uid) && sessionStorage.getItem(AGREED_KEY) === uid; } catch { return false; }
+};
+const writeTicked = (uid: string | undefined, on: boolean) => {
+  try { if (on && uid) sessionStorage.setItem(AGREED_KEY, uid); else sessionStorage.removeItem(AGREED_KEY); } catch { /* private mode */ }
 };
 
 const Terms = () => {
   const navigate = useNavigate();
   const back = useStepBack("/auth/interest-preference");
-  const { refreshProfile } = useAuth();
-  const [agreed, setAgreedState] = useState(readTicked);
-  const setAgreed = (on: boolean) => { setAgreedState(on); writeTicked(on); };
+  const { refreshProfile, user } = useAuth();
+  const uid = user?.id;
+  const [agreed, setAgreedState] = useState(() => readTicked(uid));
+  const setAgreed = (on: boolean) => { setAgreedState(on); writeTicked(uid, on); };
   const [saving, setSaving] = useState(false);
 
   // Accepting is the last sign-up step: the database records which Terms were accepted and when, and only then is the
@@ -36,6 +41,7 @@ const Terms = () => {
     setSaving(true);
     try {
       await acceptBuyerTerms();
+      writeTicked(uid, false);
       await refreshProfile();
     } catch (e) {
       setSaving(false);

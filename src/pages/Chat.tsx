@@ -7,7 +7,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import BuyerTopBar from "@/components/buyer/BuyerTopBar";
 import { type CallRecord } from "@/lib/chatData";
-import { useConversations, type ChatSummary } from "@/lib/queries/chat";
+import { useConversations, CHAT_LIST_LIMIT, type ChatSummary } from "@/lib/queries/chat";
 import { useChatUnread } from "@/lib/queries/chatUnread";
 import { useCalls, useCallVendor, useCallBuyer } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
@@ -249,6 +249,7 @@ const Chat = () => {
                       : "No conversations found"
                   } />
                 ) : (
+                  <>
                   <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5", buyerSplit && "divide-y-0 space-y-0.5")}>
                     {chats.map((c) => (
                       <motion.div key={c.id} variants={listItem}>
@@ -256,6 +257,11 @@ const Chat = () => {
                       </motion.div>
                     ))}
                   </motion.div>
+                  {/* The list reads the newest CHAT_LIST_LIMIT chats (review L-42), and says so when it stops there. */}
+                  {(dbConvos?.length ?? 0) >= CHAT_LIST_LIMIT && (
+                    <p className="px-2 py-3 text-center text-xs text-gray-400">{`Showing your newest ${CHAT_LIST_LIMIT} chats.`}</p>
+                  )}
+                  </>
                 )}
               </motion.div>
             ) : (

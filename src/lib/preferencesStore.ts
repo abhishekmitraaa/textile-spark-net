@@ -60,6 +60,20 @@ function completedAccounts(): string[] {
   }
 }
 
+/** Whether this account finished the first-run screen in this browser. Storage written before the per-account list
+ *  (no completedAccounts) counts its old browser-wide flag for the first account that signs in, once (code review). */
+function accountCompleted(uid: string): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { completedAccounts?: unknown; hasCompleted?: unknown };
+    if (!Array.isArray(parsed.completedAccounts)) return parsed.hasCompleted === true;
+    return parsed.completedAccounts.includes(uid);
+  } catch {
+    return false;
+  }
+}
+
 function load(): BuyerPreferences {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -109,8 +123,9 @@ function writeLocal() {
     // Signed in, the flag is this account's (completedAccounts); signed out, the browser's own (hasCompleted).
     const accounts = new Set(completedAccounts());
     if (userId) {
+      // Moved to the end, so the 20 kept are the most recently used.
+      accounts.delete(userId);
       if (state.hasCompleted) accounts.add(userId);
-      else accounts.delete(userId);
     }
     const toSave: BuyerPreferences & { completedAccounts: string[] } = {
       categories: userId ? stored.categories : state.categories,
@@ -189,7 +204,7 @@ async function readAccount(uid: string): Promise<void> {
     categories: cats,
     otherInterest: data?.preferred_interest_other ?? "",
     locations: locs,
-    hasCompleted: completedAccounts().includes(uid) || cats.length > 0 || locs.length > 0,
+    hasCompleted: accountCompleted(uid) || cats.length > 0 || locs.length > 0,
   });
   setSync("ready");
   if (carryUp) saveInBackground();
@@ -207,7 +222,7 @@ export async function setPreferencesUser(nextUserId: string | null) {
     return;
   }
   // Until the account is read, the flag is the account's own, never the guest's or the last account's (review L-62).
-  state = { ...state, hasCompleted: completedAccounts().includes(nextUserId) };
+  state = { ...state, hasCompleted: accountCompleted(nextUserId) };
   notify();
   try {
     await readAccount(nextUserId);
@@ -285,12 +300,13 @@ export function removeLocation(id: string) {
   saveInBackground();
 }
 
-/** Finish onboarding. skip=true completes with no filters (shows everything). */
-export function completeOnboarding(skip = false) {
-  if (writesBlocked()) return;
+/** Finish onboarding. skip=true completes with no filters (shows everything). False when it couldn't (interests unknown). */
+export function completeOnboarding(skip = false): boolean {
+  if (writesBlocked()) return false;
   if (skip) set({ categories: [], otherInterest: "", locations: [], hasCompleted: true });
   else set({ ...state, hasCompleted: true });
   saveInBackground();
+  return true;
 }
 
 /** Clear filters but stay on the feed (the "Reset preferences" action -> show all). */

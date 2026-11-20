@@ -9245,5 +9245,9 @@
  "Couldn't check whether support is open": "સપોર્ટ ખુલ્લો છે કે નહીં તે તપાસી શકાયું નહીં",
  "Couldn't load this request": "આ વિનંતી લોડ થઈ શકી નહીં",
  "Couldn't check whether replies are open": "જવાબ આપી શકાય છે કે નહીં તે તપાસી શકાયું નહીં",
- "20th November 2026": "20 નવેમ્બર 2026"
+ "20th November 2026": "20 નવેમ્બર 2026",
+ "Showing your newest {0} chats.": "તમારી સૌથી નવી {0} ચેટ બતાવવામાં આવી રહી છે.",
+ "Change your interests": "તમારી રુચિઓ બદલો",
+ "Your account details didn't load.": "તમારા એકાઉન્ટની વિગતો લોડ થઈ નહીં.",
+ "Your interests are still loading": "તમારી રુચિઓ હજી લોડ થઈ રહી છે"
 }

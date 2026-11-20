@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { createRfq, uploadRfqImages, removeRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { createRfq, uploadRfqImages, removeRfqImages, writeRefused, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
 import { quantityFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { errorMessage } from "@/lib/errorMessage";
@@ -121,8 +121,9 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
         queryClient.invalidateQueries({ queryKey: ["rfq_submissions"] }),
       ]);
     } catch (e) {
-      // Not written: its photos come down again (review L-38).
-      if (!written) void removeRfqImages(images);
+      // Refused by the database: its photos come down again (review L-38). On a network failure the requirement may be
+      // saved, so they stay.
+      if (!written && writeRefused(e)) void removeRfqImages(images);
       toast.error("Couldn't post your Quick Quote", { description: errorMessage(e) });
       setSubmitting(false);
       return;

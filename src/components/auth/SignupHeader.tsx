@@ -38,7 +38,8 @@ export default function SignupHeader({ onBack, dark = false, className }: { onBa
         )}
         <CosoraLogo height={30} variant={dark ? "white" : undefined} />
       </div>
-      {index >= 0 && (
+      {/* Not on role selection: sellers choose there too, and the count is the buyer steps' (code review). */}
+      {index > 0 && (
         <p className={cn("mt-2 text-center text-xs font-medium", dark ? "text-white/80" : "text-gray-500")}>
           {`Step ${index + 1} of ${SIGNUP_STEPS.length}`}
         </p>

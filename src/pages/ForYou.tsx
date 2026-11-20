@@ -49,6 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useOverlayState } from "@/hooks/useBackCloses";
 import { useStepParam } from "@/hooks/useStepParam";
+import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -369,9 +370,35 @@ const ForYou = () => {
   // before, not off the page. Finishing replaces the entry without it, so the feed's address is plain again.
   const steps = useStepParam("intro", INTRO_STEPS, "welcome");
   const step = INTRO_STEPS.indexOf(steps.step) as 0 | 1 | 2;
+  // How many step entries this visit pushed and still stands on (Back pops them).
+  const pushed = useRef(0);
+  const lastStep = useRef(step);
+  useEffect(() => {
+    if (step < lastStep.current) pushed.current = Math.max(0, pushed.current - (lastStep.current - step));
+    lastStep.current = step;
+  }, [step]);
+  // Read through the ref: a step leaving the screen keeps its button for the exit animation, and a second tap on it
+  // must not push the step again.
+  const goStep = (next: (typeof INTRO_STEPS)[number]) => {
+    if (INTRO_STEPS.indexOf(next) <= lastStep.current) return;
+    lastStep.current = INTRO_STEPS.indexOf(next) as 0 | 1 | 2;
+    pushed.current += 1;
+    steps.go(next);
+  };
+  // Finishing goes back over the step entries it pushed, so the feed is on the page's own entry and one Back leaves
+  // (code review). Opened at a step from a link, it replaces that entry instead. A refused finish stays on the step.
   const finishIntro = (skip: boolean) => {
-    completeOnboarding(skip);
-    steps.replace("welcome");
+    if (lastStep.current !== step) return; // a tap on a step that is leaving
+    if (!completeOnboarding(skip)) {
+      toast.error("Your interests are still loading", { description: "Try again in a moment." });
+      return;
+    }
+    if (step > 0 && pushed.current >= step) {
+      pushed.current = 0;
+      navigate(-step);
+    } else {
+      steps.replace("welcome");
+    }
   };
   const [locQuery, setLocQuery] = useState("");
 
@@ -594,7 +621,7 @@ const ForYou = () => {
                 </p>
                 <div className="my-7"><StepDots step={0} /></div>
                 <button
-                  onClick={() => steps.go("interests")}
+                  onClick={() => goStep("interests")}
                   className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Start
@@ -620,7 +647,7 @@ const ForYou = () => {
                 <CategoryPicker selected={prefs.categories} />
                 <div className="my-6"><StepDots step={1} /></div>
                 <button
-                  onClick={() => steps.go("locations")}
+                  onClick={() => goStep("locations")}
                   className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Next

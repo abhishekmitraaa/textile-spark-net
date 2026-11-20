@@ -1,3 +1,15 @@
+- 2026-11-20 (branch `fix/low-batch3-2026-11-20`; migration `20261120120000_low_batch3.sql`;
+  plan `documentation/low-bugs-batch3-plan-2026-11-20.md`; **built and checked on the local stack, migration rehearsed
+  on production and rolled back; not released**)
+  **Buyer review, Low batch 3 of 6: requirements, chats, help, profile and sign-up** (L-38–L-62, L-65–L-67).
+  - Mitra's calls: timezone picker removed; Terms 2026-11-v2 (no "India's premier", dated 20th November 2026) without
+    asking v1 buyers again; OtpVerify's Previous / Not you? replace history; every interest kept.
+  - Failed reads say so with Try again (chats, profile forms, support); Profile counts "–" until known, Saved counts videos.
+  - Sign-up: one header with "Step N of 5", Continue everywhere, the Terms tick kept, a "what next" welcome; For You's
+    first run in the address and done per account.
+  - Profile photo uploaded on Save; review delete asks; the export holds everything; regional and export are two pages.
+  - /seller: no "10 minutes", honest review copy, no Login when signed in. L-63 and L-64 left (sign-in files).
+  - Code review: 10 findings fixed.
 - 2026-11-20 (branch `fix/low-batch2-2026-11-20`, on batch 1; migration `20261120110000_low_batch2.sql`;
   plan `documentation/low-bugs-batch2-plan-2026-11-20.md`; **LIVE 2026-11-20**: migration applied with the CLI, not in the ledger; main `a01662c`;
   3 demo campaigns archived, 2 demo seals cleared)

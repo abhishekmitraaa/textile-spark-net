@@ -36,10 +36,19 @@ export function rememberReturnTo(path: string): void {
 
 /** Where a buyer's sign-in or sign-up should land: the remembered page (taken once), else `dest`. */
 export function landingFor(dest: string): string {
+  return readLanding(dest, true);
+}
+
+/** landingFor() without taking it: for a page that shows where it would go before the buyer chooses (Welcome). */
+export function peekLandingFor(dest: string): string {
+  return readLanding(dest, false);
+}
+
+function readLanding(dest: string, take: boolean): string {
   if (dest !== BUYER_LANDING) return dest;
   try {
     const raw = sessionStorage.getItem(KEY);
-    sessionStorage.removeItem(KEY);
+    if (take) sessionStorage.removeItem(KEY);
     if (!raw) return dest;
     const v = JSON.parse(raw) as { path?: unknown; at?: unknown };
     if (typeof v.path !== "string" || typeof v.at !== "number" || Date.now() - v.at > MAX_AGE_MS) return dest;

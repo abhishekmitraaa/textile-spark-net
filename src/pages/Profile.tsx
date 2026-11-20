@@ -9,7 +9,7 @@ import { interestLabel, OTHER_INTEREST_ID } from "@/lib/buyerCategories";
 import { useSaved, useSavedSync } from "@/lib/savedStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProfileFull, useProfileStats, useSettings, EMPTY_PROFILE } from "@/lib/queries/profile";
+import { useProfileFull, useProfileStats, useSavedVideoCount, useSettings, EMPTY_PROFILE } from "@/lib/queries/profile";
 import { useCallCount } from "@/lib/queries/calls";
 import { useOpenDeletionRequest, cancelDeletion, deletionCopy, formatDeletionDate } from "@/lib/queries/accountDeletion";
 import noUserPicture from "@/assets/Buyer/profile section/No user Picture.jpg";
@@ -111,6 +111,7 @@ const Profile = () => {
   const { profile: authProfile, session, loading, signOut } = useAuth();
   const { data: dbProfile } = useProfileFull(authProfile?.id);
   const { data: stats } = useProfileStats(authProfile?.id);
+  const { data: savedVideoCount } = useSavedVideoCount(authProfile?.id);
   const { data: callCount } = useCallCount();
   const { data: settings } = useSettings(authProfile?.id);
 
@@ -160,7 +161,7 @@ const Profile = () => {
   // close-ups together (L-51); "Saved Products" below stays listings only.
   const countText = (n: number | undefined) => (n == null ? "–" : String(n));
   const savedKnown = savedSync === "ready" || savedSync === "local";
-  const savedTotal = savedKnown && stats ? savedCount + stats.savedVideos : undefined;
+  const savedTotal = savedKnown && savedVideoCount != null ? savedCount + savedVideoCount : undefined;
   const notifOn = settings ? Object.values(settings.notifications).some(Boolean) : true;
   // "On" would read as "you are receiving notifications", and nothing is sent yet
   // (MPF-12). Until delivery is live the row says so instead.

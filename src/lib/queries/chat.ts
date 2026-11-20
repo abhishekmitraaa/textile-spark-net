@@ -756,14 +756,16 @@ async function fetchConversations(userId: string): Promise<ChatSummary[]> {
   if (error) throw error;
   // My own view of each listed chat: starred, archived, deleted-for-me (the policy returns only mine), 100 ids a request.
   const listedIds = ((data ?? []) as RawConv[]).map((c) => c.id);
-  const states: { conversation_id: string; starred_at: string | null; archived_at: string | null; cleared_at: string | null }[] = [];
-  for (let i = 0; i < listedIds.length; i += 100) {
+  // The groups are read side by side (code review: one after another added a round trip each).
+  const groups: string[][] = [];
+  for (let i = 0; i < listedIds.length; i += 100) groups.push(listedIds.slice(i, i + 100));
+  const states = (await Promise.all(groups.map(async (ids) => {
     const { data: part, error: stateError } = await supabase.from("conversation_member_state")
       .select("conversation_id, starred_at, archived_at, cleared_at").eq("user_id", userId)
-      .in("conversation_id", listedIds.slice(i, i + 100));
+      .in("conversation_id", ids);
     if (stateError) throw stateError;
-    states.push(...(part ?? []));
-  }
+    return part ?? [];
+  }))).flat();
   const stateOf = new Map(states.map((s) => [s.conversation_id, s]));
   // A chat deleted for me stays out of the list until a newer message arrives.
   const rows = ((data ?? []) as RawConv[]).filter((c) => {
