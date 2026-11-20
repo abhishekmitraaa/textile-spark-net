@@ -117,9 +117,10 @@ export function useFeed(filters: FeedFilters, { enabled = true }: { enabled?: bo
     queryKey: feedKey(filters),
     queryFn: ({ pageParam }) => {
       const at = pageParam as number;
-      return at === 0
-        ? fetchFeedPage(filters, 0, FEED_PAGE_SIZE)
-        : fetchFeedPage(filters, at - PAGE_OVERLAP, FEED_PAGE_SIZE + PAGE_OVERLAP);
+      if (at === 0) return fetchFeedPage(filters, 0, FEED_PAGE_SIZE);
+      // The deepest page asks one more: a 29th row means the feed goes on past where feed_products stops.
+      const deepest = at / FEED_PAGE_SIZE === MAX_PAGES - 1;
+      return fetchFeedPage(filters, at - PAGE_OVERLAP, FEED_PAGE_SIZE + PAGE_OVERLAP + (deepest ? 1 : 0));
     },
     initialPageParam: 0,
     getNextPageParam: (last, pages) => {
@@ -144,7 +145,7 @@ export function useFeed(filters: FeedFilters, { enabled = true }: { enabled?: bo
   // Stopped at feed_products' depth, not at the end of the feed (review L-03: "You've seen everything" past 984).
   const pages = q.data?.pages ?? [];
   const lastPage = pages[pages.length - 1];
-  const capped = pages.length >= MAX_PAGES && Boolean(lastPage) && lastPage.length >= FEED_PAGE_SIZE + PAGE_OVERLAP;
+  const capped = pages.length >= MAX_PAGES && Boolean(lastPage) && lastPage.length > FEED_PAGE_SIZE + PAGE_OVERLAP;
   return {
     items,
     capped,

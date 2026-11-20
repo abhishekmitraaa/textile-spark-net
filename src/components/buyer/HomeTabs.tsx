@@ -12,9 +12,12 @@ export const HOME_TABS = [
 
 export type HomeTabHref = (typeof HOME_TABS)[number]["href"];
 
+/** Other addresses that open a Home tab's page (App.tsx). */
+const TAB_ALIASES: Record<string, HomeTabHref> = { "/for-you": "/home/for-you" };
+
 /** The Home tab an address belongs to (a tab's own sub-pages count), or null. */
 export function homeTabOf(pathname: string): HomeTabHref | null {
-  return HOME_TABS.find((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))?.href ?? null;
+  return TAB_ALIASES[pathname] ?? HOME_TABS.find((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))?.href ?? null;
 }
 
 /**

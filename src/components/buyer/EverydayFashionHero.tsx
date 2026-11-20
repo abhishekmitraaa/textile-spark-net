@@ -134,6 +134,7 @@ function Slide({ slide, offset, saved, reducedMotion, wasDragged }: SlideProps) 
       </Link>
         <button
           onClick={() => {
+            if (wasDragged()) return; // a swipe that started on the button isn't a tap (code review of L-05)
             openSaveModal({
               id: slide.id, vendorId: slide.vendorId, name: slide.name, manufacturer: slide.manufacturer,
               location: slide.location, price: slide.price, priceValue: slide.priceValue, moq: slide.moq,

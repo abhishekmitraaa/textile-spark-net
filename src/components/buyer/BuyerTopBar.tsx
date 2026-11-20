@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Search, Bookmark, MoreVertical, ChevronRight, Bell, MessageCircle } from "lucide-react";
@@ -46,7 +46,7 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   // "Menu, dialog". It was a pair of positioned divs. Above the phone's bottom bar (z-50), as before.
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="left" overlayClassName="z-[70] bg-black/40" className="z-[71] flex w-72 flex-col gap-0 bg-white p-0 sm:max-w-none">
+      <SheetContent side="left" overlayClassName="z-[70] bg-black/40" className="z-[71] flex w-72 flex-col gap-0 bg-white p-0 sm:max-w-none" aria-describedby={undefined}>
             <SheetTitle className="sr-only">{t("Menu")}</SheetTitle>
             <div className="flex items-center justify-between px-5 py-4 pr-12 border-b border-gray-100">
               <CosoraLogo height={19} />
@@ -133,6 +133,9 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 export default function BuyerTopBar() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Mounted only where the phone's bottom bar is hidden: a second useChatUnread opens a second live channel (code
+  // review of L-14).
+  const isLaptop = useMinWidth(1024);
   const t = useT();
   const [drawerOpen, setDrawerOpen] = useOverlayState(); // Back closes the drawer (review M-29)
   const { active: converting } = useDisplayCurrency();
@@ -163,7 +166,7 @@ export default function BuyerTopBar() {
 
           {/* Chats with their unread count on a laptop, where the phone's bottom bar (which carries it) is hidden
               (review L-14). The count is useChatUnread's, so the two can't disagree. */}
-          {user && <ChatsButton onOpen={() => navigate("/chats")} />}
+          {user && isLaptop && <ChatsButton onOpen={() => navigate("/chats")} />}
 
           {/* Bookmark */}
           <button onClick={() => navigate("/saved")} className="p-1.5 shrink-0" aria-label={t("Saved products")}>
@@ -211,7 +214,7 @@ function ChatsButton({ onOpen }: { onOpen: () => void }) {
     <button
       onClick={onOpen}
       aria-label={label ? `${t("Chats")}, ${unread} ${t("unread")}` : t("Chats")}
-      className="relative hidden lg:flex p-1.5 shrink-0"
+      className="relative flex p-1.5 shrink-0"
     >
       <MessageCircle className="w-5 h-5 text-gray-700" />
       {label && (
@@ -221,4 +224,18 @@ function ChatsButton({ onOpen }: { onOpen: () => void }) {
       )}
     </button>
   );
+}
+
+/** True while the window is at least `px` wide (Tailwind's lg is 1024). */
+function useMinWidth(px: number): boolean {
+  const query = `(min-width: ${px}px)`;
+  const [matches, setMatches] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setMatches(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, [query]);
+  return matches;
 }

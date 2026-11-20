@@ -42,7 +42,6 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
   const flag = flags.data ? Boolean(flags.data.live_updates_hub) : undefined;
   const on = flag === true;
   const [live, setLive] = useState(false);
-  const [joining, setJoining] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
   // A fresh wait per account; past it, callers fall back whatever the hub is doing.
   useEffect(() => {
@@ -51,7 +50,9 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
     const t = setTimeout(() => setGaveUp(true), HUB_WAIT_MS);
     return () => clearTimeout(t);
   }, [userId]);
-  const waiting = Boolean(userId) && !gaveUp && ((flag === undefined && !flags.isError) || (on && joining));
+  // Derived, not set in the channel effect: the render where the switch first reads as on must already say "wait",
+  // or the bell and the chat badge open their own channels before the effect runs (code review of the L-17 fix).
+  const waiting = Boolean(userId) && !gaveUp && ((flag === undefined && !flags.isError) || (on && !live));
   const handlers = useRef(new Map<HubEvent, Set<() => void>>());
 
   const subscribe = useCallback((event: HubEvent, handler: () => void) => {
@@ -66,10 +67,8 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId || !on) {
       setLive(false);
-      setJoining(false);
       return;
     }
-    setJoining(true);
     let cancelled = false;
     let channel: RealtimeChannel | null = null;
     const timers = new Map<HubEvent, ReturnType<typeof setTimeout>>();
@@ -98,14 +97,12 @@ export function RealtimeHubProvider({ children }: { children: ReactNode }) {
           if (cancelled) return;
           if (status === "SUBSCRIBED") {
             setLive(true);
-            setJoining(false);
             // Anything that changed between the first reads and the channel joining.
             fire("notifications");
             fire("chat");
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
             // Back to the per-hook subscriptions until it joins again.
             setLive(false);
-            setJoining(false);
           }
         });
     })();
