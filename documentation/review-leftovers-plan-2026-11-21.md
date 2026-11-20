@@ -59,6 +59,11 @@ list those before any revoke.
 - Local stack: sign-up specs 54/54 (`buyer-signup`, `signup-back`, the new `review-leftovers`); 14 of them were already
   failing on main before this branch (outdated "NEXT", no Welcome screen, a read before a lazy page loaded) and are
   brought up to date.
+- The 21 other local spec files that touch what changed (feeds, product page, listings, photos, ads, moderation,
+  seller home, views), against this branch and main with the current admin app: the same 8 fail on both (left as they
+  were, ToDo), none only here. Two local traps found on the way: the admin dev server on :5184 was an old build that
+  still selected `account_status` (start the current one), and a `.env` copied into a worktree for the check scripts
+  makes its dev server draw the dev account switcher over a chat's Attach button.
 - Migration: run in rolled-back transactions locally (a takedown queues the thumbnails, a delete the originals, a pause
   nothing; `product_photo_in_use` both ways; `ad_impressions` as a visitor queues each ad once and records its event
   once) and applied locally without the legacy call. Rehearsed on production and rolled back: 60 indexes, no anon

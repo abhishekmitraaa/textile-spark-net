@@ -34,6 +34,11 @@ with no need to dictate format, context, or reference each time.
   for the page (M-25's request count); (2) engagement events are still one request per ad shown: a batch function for
   `log_engagement_event` (M-33); (3) 59 more unindexed foreign keys (M-75 listed 64; 5 added).
 
+- Local specs failing on main too (found 2026-11-21, review leftovers batch; none caused by it): buyer-minor-fixes-b 3b
+  (Quick Quote), buyer-minor-fixes 2 (card text opens the product), feeds (New Arrivals page by page), first-fixes
+  "Looking for these?", vendor-6-10 #8 (lead funnel), vendor-serious #1 and #2 (photo edits), views (once per viewer
+  per day). Look at each: stale expectation or a real bug.
+
 **High**
 - H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
 
