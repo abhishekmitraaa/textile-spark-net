@@ -1,6 +1,6 @@
 - 2026-11-20 (branch `fix/low-batch2-2026-11-20`, on batch 1; migration `20261120110000_low_batch2.sql`;
-  plan `documentation/low-bugs-batch2-plan-2026-11-20.md`; **built and checked on the local stack, migration rehearsed
-  on production and rolled back; not released**)
+  plan `documentation/low-bugs-batch2-plan-2026-11-20.md`; **LIVE 2026-11-20**: migration applied with the CLI, not in the ledger; main `a01662c`;
+  3 demo campaigns archived, 2 demo seals cleared)
   **Buyer review, Low batch 2 of 6: listings, stores and browsing content** (L-09, L-18, L-21, L-24–L-37).
   - Mitra's calls: the three running "[demo]" campaigns archived and their two demo seals cleared (recorded for a
     restore); a real sale feature logged in ToDo.md, "MEGA SALE" kept until then; the landing page kept, Sign in hidden
@@ -12,7 +12,7 @@
   - Fewer reads: browse asks for ids once, a slow site config is waited for 6 s, a bad store address
     sends no failing requests; `/go/post-rfq` signed out keeps its destination; stale ad-cap comments corrected.
 - 2026-11-20 (branch `fix/low-batch1-2026-11-20`; no migration; plan `documentation/low-bugs-batch1-plan-2026-11-20.md`;
-  **built and checked on the local stack, not released**)
+  **LIVE 2026-11-20**, main `a01662c`)
   **Buyer review, Low batch 1 of 6: buyer Home and feeds** (L-01–L-08, L-10–L-17, L-19, L-20, L-22, L-23).
   - Mitra's call: paid-plan sellers' new listings stay first in Today's New In.
   - One Home tab strip (the open tab marked, taps replace history, fits a 360 px phone); Home lit on every tab.
