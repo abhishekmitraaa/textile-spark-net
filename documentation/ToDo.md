@@ -17,11 +17,12 @@ with no need to dictate format, context, or reference each time.
 - Mitra's decisions for High (2026-11-18): H-04 take the demo data off live; H-11 precomputed feed + a scheduled job;
   H-12 thumbnails, then server-made once a browser-made one was found to skip review; H-13 keep Service Vendors / Freelancers but remove the fakes.
 - Reference: 2026-11-18 review sessions (two passes), SESSION-CONTEXT.md.
-- Status: Open. Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
+- Status: Open (High: H-12's follow-ups; Medium: M-58; Low: all 104). Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
   `20261119110000`; plans `documentation/medium-bugs-batch1-plan-2026-11-19.md`, `…batch2…`); M-58 left open (needs a
   real Google sign-in to test). Batches 3 (20 items) and 4 (14 items; plans
   `documentation/medium-bugs-batch3-plan-2026-11-19.md`, `…batch4-plan-2026-11-20.md`) LIVE 2026-11-20 with the
-  follow-up (migrations `20261119110100`, `20261119120000`, `20261120100000` via the CLI, not in the ledger). M-36 needed no
+  follow-up (migrations `20261119110100`, `20261119120000`, `20261120100000` via the CLI, not in the ledger; buyer main
+  `a32f71b`). M-36 needed no
   change (no service or freelancer page shows reviews since H-13). Batch 4 follow-ups: (1) the product page still makes
   ~20 of its own requests (listing, related, recently viewed, the seller block each read separately): one data function
   for the page (M-25's request count); (2) engagement events are still one request per ad shown: a batch function for
@@ -30,11 +31,7 @@ with no need to dictate format, context, or reference each time.
 **High**
 - H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
 
-**Medium — buyer home and browsing**
-
-**Medium — requirements, quotes, chats, profile**
-
-**Medium — sign-up, registration, seller home, database**
+**Medium**
 - M-58 — Google sign-up: Back shows Home 4–5 times. AuthCallback.tsx:43
 
 **Low**
@@ -103,29 +100,27 @@ with no need to dictate format, context, or reference each time.
   `onboarding/registration-fixes`.
 - Status: Open
 
-### Close the buyer audit's five unfixed security findings — added 2026-11-01
+### Close the buyer audit's remaining security findings — added 2026-11-01
 - Task: fix, in one migration with md5 pre-checks like the other audit migrations:
   1. `ad_category_benchmarks(uuid)`: its caller check isn't coalesced and anon holds EXECUTE (securityflags.md says it
      returns null for signed-out callers: that note is wrong). Coalesce the check, revoke anon.
   2. `hero_slides` read policy checks the end date only, so a slide scheduled for later shows before its
      `starts_at`. Add `starts_at <= now()`.
-  3. ~~`notifications` UPDATE any column~~: closed. `trg_notifications_update_columns` already allowed only `read`; it
-     was live with no migration file, and is recorded (whole row less `read`) in `20261117130000` (Seller Home audit
-     SH-040, 2026-11-17).
-  4. `profiles.avatar_url` and review `photos` accept any URL (a tracking pixel loads for every viewer). Accept only
-     Cosora storage URLs (as `rfqs.image` does via `lib/storageUrl.ts` and a guard).
-  5. `image-search` and `embed-query` edge functions return the upstream (OpenAI) error text to the browser. Return a
+  3. Review `photos` accept any URL (a tracking pixel loads for every viewer). Accept only Cosora storage URLs. The
+     avatar, logo, banner and premises photos already do (`admin.image_urls_check`, 2026-11-20, review M-75).
+  4. `image-search` and `embed-query` edge functions return the upstream (OpenAI) error text to the browser. Return a
      plain code; log the detail.
 - Context: found in the 2026-10-18 full buyer audit; not on the list Mitra asked to fix on 2026-10-19, so left open
-  (securityflags.md, "Buyer audit, open findings", and the 2026-10-19 log entry). None fixed by later sessions as of
-  2026-11-01 (main 26ad8d7).
+  (securityflags.md, "Buyer audit, open findings", and the 2026-10-19 log entry). Re-checked on production 2026-11-20:
+  1, 2, 3 and 4 still hold.
 - Reference: 2026-10-18/19 buyer audit session; 2026-11-01 "give me the list of task or flags from this session",
   then "store everything in the todo.md".
 - Status: Open
 
 ### Check four audit suspicions against production — added 2026-11-01
 - Task: confirm or rule out, on production (read-only) or the local stack:
-  1. no server-side length or rate limit on chat messages (`messages` insert);
+  1. no server-side length or rate limit on chat messages (`messages` insert): still no length check on the body on
+     2026-11-20 (only the attachment name's);
   2. a buyer can write their own `country_code`, which stamps requirements as overseas (`rfqs_overseas_stamp`);
   3. support data isn't purged after an account is deleted (the `support-sweep` job is unscheduled, D-21);
   4. buyer GSTIN, PAN and phone are saved without validation (onboarding / profile). Answered 2026-11-14: it held;
@@ -145,15 +140,6 @@ with no need to dictate format, context, or reference each time.
   header carries the real address on the image-search EDGE FUNCTION path (securityflags.md log); the database path
   wasn't tested. Drops show in Cosora-Admin › System Health (`seller:<id>`).
 - Reference: 2026-10-19/20 analytics-limit releases; 2026-11-01 todo request.
-- Status: Open
-
-### Replace the generated phone numbers on Service Vendors and Freelancers — added 2026-11-01
-- Task: give the Service Vendors and Freelancers pages real contacts, or remove Call Now there, or take the pages
-  down until there are real providers.
-- Context: their Call Now dials `demoPhone()` (`src/lib/queries/calls.ts`), a hash-generated real-format +91 number
-  that may belong to a stranger, and the providers, ratings and reviews are seed data shown as real. Mitra chose
-  "Keep them as is" on 2026-10-18; the risk is logged in securityflags.md.
-- Reference: 2026-10-18 audit "fix first" list, AskUserQuestion on Service Vendors/Freelancers.
 - Status: Open
 
 ### Make the local stack's snapshot trigger call itself, not production — added 2026-11-01
@@ -179,17 +165,11 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-10-19 paged chat history.
 - Status: Open
 
-### Fix Video Closeups' feed: paging and the copied end-of-feed cards — added 2026-11-01
-- Task: page the Video Closeups feed (it shows the 30 all-time most viewed, no more), and remove the "-fill" clone
-  cards with fake ids that pad the end of the feed.
-- Context: found in the 2026-10-18 audit (item 23); not fixed since.
-- Reference: 2026-10-18 buyer audit.
-- Status: Open
-
-### Make the Discount sort work and give buyers their own Notifications wording — added 2026-11-01
-- Task: the "Discount" sort option does nothing (results stay in the same order); the buyer Notifications page shows
-  seller wording. Fix both.
-- Context: found in the 2026-10-18 audit (item 23); not fixed since.
+### Page the Video Closeups feed — added 2026-11-01
+- Task: page the Video Closeups feed: `video_closeups_feed()` returns at most 60, and the page asks for 30.
+- Context: found in the 2026-10-18 audit (item 23). Since then the "-fill" clone cards are gone, and the order is the
+  tagged listing's recent demand with the video's own age (2026-11-20, review M-22; `ranking.md` 4.7), so new videos
+  show. Production had no live videos on 2026-11-20.
 - Reference: 2026-10-18 buyer audit.
 - Status: Open
 
@@ -204,9 +184,10 @@ with no need to dictate format, context, or reference each time.
 
 ### Record the October CLI migrations in the ledger, and fix the audit's migration numbering — added 2026-11-01
 - Task: (1) mark as applied in `supabase_migrations.schema_migrations` (e.g. `supabase migration repair --status
-  applied <version>`) the migrations applied with `db query`: 20261018160000, 160100, 160200, 160300;
-  20261019100000, 110000, 120000, 130000; 20261020100000, 110000; and the buyer sign-up release of 2026-11-14:
-  20261114100000, 100100, 100150, 100200, 100300, 100600, 100500. (2) Before merging `fix/review-2026-10-13`,
+  applied <version>`) every migration applied with `db query` or the SQL editor. On 2026-11-20 the ledger's newest row
+  was `20261012040000` (267 rows): none of the 100 files after it (`20261013100000` … `20261120100000`) is recorded.
+  Repair only those confirmed on production (compare each function or table with the file; some files were never
+  applied, such as the 2026-10-13 review branch's). (2) Before merging `fix/review-2026-10-13`,
   re-version its five migrations (20261013100000–100400 are taken on main). (3) Done 2026-11-14: `20261012040000`
   applied (guarded on the bodies it replaced) and repaired into the ledger. (4) `pause_ad_campaign_by_vendor`,
   `resume_ad_campaign`, `resubmit_ad_campaign` have no creating migration: add one from production's definitions.
@@ -343,8 +324,8 @@ with no need to dictate format, context, or reference each time.
   6. Close the older ToDo entries this settles: "Remove or relabel the three plan-comparison rows that promise lead
      features nothing delivers" (2026-10-06), "Tell sellers about new leads by dashboard, email or WhatsApp, as 'How
      are leads managed?' says" (2026-10-02), "Warn sellers as they near their lead limit, as the Subscription FAQ says"
-     (2026-10-02: there is no lead limit) and "Send the renewal reminder the billing answer promises" (2026-10-02:
-     built in P4, live once `subscription_lifecycle` is on).
+     (2026-10-02: there is no lead limit) (the renewal reminder entry was closed on 2026-11-20: P4's reminders
+     are live).
 - Context:
   - P13 was the 14th and last phase of the vendor-subscription build (plan approved 2026-10-08). P0–P12 went to
     production on 2026-10-09/10 with every switch off; P13 was held back on purpose.
@@ -428,7 +409,7 @@ with no need to dictate format, context, or reference each time.
   • Pay-per-lead access • Featured vendor badges". Registration is free (the Free plan), but "Basic" is the name of
   the ₹699/month plan, so the answer reads as if that plan were free. Pay-per-lead doesn't exist (the leads answer
   itself calls it future). "Premium listings" and "featured vendor badges" aren't products either: what sellers buy
-  are the plans and the ad placements on /advertise. Detail: the MPF-16 entry below.
+  are the plans and the ad placements on /advertise (MPF-16; that entry closed 2026-11-20, this row is what was left).
 - Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
   documents, plan changes and money-back guarantee were built to match their FAQs (branch
   `faq-truth/registration-plans-refunds`).
@@ -450,21 +431,10 @@ with no need to dictate format, context, or reference each time.
 - Task: send a seller a notification when a buyer's requirement matches them, in the app first, then by email and
   WhatsApp; or have Andy reword the answer to what exists (leads appear on the Leads page).
 - Context: the live answer says "You'll get notified via dashboard, email, or WhatsApp when a buyer is interested.
-  In future, you can also choose pay-per-lead plans". Nothing notifies a seller about a new requirement today, in
-  the app or outside it. Email waits on Resend (the MPF-4 entry below) and WhatsApp on Meta setup (MPF-24); the
-  in-app notification could come first, through `public.notify()`.
-- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
-  documents, plan changes and money-back guarantee were built to match their FAQs (branch
-  `faq-truth/registration-plans-refunds`).
-- Status: Open
-
-### Send the renewal reminder the billing answer promises — added 2026-10-02
-- Task: remind a seller before their paid period ends, in the app first and by email once Resend works; or have
-  Andy reword the answer.
-- Context: the live Subscription answer to "How does billing work — is there autopay?" says "When your period nears
-  its end you'll get a renew reminder; if you don't renew, your account falls back to the Free plan." The fall-back
-  is true (the daily `subscription-expiry-sweep`); the reminder isn't sent by anything. A daily check for periods
-  ending in, say, 3 days could sit in the same sweep and notify through `public.notify()`.
+  In future, you can also choose pay-per-lead plans". Lead alerts were built in subscriptions P6
+  (`admin.lead_alert_fanout`) and the `lead_alerts` switch is on for everyone, but on 2026-11-20 production had sent no
+  alert in the app yet (`admin.lead_alerts`). Check why (matching, channels per plan, or no matching requirement
+  since). Email waits on Resend (the MPF-4 entry below) and WhatsApp on Meta setup (MPF-24).
 - Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
   documents, plan changes and money-back guarantee were built to match their FAQs (branch
   `faq-truth/registration-plans-refunds`).
@@ -546,13 +516,14 @@ with no need to dictate format, context, or reference each time.
 - Context:
   - The live Subscription FAQ says: "We offer a 7-day money-back guarantee for first-time subscribers. If you're not
     satisfied, contact us for a full refund." The Terms say "Fees are non-refundable unless stated otherwise."
-    Detail: the MPF-17 entry below.
+    (MPF-17; that entry closed 2026-11-20 with the refund process live, this wording is what was left.)
   - Decision D-11: refunds are a manual process (support passes the request to finance, who refund by hand in
     Razorpay). That process is Mitra's to write and is still open. The Help billing topic stays switched off until
     both the wording and the process exist (launch gate G1).
-  - Update 2026-10-02: the process now exists in the app (built, not merged; see MPF-17 below): the seller asks on
-    `/subscription`, finance refunds through Razorpay and closes the request in Cosora-Admin. Only the Terms
-    wording remains for counsel.
+  - The process is live (2026-10-02): a first-time subscriber asks on `/subscription` within 7 days of the first
+    payment (`refund_guarantee_request`), finance refunds through Razorpay in Cosora-Admin (`admin-refund-payment`) and
+    closes the request, which ends the plan. Only money that went through Razorpay is offered back. Only the Terms
+    wording remains for counsel (they still say fees are non-refundable).
 - Reference: 2026-10-01, the Help & Support owner answers (Counsel: "the Terms wording on refunds; add to todo.md").
 - Status: Open
 
@@ -576,8 +547,8 @@ with no need to dictate format, context, or reference each time.
     (Intermediary Guidelines) Rules 2021 ask for acknowledgement within 24 hours and resolution within 15 days; the
     Consumer Protection (E-Commerce) Rules 2020 ask for 48 hours and one month. Whether either applies to a B2B
     marketplace is a question for counsel.
-  - Today no page names a Grievance Officer. There is no Privacy Policy page either: its links go to `/terms`
-    (`MyStore.tsx:517`) or `#` (`Register.tsx:346`).
+  - Today no page names a Grievance Officer. The Privacy Policy is published at `/privacy` (2026-11-05) and gives
+    hello@cosora.in until one is named.
   - Decision D-15 in `documentation/help-feature-plan.md`: name one later; build the page hidden until named.
 - Reference: 2026-09-30, the Help & Support planning session, Stage 3 (Andy: "name one later, be sure to add it to
   Todo.md").
@@ -606,12 +577,13 @@ with no need to dictate format, context, or reference each time.
   `discount_confirm()`, `supabase/functions/_shared/discounts.ts`.
 - Status: Open
 
-### Turn on real vendor payments (the Razorpay keys aren't set) — added 2026-09-29
-- Task: set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` in Supabase
-  (`scripts/setup-razorpay.ps1`), register the two webhooks, then buy a plan and an ad with a real card
-  and a discount code, and check the ledger, the invoice and the code's uses.
-- Context: both create-order functions answer `not_configured` (checked 2026-09-29), so every vendor
-  checkout runs the simulated demo path: a plan activates and ads are submitted without payment.
+### Switch Razorpay to its live keys and prove a real payment — added 2026-09-29
+- Task: replace the Razorpay test keys with the live ones (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`,
+  `RAZORPAY_WEBHOOK_SECRET`; `scripts/setup-razorpay.ps1`), register the two webhooks, then buy a plan and an ad with a
+  real card and a discount code, and check the ledger, the invoice, the code's uses and a 7-day money-back refund.
+- Context: the test keys have been set since 2026-10-08 (Mitra), so checkout runs Razorpay's test mode and takes no
+  money. Cosora's GST details come first ("Give Cosora's GST details" above). On 2026-09-29 both create-order functions
+  answered `not_configured` and every checkout ran the simulated demo path.
   `claude.md` used to say checkouts move real money; corrected in Phase 10. The discount code path is
   built and tested for live mode (reserve against the Razorpay order, confirm on claim, ₹0 orders
   without Razorpay) but has only run against a stand-in for Razorpay.
@@ -679,9 +651,8 @@ with no need to dictate format, context, or reference each time.
   is Mitra's call), or a shorter maximum window.
 - Context: it's 2–10 ms today on ~2,100 events, and each open Live Activity tab calls it every
   30 seconds. At 10,000 concurrent buyers the log could take millions of rows an hour, and the
-  24-hour window would scan all of them per call. While there: the performance advisor lists
-  `engagement_events.product_id` and `viewer_id` as unindexed foreign keys. Admin completion Phase 12 (2026-10-02)
-  covered the RLS warnings only; 40 unindexed foreign keys and 19 unused indexes (INFO) remain.
+  24-hour window would scan all of them per call. `engagement_events.product_id` and `viewer_id` are indexed since
+  2026-11-20 (review M-75); 59 other unindexed foreign keys remain (the buyer review's batch 4 follow-up above).
 - Reference: 2026-09-28, admin completion Phase 8 (Live Activity, native).
 - Priority: Low today; High before a traffic launch
 - Status: Open
@@ -807,13 +778,13 @@ with no need to dictate format, context, or reference each time.
     (`20260925075432_faqs_seed_seller_registration_and_subscription.sql`), and the Subscription "Contact us" writes to
     hello@cosora.in (Mitra's choice over Andy's `/help`).
   - **Left:**
-    - Andy to review the answers published verbatim that don't match the product (MPF-16);
-    - align the Terms page with the 7-day money-back guarantee, and make refunds workable
-      (MPF-17);
+    - Andy's answers that don't match the product: "Is there any cost to register?", the GST "Unverified Seller"
+      answer and "How are leads managed?" (their own entries above; MPF-16, closed 2026-11-20, held the rest);
+    - the Terms' refund wording ("Counsel: word the Terms' refund clause"; refunds work since 2026-10-02);
     - a content pass over the buyer Help answers (MPF-14; its own entry below, since Phase 25);
     - keep the "Lowest billing plan?" prices in step with `subscription_plans`.
 
-  Full context: the MPF-14, MPF-16 and MPF-17 entries below (moved here from
+  Full context: the MPF-14 entry below (moved here from
   `myprofileflags.md` on 2026-09-25), and `documentation/myprofileflags-fixed.md`, "Phase 9 decisions".
 - Reference: My Profile brief, Phase 9 (2026-09-23).
 - Priority: Medium (live pages carry claims the product doesn't back)
@@ -946,8 +917,8 @@ with no need to dictate format, context, or reference each time.
   - **Related.**
     - "Finish the Phase 9 FAQ content" (above) lists this as one of its leftovers. This
       entry is that item in full.
-    - MPF-16 and MPF-17 are Andy's Seller Registration and Subscription answers, published
-      verbatim by decision. They are separate, so don't fold them in.
+    - Andy's Seller Registration and Subscription answers (MPF-16, MPF-17) are published
+      verbatim by decision and tracked in their own entries. Don't fold them in.
 - Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
   MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
   itself came from Phase 9 (2026-09-23), which moved the Help text into the table and read
@@ -956,93 +927,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: Medium (MPF-14's severity): buyers are told about escrow and refunds that don't
   exist.
 - Status: Open
-
-### Decide whether Andy's Seller Registration and Subscription FAQ answers change, or the product catches up (MPF-16) — added 2026-09-25
-- Task: decide, for each of Andy's answers that doesn't match the product, whether Andy rewords it
-  in Cosora-Admin `/faqs` (no deploy) or the product changes to match it. Each row in the
-  detail below is independent.
-- Context: Andy's content is published verbatim on `/seller` and `/subscription` by Mitra's decision
-  (2026-09-23), so nobody should "fix" the wording quietly: it is Andy's call.
-- Detail, as the flag recorded it ("Andy's Seller Registration and Subscription FAQs promise things the product doesn't do"):
-
-
-  - **Where:** `public.faqs`, surfaces `seller_registration` (shown on `/seller`) and
-    `subscription` (shown on `/subscription`). Loaded 2026-09-23 from Andy's content
-    (`documentation/seller-registration-and-subscription-faq-content.md`).
-  - **Decision:** Mitra chose to publish the answers **verbatim** (2026-09-23), rather than as
-    corrected versions, and to log each mismatch here. Each claim was checked against the code
-    and the live data before publishing:
-
-    | Answer (surface) | Claim | Reality (checked 2026-09-23) |
-    |---|---|---|
-    | Can I upgrade or downgrade my plan anytime? (subscription) | "the difference will be prorated" | No proration anywhere. `activateSubscription()` in `subscription-verify-payment` charges the plan's full price and starts a fresh period at the moment of payment |
-    | same | "Downgrades will take effect from your next billing cycle" | A lower plan is bought like any other: it starts immediately and replaces the current one. The page enables every plan except the current one and Free |
-    | What happens when I reach my lead limit? (subscription) | "You'll receive notifications as you approach your limit" | Nothing sends a notification about the limit. `/leads` shows "N/cap leads used", and quoting at the cap is refused with an upgrade prompt |
-    | How are leads managed on Cosora? (seller) | Notified "via dashboard, email, or WhatsApp" | No email or WhatsApp is sent, and no in-app notification fires for new RFQs (Phase 7). Leads appear on `/leads` |
-    | I don't have a GST number… (seller) | Marked "Unverified Seller", which "may affect visibility and lead access" | There's no such label. Searching the SQL and the app found no ranking or lead-access gate on `is_verified`. GST is optional at registration |
-    | Is there any cost to register? (seller) | "Basic registration is free… pay for Premium listings, Pay-per-lead access, Featured vendor badges" | Registration is free (the **Free** plan), but "Basic" is the name of a ₹699/month plan on the Subscription page. Pay-per-lead doesn't exist; Andy's own lead answer calls it future |
-
-  - **Holds up:**
-    - what Cosora is, and who can register;
-    - buyers call or chat;
-    - verification time (now 3–5 days across the app);
-    - the documents asked for at registration: PAN, the GST certificate when registered for GST, a business
-      registration (Udyam/MSME among the kinds), the owner's masked Aadhaar, and a catalogue or a first product
-      (collected since 2026-10-02; one all-or-nothing submit since 2026-11-13). Sellers outside India give their
-      own country's documents, which Andy's answer doesn't mention;
-    - no shipping through Cosora;
-    - the annual discount: yearly is 10× monthly, about 16.7%, so "up to 17%" and "2 months
-      free" are right;
-    - editing listings, though the answer doesn't mention that an edit sends a live listing
-      back to review, hidden from buyers until re-approved.
-  - **Fix shape:** Andy edits the wording in Cosora-Admin `/faqs` (no deploy), or the product
-    catches up. Each row is independent.
-
-- Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
-- Update 2026-10-02 (Andy: the product should do what these say): the documents row and both
-  upgrade/downgrade rows are built (branch `faq-truth/registration-plans-refunds`, not merged). Registration now
-  asks for the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, an
-  incorporation certificate, a shop licence or a partnership deed), a masked Aadhaar, and a catalogue or a first
-  product; an upgrade is prorated and a downgrade starts at the next period. The other rows (cost to register,
-  "Unverified Seller", lead notifications, lead-limit notifications, and the renewal reminder) have their own entries
-  at the top of Open.
-- Priority: Medium (vendors are told about proration, alerts and documents that don't match)
-- Status: Open (until the branch is merged and live)
-
-### Resolve the Subscription FAQ's 7-day money-back promise against the Terms, and make a refund possible (MPF-17) — added 2026-09-25
-- Task: make the public 7-day money-back promise on `/subscription` true: state it in the Terms,
-  and give support a way to refund (Razorpay keys for `admin-refund-payment`, or a written
-  manual process).
-- Context: The promise was published as written by Mitra's decision (2026-09-23). The Terms still
-  say fees are non-refundable, and no refund can run today.
-- Detail, as the flag recorded it ("The Subscription FAQ promises a 7-day money-back guarantee that the Terms contradict"):
-
-
-  - **Where:** the `public.faqs` subscription row "Is there a refund policy?", on
-    `/subscription`: "We offer a 7-day money-back guarantee for first-time subscribers."
-  - **Conflicts:**
-    - `TermsConditions.tsx` says "Fees are non-refundable unless stated otherwise."
-    - No refund can run today. Cosora-Admin's `admin-refund-payment` exists, but its README
-      records that refunds can't execute on this project because the Razorpay keys aren't set.
-    - Nothing tracks "first-time subscriber" or the 7-day window.
-  - **Decision:** Mitra chose to publish it as written (2026-09-23).
-  - **Risk:** it's a public financial promise. A vendor who asks for a refund needs manual
-    handling outside the app, and the Terms say the opposite.
-  - **Fix shape:**
-    - update the Terms to state the guarantee, so "unless stated otherwise" is explicit in the
-      Terms themselves;
-    - then either set the Razorpay keys so `admin-refund-payment` works, or define the manual
-      process support follows.
-
-- Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
-- Update 2026-10-02 (Andy: "the app should do what the FAQ says"): built, not merged. A first-time
-  subscriber asks on `/subscription` within 7 days of their first payment (`refund_guarantee_request`); finance
-  refunds each payment through Razorpay in Cosora-Admin (`admin-refund-payment`, unchanged) and closes the request,
-  which ends the plan (`admin_refund_guarantee_close`). Only money that went through Razorpay is offered back, so
-  nothing shows until the Razorpay keys are set ("Turn on real vendor payments" above). The Terms still say fees are
-  non-refundable: "Counsel: word the Terms' refund clause" above.
-- Priority: Medium (a public financial promise the Terms contradict)
-- Status: Open (until the branch is merged, the keys are set and the Terms are reworded)
 
 ### Never deploy otp-dev-verify as it is; harden it or delete it once SMS works (MPF-21) — added 2026-09-25
 - Task: keep `supabase/functions/otp-dev-verify/` undeployed and uncommitted. Before it is ever

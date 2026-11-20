@@ -1,5 +1,12 @@
+- 2026-11-20 **ToDo.md brought up to date** (docs only). Removed as done: Service Vendors' generated phone numbers
+  (Call removed in H-13), the Discount sort and buyer Notifications wording, the renewal reminder (P4, live), and the
+  MPF-16 and MPF-17 FAQ entries (built and live; what is left has its own entries). Corrected from production: the
+  Razorpay test keys are set, the refund guarantee is live, lead alerts are on with none sent yet, no migration after
+  `20261012040000` is in the ledger, and the buyer audit's avatar finding is fixed. Medium list: only M-58 left.
 - 2026-11-20 (branch `fix/medium-batch4-2026-11-20`, on batch 3; migration `20261120100000_medium_batch4.sql`;
-  plan `documentation/medium-bugs-batch4-plan-2026-11-20.md`; **LIVE 2026-11-20**, migrations via the CLI, not in the ledger)
+  plan `documentation/medium-bugs-batch4-plan-2026-11-20.md`; **LIVE 2026-11-20**: the three migrations rehearsed on
+  production in a rolled-back transaction, then applied with the CLI (not in the ledger); buyer main `a32f71b`, bundle
+  `index-DK8ZzE52.js`; checked signed out on www.cosora.in, `product-views-fold` succeeding every minute)
   **Buyer review, Medium batch 4 of 4: speed and database** (M-21–M-25, M-31–M-37, M-68, M-69, M-75).
   - Mitra's calls: deleted sellers' listings to draft; the views job; names left readable.
   - Views queued and folded every minute; impressions only when on screen, batched; Standing joined once.
@@ -29,7 +36,8 @@
 - 2026-11-19 (branch `fix/medium-batch2-2026-11-19`, on top of batch 1; migration `20261119110000_buyer_terms_db_check.sql`;
   plan `documentation/medium-bugs-batch2-plan-2026-11-19.md`; **LIVE 2026-11-19**: migration applied with the CLI (not in
   the ledger), 7 triggers in place, `rls-policy-check` 159/0/0; buyer main `927a527`, bundle `index-DeXFbk3J.js`; follow-up
-  `20261119110100` (message exemption without `admin.is_real_seller`, after a second commit security review) not yet on production)
+  `20261119110100` (message exemption without `admin.is_real_seller`, after a second commit security review) applied
+  2026-11-20 with batches 3 and 4)
   **Buyer review, Medium batch 2 of 4: frame, sign-up gate, Back on overlays, Register** (M-01, M-12–M-14, M-28, M-29,
   M-43, M-48, M-53–M-57, M-59–M-64; M-58 left open: it needs a real Google sign-in to test).
   - Mitra's calls: "I'm a buyer, not a seller" until a registration is submitted; the database refuses requirements,
