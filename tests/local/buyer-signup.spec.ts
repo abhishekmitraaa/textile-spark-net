@@ -20,6 +20,15 @@ function watchWrites(page: Page): Request[] {
   return writes;
 }
 
+
+/** Terms ends on the "what next" screen (/auth/welcome, review L-53): its last button goes on (Home, or the page
+ *  sign-up started from). */
+async function passWelcome(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/auth\/welcome$/, { timeout: 20_000 });
+  await page.getByRole("button", { name: /^(Go to Home|Continue where you were)$/ }).click();
+  await expect(page).not.toHaveURL(/\/auth\//, { timeout: 20_000 });
+}
+
 test.describe("B1 · the sign-up steps need a session and close once sign-up is finished", () => {
   test("a signed-out visitor is sent to sign in from every step, and nothing is written", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
@@ -101,8 +110,9 @@ test.describe("B5 · accepting the Terms is recorded", () => {
     try {
       await page.goto(`${BUYER_URL}/auth/terms`);
       await page.getByRole("checkbox").check();
-      await page.getByRole("button", { name: "NEXT" }).click();
-      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+      await page.getByRole("button", { name: "Continue" }).click();
+      await passWelcome(page);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/);
       expect(sql(`select count(*) || ':' || bool_and(terms_version = public.buyer_terms_version()) || ':' || max(source)
                     from public.terms_acceptances where profile_id = '${who.id}'`)).toBe("1:true:signup");
       expect(sql(`select onboarded || ':' || (terms_version = public.buyer_terms_version()) || ':' || (terms_accepted_at is not null)
@@ -234,7 +244,7 @@ test.describe("B3 · Account Information prefills, saves only what changed, and 
       const q = new URL(seen[0]).searchParams;
       for (const k of ["latitude", "longitude"]) expect((q.get(k) ?? "").split(".")[1]?.length ?? 0, k).toBeLessThanOrEqual(2);
 
-      await page.getByRole("button", { name: "NEXT" }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
       await expect(page).toHaveURL(/\/auth\/interest-preference$/);
       expect(sql(`select concat_ws('|', company, postal_code, city, state) from public.buyer_profiles where id = '${who.id}'`))
         .toBe("Asha Textiles|110001|New Delhi|Delhi");
@@ -263,7 +273,7 @@ test.describe("B3 · Account Information prefills, saves only what changed, and 
       const pin = page.getByPlaceholder("Enter Pincode");
       await expect(pin).toHaveValue("560001");
       await pin.fill("110001");
-      await page.getByRole("button", { name: "NEXT" }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
       await expect(page).toHaveURL(/\/auth\/interest-preference$/);
       expect(sql(`select concat_ws('|', postal_code, coalesce(city, 'NULL'), coalesce(state, 'NULL')) from public.buyer_profiles where id = '${who.id}'`))
         .toBe("110001|NULL|NULL");
@@ -283,7 +293,7 @@ test.describe("B3 · Account Information prefills, saves only what changed, and 
       await page.goto(`${BUYER_URL}/auth/account-info`);
       await expect(page.getByPlaceholder("Your company or brand name")).toHaveValue("Asha Textiles");
       const writes = watchWrites(page);
-      await page.getByRole("button", { name: "NEXT" }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
       await expect(page).toHaveURL(/\/auth\/interest-preference$/);
       expect(writes.filter((w) => /\/rest\/v1\/(profiles|buyer_profiles)/.test(w.url())).map((w) => w.url())).toEqual([]);
     } finally {
@@ -323,7 +333,7 @@ test.describe("B4 · interests are never lost or wiped", () => {
         route.request().method() === "POST" ? route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }) : route.continue());
       await page.goto(`${BUYER_URL}/auth/interest-preference`);
       await page.locator("[data-interest-id]").first().click({ force: true });
-      await page.getByRole("button", { name: /^Save/ }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
       await expect(page.getByText("Couldn't save your interests")).toBeVisible();
       await expect(page).toHaveURL(/\/auth\/interest-preference$/);
       expect(sql(`select coalesce(preferred_categories::text, 'none') from public.buyer_profiles where id = '${who.id}'
@@ -408,8 +418,9 @@ test.describe("B6 · an unfinished sign-up is finished first, behind buyer_signu
       await page.goto(`${BUYER_URL}/home/new-arrivals`);
       await expect(page).toHaveURL(/\/auth\/terms$/);
       await page.getByRole("checkbox").check();
-      await page.getByRole("button", { name: "NEXT" }).click();
-      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+      await page.getByRole("button", { name: "Continue" }).click();
+      await passWelcome(page);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/);
       await page.reload();
       await page.waitForTimeout(1500);
       await expect(page).toHaveURL(/\/home\/new-arrivals$/);
@@ -633,14 +644,15 @@ async function finishBuyerSteps(page: Page): Promise<void> {
   await page.getByPlaceholder("Enter your name").fill("Asha Rao");
   await page.getByPlaceholder("name@company.com").fill("asha@example.com");
   await page.getByPlaceholder("Your company or brand name").fill("Asha Textiles");
-  await page.getByRole("button", { name: "NEXT" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/auth\/interest-preference$/);
   await page.locator("[data-interest-id]").first().click();
-  await page.getByRole("button", { name: /^Save/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/auth\/terms$/);
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "NEXT" }).click();
-  await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await passWelcome(page);
+  await expect(page).toHaveURL(/\/home\/new-arrivals$/);
 }
 
 test.describe("C2 · after sign-in or sign-up, back leaves the sign-in pages", () => {

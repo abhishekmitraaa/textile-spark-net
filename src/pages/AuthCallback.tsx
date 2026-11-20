@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
-import { clearAuthStart } from "@/lib/authHistory";
+import { clearAuthStart, historyIndex, markAuthStart } from "@/lib/authHistory";
 import { BUYER_LANDING, landingFor } from "@/lib/returnTo";
 
 // ─────────────────────────────────────────────────────────────
@@ -60,6 +60,10 @@ export default function AuthCallback() {
       }
       if (cancelled) return;
       if (!profile.onboarded) {
+        // Sign-up starts on this entry (role selection replaces it): Terms, or the seller registration, rewinds to it
+        // when sign-up ends, as after a phone sign-in. Without the mark every step stayed in history, and once signed up
+        // each one sent Back to Home: a Google sign-up's Back showed Home 4–5 times (review M-58).
+        markAuthStart(historyIndex());
         navigate("/auth/role-selection", { replace: true });
       } else {
         // A buyer goes back to the page they came from (review M-59); a seller to Seller Home.

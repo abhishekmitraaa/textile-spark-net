@@ -18,6 +18,15 @@
 // FORMATS: JPEG and PNG (ImageScript). Listing photos are stored as JPEG since 2026-11-18 (Upload, registration);
 // an older WebP or HEIC photo is skipped and its card keeps the full photo.
 //
+// REMOVING (H-12 follow-up, 2026-11-20; Mitra: "Remove on delete only"): `{ remove: { thumbs, originals, legacy } }`.
+//   thumbs     source paths of a listing that stopped being live (taken down, sent back, unpublished): the
+//              thumbnail goes unless the photo is a live listing's photo again by now.
+//   originals  source paths of a deleted listing: the photo and its thumbnail go unless anything still points at the
+//              photo (product_photo_in_use(): listings, ads, catalogues, videos, reviews, requirements, stores).
+//   legacy     the thumbnails named <path-without-extension>.jpg before 2026-11-18's naming (unused).
+// admin.queue_product_photo_removal() sends these through pg_net after the write commits, so the listing is already
+// gone (or no longer live) when this runs; each check is made again here, never taken from the caller.
+//
 // verify_jwt = true (config.toml), and the handler requires the service_role claim on top of it.
 // ─────────────────────────────────────────────────────────────
 import { decode, Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
@@ -53,6 +62,53 @@ export function thumbPathFor(path: string): string {
   return path + ".jpg";
 }
 
+// A thumbnail written before the <path>.jpg naming: <owner>/onboarding-product/<name>.jpg, never a doubled extension.
+const LEGACY_THUMB_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/onboarding-product\/[A-Za-z0-9._-]{1,120}\.jpg$/i;
+
+interface RemoveRequest { thumbs?: unknown; originals?: unknown; legacy?: unknown }
+
+const asPaths = (v: unknown, re: RegExp): string[] =>
+  Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string" && re.test(x) && !x.includes("..")))].slice(0, 50) : [];
+
+async function removePhotos(url: string, auth: Record<string, string>, body: RemoveRequest): Promise<Response> {
+  const publicBase = `${Deno.env.get("PUBLIC_SUPABASE_URL") ?? url}/storage/v1/object/public/${SOURCE_BUCKET}/`;
+  const isLivePhoto = async (path: string): Promise<boolean | null> => {
+    const r = await fetch(
+      `${url}/rest/v1/product_images?select=product_id,products!inner(status)&products.status=eq.live&url=eq.${encodeURIComponent(publicBase + path)}&limit=1`,
+      { headers: auth },
+    );
+    return r.ok ? ((await r.json()) as unknown[]).length > 0 : null;
+  };
+  const inUse = async (path: string): Promise<boolean | null> => {
+    const r = await fetch(`${url}/rest/v1/rpc/product_photo_in_use`, {
+      method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ p_path: path }),
+    });
+    return r.ok ? (await r.json()) === true : null;
+  };
+  const drop = async (bucket: string, names: string[]): Promise<boolean> => {
+    if (names.length === 0) return true;
+    const r = await fetch(`${url}/storage/v1/object/${bucket}`, {
+      method: "DELETE", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ prefixes: names }),
+    });
+    return r.ok;
+  };
+
+  const thumbs: string[] = [];
+  const originals: string[] = [];
+  const kept: string[] = [];
+  for (const path of asPaths(body.thumbs, PATH_RE)) {
+    const live = await isLivePhoto(path);
+    if (live === false) thumbs.push(thumbPathFor(path)); else kept.push(path); // unknown → keep
+  }
+  for (const path of asPaths(body.originals, PATH_RE)) {
+    const used = await inUse(path);
+    if (used === false) { originals.push(path); thumbs.push(thumbPathFor(path)); } else kept.push(path);
+  }
+  const legacy = asPaths(body.legacy, LEGACY_THUMB_RE).filter((p) => !/\.(jpe?g|png)\.jpg$/i.test(p));
+  const ok = (await drop(THUMB_BUCKET, [...new Set([...thumbs, ...legacy])])) && (await drop(SOURCE_BUCKET, originals));
+  return json({ ok, removed_thumbs: thumbs.length + legacy.length, removed_originals: originals.length, kept: kept.length }, ok ? 200 : 502);
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   if (jwtRole(req.headers.get("Authorization")) !== "service_role") return json({ error: "service_role_required" }, 403);
@@ -62,12 +118,14 @@ Deno.serve(async (req) => {
   if (!url || !key) return json({ error: "not_configured" }, 500);
   const auth = { apikey: key, authorization: `Bearer ${key}` };
 
-  let path: string;
+  let payload: { path?: unknown; remove?: RemoveRequest };
   try {
-    path = String((await req.json())?.path ?? "");
+    payload = (await req.json()) ?? {};
   } catch {
     return json({ error: "bad_request" }, 400);
   }
+  if (payload.remove && typeof payload.remove === "object") return await removePhotos(url, auth, payload.remove);
+  const path = String(payload.path ?? "");
   if (!PATH_RE.test(path) || path.includes("..")) return json({ error: "bad_path" }, 400);
 
   // Only a photo of a live (approved) listing gets a thumbnail, matched on its exact address in this project's Storage

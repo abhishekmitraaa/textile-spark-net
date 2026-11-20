@@ -122,7 +122,7 @@ const AccountInfo = () => {
     try {
       await saveAccountInfo(session.user.id, before.current ?? accountInfoFrom(EMPTY_PROFILE), after);
       before.current = after;
-      await Promise.all([refreshProfile(), saved.refetch()]);
+      await Promise.all([refreshProfile("row+contact"), saved.refetch()]); // admin status can't change here (L-64)
     } catch (e) {
       setSaving(false);
       toast.error("Couldn't save your details", { description: errorMessage(e) });

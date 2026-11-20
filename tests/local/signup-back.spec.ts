@@ -5,8 +5,17 @@
  * seller who had just finished it. The video viewer is an overlay with no entry of its
  * own, so back used to leave the page under it; now it closes the video. Local stack only.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { BUYER_URL, contextWithSession, freshAccount } from "./stack";
+
+
+/** Terms ends on the "what next" screen (/auth/welcome, review L-53): its last button goes on (Home, or the page
+ *  sign-up started from). */
+async function passWelcome(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/auth\/welcome$/, { timeout: 20_000 });
+  await page.getByRole("button", { name: /^(Go to Home|Continue where you were)$/ }).click();
+  await expect(page).not.toHaveURL(/\/auth\//, { timeout: 20_000 });
+}
 
 test.describe("Sign-up, then back", () => {
   test("back from Home does not reopen Terms or the steps before it", async ({ browser }) => {
@@ -19,12 +28,13 @@ test.describe("Sign-up, then back", () => {
       await expect(page).toHaveURL(/\/auth\/sub-role$/);
       await page.goto(`${BUYER_URL}/auth/terms`);
       await page.getByRole("checkbox").check();
-      await page.getByRole("button", { name: "NEXT" }).click();
-      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+      await page.getByRole("button", { name: "Continue" }).click();
+      await passWelcome(page);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/);
 
       await page.goBack();
       await expect(page).toHaveURL(/\/home\/new-arrivals$/);
-      await expect(page.getByRole("button", { name: "NEXT" })).toHaveCount(0);
+      await expect(page.getByRole("checkbox", { name: /I agree to the Terms/ })).toHaveCount(0);
 
       // Terms is replaced by Welcome and Home (2026-11-14), so one more back leaves the steps behind for good.
       await page.goBack();
@@ -40,7 +50,7 @@ test.describe("Sign-up, then back", () => {
     const page = await ctx.newPage();
     try {
       await page.goto(`${BUYER_URL}/auth/terms`);
-      await expect(page.getByRole("button", { name: "NEXT" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
       await expect(page).toHaveURL(/\/auth\/terms$/);
     } finally {
       await ctx.close();

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode, useC
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { fetchMyContactInfo } from "@/lib/queries/myContact";
-import { readProfileRow } from "@/lib/auth/profileRead";
+import { PROFILE_COLUMNS, readProfileRow, type ProfileRow } from "@/lib/auth/profileRead";
 
 // ─────────────────────────────────────────────────────────────
 // Auth context — the real session + profile for the signed-in user.
@@ -29,6 +29,13 @@ export interface Profile {
   /** The Terms version this account last accepted (accept_buyer_terms); null when none is recorded. */
   terms_version: string | null;
 }
+
+/**
+ * What a refresh reads again (review L-64: a phone sign-up read the profile, the contact details and admin status
+ * five times over, ~15 requests). "all" after sign-in; "row+contact" after a step that saves contact details
+ * (Account Information); "row" after a step that changes only the row (Terms). Admin status never changes in sign-up.
+ */
+export type ProfileParts = "all" | "row+contact" | "row";
 
 // Seeded in the DB (see migrations/seed). Dev-server only: the passwords come
 // from the gitignored .env through vite.config.ts, which defines
@@ -57,16 +64,25 @@ interface AuthContextValue {
   isAdmin: boolean;
   signInAsDemo: (role: DemoRole) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  chooseRole: (role: "buyer" | "seller") => Promise<void>;
+  /** Saves the role an unfinished account picked. `uid` is for the moment right after sign-in, before `session` is set. */
+  chooseRole: (role: "buyer" | "seller", uid?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (parts?: ProfileParts) => Promise<void>;
+  /**
+   * The profile row of `uid`, from the load this context already started for that account (the code screen used to
+   * read it again itself); read afresh when that load isn't this account's or failed. Null when it can't be read.
+   */
+  awaitProfile: (uid: string) => Promise<ProfileRow | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfileState] = useState<Profile | null>(null);
+  // The latest profile, for reads that finish after a render (awaitProfile, a partial refresh keeping the email).
+  const profileRef = useRef<Profile | null>(null);
+  const setProfile = (next: Profile | null) => { profileRef.current = next; setProfileState(next); };
   const [profileError, setProfileError] = useState(false);
   // Only the latest read may set the profile: a sign-out or a second sign-in can overtake a retrying one.
   const readSeq = useRef(0);
@@ -93,25 +109,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   //
   // The profile row is read again a few times when it fails (lib/auth/profileRead.ts); if it still fails,
   // profileError says so, and the pages that route on it offer Retry instead of guessing (audit item 6).
-  const loadProfile = useCallback((uid: string): Promise<void> => {
+  const loadProfile = useCallback((uid: string, parts: ProfileParts = "all"): Promise<void> => {
+    // A partial read only makes sense over this account's complete load.
+    const whole = loadedFor.current !== uid || loadFailed.current || profileRef.current?.id !== uid ? "all" : parts;
     loadedFor.current = uid;
-    const p = readAccountProfile(uid);
+    const p = readAccountProfile(uid, whole);
     inflight.current = p;
     return p;
   }, []);
 
-  const readAccountProfile = async (uid: string) => {
+  const readAccountProfile = async (uid: string, parts: ProfileParts) => {
     const seq = ++readSeq.current;
-    const [data, contact, { data: adminFlag, error: adminError }] = await Promise.all([
+    const [data, contact, admin] = await Promise.all([
       readProfileRow(uid),
-      fetchMyContactInfo().catch(() => null),
-      supabase.rpc("is_admin"),
+      parts === "row" ? Promise.resolve(undefined) : fetchMyContactInfo().catch(() => null),
+      parts === "all" ? supabase.rpc("is_admin") : Promise.resolve(undefined),
     ]);
     if (seq !== readSeq.current) return;
-    setProfile(data ? ({ ...data, email: contact?.email ?? null } as Profile) : null);
+    const email = contact === undefined ? profileRef.current?.email ?? null : contact?.email ?? null;
+    setProfile(data ? ({ ...data, email } as Profile) : null);
     setProfileError(!data);
     loadFailed.current = !data;
-    setIsAdmin(!adminError && adminFlag === true);
+    if (admin !== undefined) setIsAdmin(!admin.error && admin.data === true);
   };
 
   useEffect(() => {
@@ -167,21 +186,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // so anyone who stopped there was never shown the rest. A buyer is onboarded when they accept the Terms
   // (accept_buyer_terms, lib/buyerTerms.ts), a seller when vendor onboarding finishes (vendorOnboarding.ts); until then every sign-in
   // goes back to role selection.
-  const chooseRole = useCallback(async (role: "buyer" | "seller") => {
-    if (!session?.user) return;
-    const { error } = await supabase
+  // The update returns the row it saved, so choosing a role reads nothing again (review L-64).
+  const chooseRole = useCallback(async (role: "buyer" | "seller", uid?: string) => {
+    const id = uid ?? session?.user?.id;
+    if (!id) return;
+    const { data, error } = await supabase
       .from("profiles")
       .update({ active_role: role })
-      .eq("id", session.user.id);
+      .eq("id", id)
+      .select(PROFILE_COLUMNS)
+      .maybeSingle();
     if (error) throw error;
-    await loadProfile(session.user.id);
+    if (data && profileRef.current?.id === id) {
+      readSeq.current++; // a read still under way would bring back the role before this one
+      setProfile({ ...profileRef.current, ...(data as ProfileRow) });
+    } else {
+      await loadProfile(id, "row");
+    }
   }, [session, loadProfile]);
 
   const signOut = useCallback(async () => { await supabase.auth.signOut(); }, []);
 
-  const refreshProfile = useCallback(async () => {
-    if (session?.user) await loadProfile(session.user.id);
+  const refreshProfile = useCallback(async (parts: ProfileParts = "all") => {
+    if (session?.user) await loadProfile(session.user.id, parts);
   }, [session, loadProfile]);
+
+  const awaitProfile = useCallback(async (uid: string): Promise<ProfileRow | null> => {
+    if (loadedFor.current === uid && inflight.current) {
+      await inflight.current.catch(() => undefined);
+      const p = profileRef.current;
+      if (p && p.id === uid && !loadFailed.current) return p;
+    }
+    return readProfileRow(uid);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -197,6 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         chooseRole,
         signOut,
         refreshProfile,
+        awaitProfile,
       }}
     >
       {children}

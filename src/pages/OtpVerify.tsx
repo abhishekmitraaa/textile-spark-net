@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useAuth } from "@/contexts/AuthContext";
-import { readProfileRow } from "@/lib/auth/profileRead";
+import { errorMessage } from "@/lib/errorMessage";
 import { clearAuthStart, finishAuthFlow } from "@/lib/authHistory";
 import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
 import { maskPhone } from "@/lib/auth/phone";
@@ -81,7 +81,7 @@ const OtpVerify = () => {
   const [error, setError] = useState<string | null>(null);
   // Signed in, but the profile couldn't be read even after retrying: where to go isn't known, so ask (audit item 6).
   const [landingFailed, setLandingFailed] = useState<string | null>(null);
-  const { signOut, session, profile: signedInProfile, loading } = useAuth();
+  const { signOut, session, profile: signedInProfile, loading, awaitProfile, chooseRole } = useAuth();
   // Already signed in when this screen opens (back into it after signing in): go to the account's place, once.
   const arrived = useRef(false);
   useEffect(() => {
@@ -153,14 +153,27 @@ const OtpVerify = () => {
   const land = async (uid: string) => {
     setVerifying(true);
     setLandingFailed(null);
-    const profile = await readProfileRow(uid);
-    setVerifying(false);
+    // The profile the sign-in itself is loading, not a second read of it (review L-64).
+    const profile = await awaitProfile(uid);
     if (!profile) {
+      setVerifying(false);
       setLandingFailed(uid);
       return;
     }
 
-    const activeRole = profile.active_role === "seller" ? "seller" : "buyer";
+    let activeRole: "buyer" | "seller" = profile.active_role === "seller" ? "seller" : "buyer";
+    // An account that hadn't finished signing up keeps the role picked on Register this time (review L-63):
+    // handle_new_user() applies the signup role only when the account is created, so its old role used to win.
+    // A finished account (a submitted seller registration counts) keeps its own.
+    if (!profile.onboarded && state.signup && state.signup.role !== activeRole) {
+      try {
+        await chooseRole(state.signup.role, uid);
+        activeRole = state.signup.role;
+      } catch (e) {
+        toast.error("Couldn't save your role", { description: errorMessage(e) });
+      }
+    }
+    setVerifying(false);
     setRole(activeRole);
 
     if (!profile.onboarded) {

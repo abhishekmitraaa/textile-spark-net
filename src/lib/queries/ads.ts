@@ -522,7 +522,8 @@ export { isProfileGoalAd, adDestination, PROFILE_GOAL_PLACEMENTS } from "@/lib/a
 //
 // Impressions are gathered for a second and sent in one ad_impressions() call (review M-33): a page showing a rail
 // of ads made one request per ad. Call it when the ad is on screen (useAdImpressions()), never on mount. A tab going
-// to the background sends what is waiting.
+// to the background sends what is waiting. The same call records each ad's `ad_impression` engagement event
+// (20261120150000): the app no longer sends one log_engagement_event() per ad.
 const IMPRESSION_BATCH_MS = 1000;
 const IMPRESSION_BATCH_MAX = 48; // ad_impressions() refuses more in one call
 const pendingImpressions: string[] = [];
@@ -541,7 +542,6 @@ function flushImpressions(): void {
 
 export function logAdImpression(adId: string): void {
   pendingImpressions.push(adId);
-  void logEngagement({ eventType: "ad_impression", adId, source: "ad" });
   if (!flushOnHide && typeof document !== "undefined") {
     flushOnHide = true;
     document.addEventListener("visibilitychange", () => {

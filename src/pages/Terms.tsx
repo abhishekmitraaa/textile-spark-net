@@ -42,7 +42,7 @@ const Terms = () => {
     try {
       await acceptBuyerTerms();
       writeTicked(uid, false);
-      await refreshProfile();
+      await refreshProfile("row"); // only onboarded and terms_version changed (review L-64)
     } catch (e) {
       setSaving(false);
       if (isStaleTerms(e)) toast.error("These Terms have changed. Reload the page to read the new version.");

@@ -155,17 +155,22 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
 // A vendor's products rank higher when their active paid plan has a higher
 // search_boost_tier. Cached like the categories catalogue; 0 when no active
 // paid plan. This is a genuine sort input — not simulated ranking.
-let planBoostCache: Map<string, number> | null = null;
-async function loadPlanBoosts(): Promise<Map<string, number>> {
+// The request itself is shared, so two strips asking at once read the plans once (review M-25 follow-up).
+let planBoostCache: Promise<Map<string, number>> | null = null;
+function loadPlanBoosts(): Promise<Map<string, number>> {
   if (planBoostCache) return planBoostCache;
-  const { data } = await supabase.from("subscription_plans").select("id, limits");
-  const m = new Map<string, number>();
-  for (const p of (data ?? []) as { id: string; limits: { search_boost_tier?: number } | null }[]) {
-    const t = Number(p.limits?.search_boost_tier ?? 0);
-    m.set(p.id, Number.isFinite(t) ? t : 0);
-  }
-  planBoostCache = m;
-  return m;
+  planBoostCache = (async () => {
+    const { data, error } = await supabase.from("subscription_plans").select("id, limits");
+    // A failed read means no boost this time (as before), and isn't kept: the next caller asks again.
+    if (error) { planBoostCache = null; return new Map(); }
+    const m = new Map<string, number>();
+    for (const p of (data ?? []) as { id: string; limits: { search_boost_tier?: number } | null }[]) {
+      const t = Number(p.limits?.search_boost_tier ?? 0);
+      m.set(p.id, Number.isFinite(t) ? t : 0);
+    }
+    return m;
+  })();
+  return planBoostCache;
 }
 function vendorBoost(boosts: Map<string, number>, planId?: string | null, planExpiresAt?: string | null): number {
   if (!planId || !planExpiresAt) return 0;
@@ -395,10 +400,23 @@ interface RawDetail extends RawProduct {
   waist_sizes: string[] | null; lengths: string[] | null;
 }
 
+// A listing's seller, read in the same request as the listing (review M-25 follow-up): products.vendor_id points at
+// profiles, and vendor_profiles at profiles, so the seller is embedded through profiles. Each read used to wait for the
+// listing before asking for its seller (the product page, its related listings and Brand Picks).
+const VENDOR_EMBED =
+  "profiles!products_vendor_id_fkey ( vendor_profiles!vendor_profiles_id_fkey ( brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until, plan_id ) )";
+
+type EmbeddedVendor = RawVendor & { rating_avg?: number | null; reviews_count?: number | null };
+function embeddedVendor(row: unknown): EmbeddedVendor | null {
+  const p = (row as { profiles?: { vendor_profiles?: EmbeddedVendor | EmbeddedVendor[] | null } | null }).profiles;
+  const v = p?.vendor_profiles;
+  return (Array.isArray(v) ? v[0] : v) ?? null;
+}
+
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, views_count, enquiries_count, categories ( name ), product_images ( url, position )")
+    .select(`id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, views_count, enquiries_count, categories ( name ), product_images ( url, position ), ${VENDOR_EMBED}`)
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -406,12 +424,8 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const row = data as unknown as RawDetail;
 
   let vendor: ProductDetail["vendor"] = null;
-  const { data: v } = await supabase
-    .from("vendor_profiles")
-    .select("brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until")
-    .eq("id", row.vendor_id)
-    .maybeSingle();
-  if (v) vendor = { brandName: v.brand_name, isVerified: trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until), city: v.city, ratingAvg: Number(v.rating_avg), reviewsCount: v.reviews_count };
+  const v = embeddedVendor(data);
+  if (v) vendor = { brandName: v.brand_name, isVerified: trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until), city: v.city, ratingAvg: Number(v.rating_avg), reviewsCount: Number(v.reviews_count ?? 0) };
 
   return {
     id: row.id,
@@ -483,22 +497,14 @@ export async function recordProductEnquiry(id: string): Promise<void> {
 
 const RELATED_LIMIT = 10;
 
-// Load the vendor public-profile info (brand name, trust seal, plan boost) for a
-// set of vendor ids — shared by the strip queries below.
-async function vendorMapFor(vendorIds: string[]): Promise<Map<string, RawVendor>> {
-  const vendorMap = new Map<string, RawVendor>();
-  if (!vendorIds.length) return vendorMap;
+// Cards with the seller each row embeds (brand name, trust seal, plan boost): shared by the strip queries below.
+async function cardsWithEmbeddedVendor(rows: unknown[]): Promise<ProductCardData[]> {
   const boosts = await loadPlanBoosts();
-  const { data: vendors } = await supabase
-    .from("vendor_profiles")
-    .select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id")
-    .in("id", vendorIds);
-  for (const v of vendors ?? []) {
-    const rv = v as RawVendor;
-    rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
-    vendorMap.set((v as { id: string }).id, rv);
-  }
-  return vendorMap;
+  return rows.map((r) => {
+    const v = embeddedVendor(r);
+    if (v) v.searchBoost = vendorBoost(boosts, v.plan_id, v.plan_expires_at);
+    return mapProductRow(r as RawProduct, v ?? undefined);
+  });
 }
 
 /**
@@ -518,13 +524,10 @@ async function fetchRelatedProducts(currentId: string, limit: number): Promise<P
 
   const position = new Map(ranked.map((r, i) => [r.id, i]));
   const { data: products, error: prodErr } = await supabase
-    .from("products").select(PRODUCT_CARD_SELECT).in("id", ranked.map((r) => r.id));
+    .from("products").select(`${PRODUCT_CARD_SELECT}, ${VENDOR_EMBED}`).in("id", ranked.map((r) => r.id));
   if (prodErr) throw prodErr;
 
-  const rows = (products ?? []) as unknown as RawProduct[];
-  const vendorMap = await vendorMapFor(Array.from(new Set(rows.map((r) => r.vendor_id))));
-  return rows
-    .map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)))
+  return (await cardsWithEmbeddedVendor(products ?? []))
     .sort((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0));
 }
 
@@ -534,7 +537,7 @@ async function fetchVendorOtherProducts(vendorId: string, excludeId: string, lim
   // the seller's listings (PostgREST orders by the one-to-one product_trend embed), not just the newest few.
   const { data, error } = await supabase
     .from("products")
-    .select(`${PRODUCT_CARD_SELECT}, product_trend ( log2_score )`)
+    .select(`${PRODUCT_CARD_SELECT}, product_trend ( log2_score ), ${VENDOR_EMBED}`)
     .eq("status", "live")
     .eq("vendor_id", vendorId)
     .neq("id", excludeId)
@@ -543,9 +546,7 @@ async function fetchVendorOtherProducts(vendorId: string, excludeId: string, lim
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  const rows = (data ?? []) as unknown as RawProduct[];
-  const vendorMap = await vendorMapFor([vendorId]);
-  return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
+  return cardsWithEmbeddedVendor(data ?? []);
 }
 
 /**
