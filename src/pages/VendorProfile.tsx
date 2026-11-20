@@ -108,9 +108,10 @@ const VendorProfile = () => {
 
   // Real vendor identity + catalogue + reels.
   const { data: vendor, isPending: vendorPending, isError: vendorFailed, refetch: refetchVendor } = useVendorProfile(id);
-  const { data: catalogues = [] } = useVendorCatalogues(id);
   // The resolved vendor_profiles id, never the route param: a slug would only
-  // fail on the uuid cast (the same rule as the submit below).
+  // fail on the uuid cast (the same rule as the submit below; review L-35: a bad
+  // address sent the catalogue read twice, 400 both times).
+  const { data: catalogues = [] } = useVendorCatalogues(vendor?.id);
   const { data: reviewData } = useVendorReviews(vendor?.id);
   const { submit: submitReview } = useReviewMutations();
   const { user } = useAuth();
@@ -120,7 +121,7 @@ const VendorProfile = () => {
   // Same moderation rule the Call Now buttons run on click, resolved up front
   // so the contact card can decide whether it may render at all. Two
   // independent checks by design — neither can go stale against the other.
-  const { loading: contactLoading, blocked: contactBlocked } = useContactGate(vendorId);
+  const { loading: contactLoading, blocked: contactBlocked } = useContactGate(vendor?.id);
   // The single answer to "may this viewer see a way to reach this vendor?",
   // resolved once and consumed by both the Contact Details card and the
   // Website Address row further down. Unresolved counts as NOT visible — the
@@ -254,6 +255,7 @@ const VendorProfile = () => {
         fit: p.fitType,
         rating: p.rating,
         reviews: p.enquiries,
+        enquiriesNum: p.enquiriesNum,
         gender: (p.gender as GenderFilter),
         latest: false,
         image: p.image,
@@ -307,7 +309,8 @@ const VendorProfile = () => {
     if (genderFilter) list = list.filter((p) => p.gender === genderFilter);
     if (categoryFilter) list = list.filter((p) => p.categorySlot === categoryFilter);
     if (sortKey === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
-    else if (sortKey === "sold") list = [...list].sort((a, b) => parseInt(b.reviews) - parseInt(a.reviews));
+    // The count itself: "1.6k" read with parseInt was 1 (review L-27).
+    else if (sortKey === "sold") list = [...list].sort((a, b) => b.enquiriesNum - a.enquiriesNum);
     return list;
   }, [vpProducts, productSearch, genderFilter, sortKey, categoryFilter]);
 

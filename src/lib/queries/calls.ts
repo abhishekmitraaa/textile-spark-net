@@ -74,7 +74,8 @@ export function demoPhone(seed: string): string {
 // tapped Call, and the wrong thing to tell someone reading a contact card.
 // "blocked": either of the two blocked the other (chat_blocks, 2026-10-18); a block stops every way of
 // reaching the other person, numbers included (20261018160200).
-export type CallBlockReason = "caller_suspended" | "target_suspended" | "under_review" | "blocked";
+/** `check_failed`: a read the gate needs failed, so it can't say the contact is allowed (review L-31). */
+export type CallBlockReason = "caller_suspended" | "target_suspended" | "under_review" | "blocked" | "check_failed";
 
 // Null means "go ahead". A nullable value rather than an { ok } discriminated
 // union on purpose: this project compiles with `strict: false`, so
@@ -104,6 +105,7 @@ const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
   target_suspended: { title: "Calling is unavailable", description: "This account is currently suspended." },
   under_review: { title: "This chat is under review — calling is paused", description: "Our team will follow up." },
   blocked: { title: "Calling is unavailable", description: "One of you has blocked the other." },
+  check_failed: { title: "Couldn't check right now", description: "Check your connection and try again." },
 };
 
 // Someone is looking at a contact card. Same three reasons, phrased as "why
@@ -113,6 +115,7 @@ const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
   target_suspended: { title: "Contact details aren't available", description: "This account is currently suspended." },
   under_review: { title: "This chat is under review", description: "Contact details aren't available right now. Our team will follow up." },
   blocked: { title: "Contact details aren't available", description: "One of you has blocked the other." },
+  check_failed: { title: "Contact details didn't load", description: "Check your connection and try again." },
 };
 
 export async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
@@ -124,7 +127,10 @@ export async function callGate(meId: string | undefined, otherId: string): Promi
   // account_status is readable to signed-in accounts, so the other party's status is
   // readable; their email and phone are not (MPF-3).
   const ids = meId !== otherId ? [meId, otherId] : [otherId];
-  const { data: rows } = await supabase.from("profiles").select("id, account_status").in("id", ids);
+  // A read that fails is "couldn't check", never "allowed" (review L-31). The database refuses a blocked or suspended
+  // contact on its own; this only decides what the screen says.
+  const { data: rows, error: rowsError } = await supabase.from("profiles").select("id, account_status").in("id", ids);
+  if (rowsError) return "check_failed";
   const statusOf = (id: string) => rows?.find((r) => r.id === id)?.account_status ?? "active";
 
   if (meId && statusOf(meId) === "suspended") {
@@ -139,17 +145,19 @@ export async function callGate(meId: string | undefined, otherId: string): Promi
   // checking whether calling is allowed.
   if (meId) {
     const [a, b] = [meId, otherId].sort();
-    const { data: conv } = await supabase
+    const { data: conv, error: convError } = await supabase
       .from("conversations")
       .select("status")
       .eq("user_a", a)
       .eq("user_b", b)
       .maybeSingle();
+    if (convError) return "check_failed";
     if (conv?.status === "under_review") {
       return "under_review";
     }
     // A block either way: no number, no WhatsApp, no call (the server refuses them too).
-    const { data: blockState } = await supabase.rpc("chat_block_state", { p_other: otherId });
+    const { data: blockState, error: blockError } = await supabase.rpc("chat_block_state", { p_other: otherId });
+    if (blockError) return "check_failed";
     const block = (blockState ?? {}) as { blocked_by_me?: boolean; blocked_me?: boolean };
     if (block.blocked_by_me || block.blocked_me) {
       return "blocked";

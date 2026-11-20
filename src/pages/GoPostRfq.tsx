@@ -15,11 +15,9 @@ import { useUserRole } from "@/contexts/UserRoleContext";
  *
  *   signed-in buyer   -> the RFQ form
  *   signed-in vendor  -> their dashboard, since vendors answer RFQs rather than post them
- *   signed out        -> the landing page
- *
- * Deliberately not a redirect-after-login flow: nothing in this app carries an
- * intended destination through login today, and the Google OAuth round trip
- * would need its own carrier to survive.
+ *   signed out        -> the RFQ form too, which asks for sign-in first (review H-03) and is
+ *                        returned to after it (ReturnToTracker, M-59). It used to send them to
+ *                        "/", dropping what they came for (review L-36).
  */
 export default function GoPostRfq() {
   const navigate = useNavigate();
@@ -30,7 +28,7 @@ export default function GoPostRfq() {
     if (loading) return;
 
     if (!user) {
-      navigate("/", { replace: true });
+      navigate("/requirement/post-requirement", { replace: true });
       return;
     }
 

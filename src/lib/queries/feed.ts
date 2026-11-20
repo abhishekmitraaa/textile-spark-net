@@ -187,9 +187,11 @@ export function useBrowseCatalogue(enabled: boolean, supplier: SupplierLocation 
     // loaded pages would read up to 960 listings to find them.
     queryKey: ["feed", "browse-catalogue", supplier, sort],
     queryFn: async ({ pageParam }): Promise<{ rows: CatalogueRow[]; count: number }> => {
+      // The order only (review L-29): the listings are then read once, with the fields the facets need. This used to
+      // download every card here and the same listings again below.
       const { data, error } = await supabase.rpc("feed_products", {
         p_sort: sort, p_limit: PAGE, p_offset: pageParam as number, p_supplier: supplier ?? undefined,
-      });
+      }).select("id");
       if (error) throw error;
       const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
       const at = new Map(ids.map((id, i) => [id, i]));

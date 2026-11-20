@@ -210,17 +210,20 @@ with no need to dictate format, context, or reference each time.
   (no keys yet, use the platform's own searches for now).
 - Status: Open
 
-### Decide whether the Sale page keeps its "MEGA SALE" heading — added 2026-10-14
-- Task: Mitra or Andy to confirm the heading on `/home/sale` (`src/pages/Sale.tsx`, the hero's `<h1>`), or give
-  wording to replace it.
-- Context: on 2026-10-14 the Sale page's invented urgency was removed: the "Sale ends in" and Flash Deals countdowns
-  (they counted to a time set on every page load, so nothing ever ended) and the "Limited time" chip; the Flash Deals
-  rail became "Top deals". "MEGA SALE" was kept as a page title, not a claim about time, but it still presents
-  sellers' individual discounts as one Cosora sale event, which no data backs (a listing's discount has no start or
-  end, and there is no sale campaign). Options: keep it; something descriptive like "Deals" or "Discounted listings";
-  or real sale windows (a sale table with dates), after which a heading and a timer could be true.
-- Reference: 2026-10-14 session (removing Sale's fake countdowns as part of the feeds release). Mitra: "The 'MEGA
-  SALE' heading stays; it's a page title, not a time claim … add these to todo.md".
+### Build a Cosora-run sale feature, so "MEGA SALE" describes a real sale — added 2026-11-20
+- Task: design and build sale events Cosora runs: a sale with a name, a start and an end, set in Cosora-Admin, that
+  sellers join with chosen listings and a sale price; the Sale page (`src/pages/Sale.tsx`, `/home/sale`) shows the
+  running sale, and only then a heading like "MEGA SALE" and a countdown to its stored end. Plan it first (a dated
+  plan in `documentation/`), with Mitra's answers on who sets a sale, how sellers opt in, whether a sale price is
+  checked against the listing's price, and what the page shows between sales.
+- Context: buyer review 2026-11-18, L-09 ("MEGA SALE" presents sellers' own discounts as one Cosora sale). Nothing
+  like a sale exists today: the Sale page lists live listings whose `compare_at_price` is above `price_value`
+  (0 on production on 2026-11-20), a listing's discount has no start or end, and Cosora-Admin's Discounts are codes
+  for sellers' own purchases (plans, ads), not buyer prices. On 2026-11-20 Mitra chose "Build a real sale feature"
+  over renaming the heading; the heading stays as it is until the feature exists. The "no invented urgency" rule
+  (claude.md) still holds: no timer without a stored end. Replaces the 2026-10-14 entry "Decide whether the Sale page
+  keeps its 'MEGA SALE' heading".
+- Reference: 2026-11-20 session, low-priority batch 2 of the buyer review; L-09 answered "Build a real sale feature".
 - Status: Open
 
 ### Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10

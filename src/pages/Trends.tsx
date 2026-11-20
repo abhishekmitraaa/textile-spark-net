@@ -154,24 +154,26 @@ interface StyledTrend {
 }
 
 // EDITORIAL (no trends job exists — see ToDo.md): "Hot Trends, Styled for You" — refreshed via "View More Styles".
+// Each title and tag says what its picture shows (review L-24: "Wide-Leg Denim" showed mustard trousers, and a plain
+// white tee was tagged "#Screen printing #Gray"). The title is also the search a tap opens.
 const STYLED_TRENDS: StyledTrend[] = [
   {
     id: "st1",
     image: ["menswear", "T-Shirts"],
-    title: "T-shirts/Tops",
-    tags: ["#Screen printing", "#Gray"],
+    title: "Plain Crew-Neck Tee",
+    tags: ["#White", "#Basics"],
   },
   {
     id: "st2",
     image: ["womenswear", "Dresses"],
-    title: "Floral Midi Dress",
-    tags: ["#Summer", "#Linen"],
+    title: "Floral Sundress",
+    tags: ["#Summer", "#Floral print"],
   },
   {
     id: "st3",
     image: ["womenswear", "Bottomwear"],
-    title: "Wide-Leg Denim",
-    tags: ["#Vintage wash", "#Relaxed"],
+    title: "Wide-Leg Trousers",
+    tags: ["#High-waist", "#Mustard"],
   },
 ];
 

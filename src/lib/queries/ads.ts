@@ -515,13 +515,10 @@ export { isProfileGoalAd, adDestination, PROFILE_GOAL_PLACEMENTS } from "@/lib/a
 // and Cosora-Admin read advertisements.impressions/clicks directly; the event
 // adds the timestamp, viewer and source the counter cannot carry.
 //
-// Both halves are scoped to the SAME anonymous session id. ad_impression now
-// consults ad_frequency_capped(), which counts out of engagement_events — so if
-// the counter passed a different session than the log wrote, the cap would
-// count one viewer and suppress another. Signed-in viewers are keyed on
-// auth.uid() inside the RPC and the session id is ignored.
-//
-// Every view of a running campaign is counted, with no cap (Mitra, 2026-11-18).
+// Both halves carry the same anonymous session id, so the count and the event describe the same viewer; signed-in
+// viewers are keyed on auth.uid() inside the RPC. Every view of a running campaign is counted, with no cap (Mitra,
+// 2026-11-18): ad_impression() no longer consults ad_frequency_capped() (review L-37 found this comment still said it
+// did).
 //
 // Impressions are gathered for a second and sent in one ad_impressions() call (review M-33): a page showing a rail
 // of ads made one request per ad. Call it when the ad is on screen (useAdImpressions()), never on mount. A tab going

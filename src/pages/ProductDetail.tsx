@@ -1,3 +1,4 @@
+import { moqWithUnit } from "@/lib/moq";
 import { priceText } from "@/lib/currency";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useState } from "react";
@@ -119,10 +120,9 @@ function toViewModel(row: ProductRow): ProductData {
     name: row.name,
     price: row.priceValue != null ? priceText(row.currency, Number(row.priceValue)) : null,
     unit: row.unit,
-    // Seeded MOQs already carry their unit ("50 pieces"); demo listings are a
-    // bare number. The old code appended "Pieces" to both — producing
-    // "50 pieces Pieces" — and guessed the unit, since `unit` was never read.
-    moq: moq && /^\d+$/.test(moq) && row.unit ? `${moq} ${row.unit}` : moq,
+    // An MOQ that already carries its unit ("50 pieces") is shown as listed; a bare number gets the listing's unit,
+    // never a guessed one (moqWithUnit, the cards' rule too).
+    moq: moqWithUnit(moq, row.unit),
     category: row.categoryName,
     media: row.images.map((url) => ({ type: "image" as const, url })),
     vendor: {

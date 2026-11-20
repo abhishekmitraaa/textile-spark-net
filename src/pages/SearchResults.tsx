@@ -1,6 +1,7 @@
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { categoriesForBrowse } from "@/lib/categoryImageSlots";
 import { CardSpecs } from "@/components/buyer/CardSpecs";
 import { RatingChip } from "@/components/buyer/RatingChip";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -592,7 +593,10 @@ const SearchResults = () => {
   const reduced = useReducedMotion();
   const t = useT();
   const [params, setParams] = useSearchParams();
-  const query = params.get("q") || params.get("category") || "";
+  // ?category= opens a category browse, not a text search for the name (review L-25): the category filter is picked
+  // with the tile's categories (categoriesForBrowse) and the live listings are read in feed order.
+  const query = params.get("q") || "";
+  const categoryParam = query ? null : (params.get("category")?.trim() || null);
 
   // Tab, sort and the facet picks live in the address, so Back to the results keeps them (2026-11-19, review M-30).
   const [tab, setTab] = useUrlState<Tab>("tab", "product", ["product", "brand"]);
@@ -614,7 +618,7 @@ const SearchResults = () => {
   // matched rows come back. The page no longer downloads the whole live table
   // to run `.includes()` over it in the browser.
   //
-  // Without a query (no q and no ?category=, which counts as one) there is nothing to rank: the
+  // Without a typed query (?category= is a browse with the category filter picked) there is nothing to rank: the
   // live listings come in feed order, 96 at a time, and the facets filter what has loaded
   // (2026-10-14; it was the whole catalogue, cut silently at 1,000 rows). Both hooks are called
   // unconditionally (rules of hooks); `enabled` decides which one runs.
@@ -624,8 +628,11 @@ const SearchResults = () => {
   // gender pre-scope). A new search is a new address, so it starts from its own defaults.
   const rawSelections = params.get("f");
   const fromUrl = useMemo<Record<string, string[]>>(
-    () => parseSelections(rawSelections) ?? defaultSelections(query),
-    [rawSelections, query],
+    () => parseSelections(rawSelections)
+      ?? (categoryParam
+        ? { ...defaultSelections(categoryParam), category: categoriesForBrowse(categoryParam) }
+        : defaultSelections(query)),
+    [rawSelections, query, categoryParam],
   );
   // The screen follows a pick at once; the address is written 300 ms after the last change, so dragging the price
   // slider doesn't replace the history entry dozens of times a second (browsers throttle and refuse that).
@@ -634,7 +641,7 @@ const SearchResults = () => {
   const selectionsRef = useRef(selections);
   selectionsRef.current = selections;
   const writeTimer = useRef<number | undefined>(undefined);
-  useEffect(() => { setDraft(null); }, [rawSelections, query]);
+  useEffect(() => { setDraft(null); }, [rawSelections, query, categoryParam]);
   // A new search drops a write still waiting for the last one's picks.
   useEffect(() => () => window.clearTimeout(writeTimer.current), [query]);
   useEffect(() => () => window.clearTimeout(writeTimer.current), []);
@@ -791,7 +798,7 @@ const SearchResults = () => {
   };
 
   // A category page: opened from a category (?category=, no typed q), or browsing with a category picked.
-  const categoryName = (!params.get("q") && params.get("category")) || (!hasQuery ? selections.category?.[0] : null) || null;
+  const categoryName = (!hasQuery ? selections.category?.[0] : null) || null;
   const categoryBrowse = Boolean(categoryName);
   const { data: browseCategoryId = null } = useResolvedCategoryId([categoryName]);
   const { data: featuredPlaces = [] } = useFeaturedListings(categoryBrowse && tiersOn ? browseCategoryId : null);
@@ -1008,6 +1015,8 @@ const SearchResults = () => {
               {query && <span onClick={(e) => { e.stopPropagation(); navigate("/search"); }} aria-label="Clear"><X className="w-4 h-4 text-gray-400" /></span>}
             </button>
           </div>
+          {/* A category page names its category (review L-25: it used to be the search box's text). */}
+          {categoryParam && <h1 className="pb-2 text-base lg:text-lg font-bold text-gray-900">{categoryParam}</h1>}
 
           {/* Tabs */}
           <div className="flex gap-6">

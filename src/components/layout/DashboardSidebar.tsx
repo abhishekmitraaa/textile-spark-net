@@ -328,7 +328,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
             const cap = vplan?.limits.product_cap ?? -1;
             const used = vplan?.usage.products_used ?? 0;
             const usageLine = vplan
-              ? isUnlimited(cap) ? `${used} products` : `${used}/${cap} products used`
+              ? isUnlimited(cap) ? (used === 1 ? "1 product" : `${used} products`) : `${used}/${cap} products used`
               : (role === "buyer" ? "Buyer account" : "Seller account");
             return (
               <div className="flex items-center gap-3">

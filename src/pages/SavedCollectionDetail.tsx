@@ -81,7 +81,7 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
       <div className="relative p-2">
         <CardLinkOverlay to={`/product/${p.id}`} />
         <p className="text-xs font-bold text-brand-buyer">{showText(p.price)} | {p.moq}</p>
-        <p className="text-[10px] text-gray-600 mt-1 truncate">{p.name} | <span className="font-bold">{p.manufacturer}</span></p>
+        <p className="text-[10px] text-gray-600 mt-1 truncate">{p.name}{p.manufacturer && <> | <span className="font-bold">{p.manufacturer}</span></>}</p>
         <div className="flex items-center gap-0.5 mt-1 text-[10px] text-gray-500">
           <MapPin className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{p.location}</span>
         </div>

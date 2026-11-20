@@ -1423,6 +1423,14 @@ undocumented. Deep technical rationale for each lives in
   depth (984); pages after the first overlap the one before by 4 (`PAGE_OVERLAP`).
 - **Callers wait for the live-updates hub before subscribing themselves** (2026-11-20, review L-17): `useHubLive()` /
   `useHubEvent()` answer true while the switch loads or the channel joins, for at most 5 s (`HUB_WAIT_MS`).
+- **An MOQ shows its unit when it is a bare number** (2026-11-20, review L-18): `moqWithUnit()` (`src/lib/moq.ts`) and the
+  same rule inside `feed_products()` (`20261120110000`); an MOQ that already names its unit is shown as listed, and a
+  listing without a unit is never given one. Change both together.
+- **A contact check that couldn't read says so** (2026-11-20, review L-31): `callGate()` returns `check_failed` when a
+  read it needs fails, never "allowed".
+- **Saves made signed out join the account at sign-in** (2026-11-20, review L-32): `mergeGuestSaves()` in `savedStore`.
+- **A slow site-config snapshot is tried twice before the tables** (2026-11-20, review L-33): 3 s, then 10 s
+  (`loadSiteConfig()`); only a failure or two timeouts read the five tables.
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

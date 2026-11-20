@@ -744,7 +744,7 @@ const NewArrivals = () => {
                         <span className="font-normal text-[10px] lg:text-xs text-white/70">&nbsp;·&nbsp;</span>
                       </>
                     )}
-                    <span className="font-normal text-[10px] lg:text-xs text-white/70">{v.liveProducts} products</span>
+                    <span className="font-normal text-[10px] lg:text-xs text-white/70">{v.liveProducts === 1 ? "1 product" : `${v.liveProducts} products`}</span>
                   </p>
                 </div>
               </Link>

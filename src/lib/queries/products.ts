@@ -1,3 +1,4 @@
+import { moqWithUnit } from "@/lib/moq";
 import { priceText } from "@/lib/currency";
 import { useQuery } from "@tanstack/react-query";
 import { viewerKey } from "@/lib/viewerKey";
@@ -33,6 +34,8 @@ export interface ProductCardData {
   views: string | null;
   viewsNum: number;
   enquiries: string;
+  /** The enquiry count itself, for sorting ("1.6k" read as a number was 1: review L-27). */
+  enquiriesNum: number;
   rating: number;
   fabric: string;
   gsm: string;
@@ -92,6 +95,8 @@ export interface RawProduct {
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
   fit_type: string | null; gender: string | null; rating_avg: number; enquiries_count: number;
   views_count: number | null; location: string | null; category_id: string | null;
+  /** The price unit; absent on feed rows, whose `moq` already carries it (moqWithUnit). */
+  unit?: string | null;
   categories: { name: string } | null;
   product_images: RawImage[] | null;
 }
@@ -103,7 +108,7 @@ export interface RawProduct {
 // row and once as the live tree child — so a name is no longer unique enough to
 // resolve a preference against. See pref_category_map.
 export const PRODUCT_CARD_SELECT =
-  "id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, views_count, location, category_id, categories ( name ), product_images ( url, position )";
+  "id, vendor_id, name, price_value, currency, compare_at_price, moq, unit, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, views_count, location, category_id, categories ( name ), product_images ( url, position )";
 
 export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardData {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
@@ -125,10 +130,11 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
     compareAtPrice,
     discountPct,
     // A listing without a minimum says so; "2" was invented here and at Upload (SH-055).
-    moq: p.moq?.trim() || "Not specified",
+    moq: moqWithUnit(p.moq, p.unit) ?? "Not specified",
     views: viewsLabel(p.views_count),
     viewsNum: p.views_count ?? 0,
     enquiries: fmtK(p.enquiries_count),
+    enquiriesNum: p.enquiries_count ?? 0,
     rating: Number(p.rating_avg),
     fabric: p.fabric ?? "—",
     gsm: p.gsm ?? "—",
@@ -227,7 +233,7 @@ export interface CatalogueRow {
 // server-ranked result set is mapped through exactly the same code path as the
 // browse feed — one definition of what a catalogue row is.
 export const CATALOGUE_SELECT =
-  "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, views_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position ), product_trend ( log2_score )";
+  "id, vendor_id, name, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, location, rating_avg, views_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position ), product_trend ( log2_score )";
 
 type RawCatalogueRow = RawProduct & {
   gender: string | null; colour: string | null; sizes: string[] | null;
@@ -288,7 +294,7 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
       manufacturer: v?.brand_name ?? "Vendor",
       location: p.location ?? v?.city ?? "India",
       priceValue: p.price_value != null ? Number(p.price_value) : 0,
-      moq: `MOQ: ${p.moq?.trim() || "Not specified"}`,
+      moq: `MOQ: ${moqWithUnit(p.moq, p.unit) ?? "Not specified"}`,
       views: viewsLabel(p.views_count),
       enquiries: fmtK(p.enquiries_count),
       rating: Number(p.rating_avg),
@@ -298,7 +304,7 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
       discount: 0,
       fabric: p.fabric ?? "—",
       gsm: p.gsm ?? "",
-      fit: p.fit_type ?? "Regular",
+      fit: p.fit_type ?? "", // not "Regular": a listing that states no fit has none (review L-30)
       gender: p.gender ?? "Men",
       colour: p.colour ?? "",
       image: imgs[0] ?? PLACEHOLDER,
@@ -523,7 +529,7 @@ async function fetchRelatedProducts(currentId: string, limit: number): Promise<P
 }
 
 async function fetchVendorOtherProducts(vendorId: string, excludeId: string, limit: number): Promise<ProductCardData[]> {
-  // The seller's listings most in demand recently, then best-rated, then newest (2026-10-17: it ordered on all-time
+  // The seller's listings most in demand recently, then newest (2026-10-17: it ordered on all-time
   // enquiries and views, which could be pumped before the counters were hardened). Ranked by the server over all
   // the seller's listings (PostgREST orders by the one-to-one product_trend embed), not just the newest few.
   const { data, error } = await supabase
@@ -532,8 +538,8 @@ async function fetchVendorOtherProducts(vendorId: string, excludeId: string, lim
     .eq("status", "live")
     .eq("vendor_id", vendorId)
     .neq("id", excludeId)
+    // Recent demand, then newest. Not the seeded products.rating_avg (review L-28; seeded ratings never rank).
     .order("product_trend(log2_score)", { ascending: false, nullsFirst: false })
-    .order("rating_avg", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;

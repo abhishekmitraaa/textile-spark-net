@@ -289,6 +289,11 @@ On a listing's page: the live listings nearest the listing's own embedding, with
 anchor itself may be any status; only results must be live. With no embedding, the fallback is recent demand ↓,
 listing rating ↓, newest. `match_videos` does the same for videos.
 
+**More from this seller** (the listing page's row of the same seller's other live listings, `useVendorOtherProducts`):
+recent demand ↓, newest. Never the seeded listing rating (2026-11-20, review L-28: it ordered on `rating_avg` first).
+The seller's page sorts "Most Enquired" on the listing's enquiry count (`enquiriesNum`), not on its shortened label
+("1.6k" read as 1).
+
 ### 4.5 Spotlight and featured listings
 
 - **`spotlight_listings`** (switch `featured_listings`):

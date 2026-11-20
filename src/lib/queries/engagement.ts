@@ -69,10 +69,9 @@ export const CTA_LABELS: Record<CtaName | "call_now", string> = {
 // log_engagement_event: session_id is only stored when auth.uid() is null).
 const SESSION_KEY = "cosora_engagement_session";
 
-// Exported so the ad counter RPCs can be scoped to the SAME anonymous session
-// this log uses. Frequency capping (ad_frequency_capped) counts out of
-// engagement_events, so if the counter and the event log disagreed about who
-// the viewer was, the cap would count one thing and suppress another.
+// Exported so the ad counter RPCs carry the SAME anonymous session this log
+// uses, and an ad's count and its events describe the same viewer. (Ads have
+// no frequency cap since 2026-11-18; review L-37.)
 export function sessionId(): string | null {
   if (typeof window === "undefined") return null;
   try {

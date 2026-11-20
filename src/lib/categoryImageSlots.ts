@@ -35,6 +35,32 @@ export const NEW_ARRIVALS_TILES = [
   { key: "winter-wear", name: "Winter Wear", tile: ["menswear", "Winterwear"] },
 ] as const;
 
+/**
+ * The categories each New Arrivals tile opens (review L-25): Search Results browses them with the category filter (a
+ * parent's name keeps its sub-categories). A tile used to run a text search for its own label, and most labels
+ * ("Women's Apparel", "Men's Shirt") are no category's name. Every name here is a `categories.name` on production
+ * (checked 2026-11-20); a renamed category needs its tile updated.
+ */
+export const NEW_ARRIVALS_TILE_CATEGORIES: Record<string, readonly string[]> = {
+  "Women's Apparel": ["Women's Dresses", "Women's Tops", "Women's Pants/Trousers", "Women's Ethnic Wear", "Sarees", "Lehengas"],
+  "Men's Apparel": ["Men's T-Shirts", "Men's Shirts", "Men's Pants/Trousers", "Men's Jeans", "Men's Ethnic Wear"],
+  "Men's Jeans": ["Men's Jeans", "Jeans"],
+  "Men's Shirt": ["Men's Shirts", "Shirt"],
+  "Accessories": ["Accessories", "Fashion Accessories (Unisex)"],
+  "Women's Trousers": ["Women's Pants/Trousers"],
+  "Women's T-shirts": ["Women's Tops", "T-shirts/Tops"],
+  "Women's Shoes": ["Women's Footwear"],
+  "Kidswear": ["Kidswear", "Kids Wear"],
+  "Ethnic Wear": ["Ethnic Wear", "Women's Ethnic Wear", "Men's Ethnic Wear", "Sarees", "Lehengas"],
+  "Activewear": ["Activewear"],
+  "Winter Wear": ["Winter Wear"],
+};
+
+/** The categories a `?category=` name opens: a tile's own list, else the name itself. */
+export function categoriesForBrowse(name: string): string[] {
+  return [...(NEW_ARRIVALS_TILE_CATEGORIES[name] ?? [name])];
+}
+
 export type NewArrivalsTileKey = (typeof NEW_ARRIVALS_TILES)[number]["key"];
 
 /** "Sportswear — Upper Body" → "sportswear-upper-body"; "Kids' Footwear" → "kids-footwear". */

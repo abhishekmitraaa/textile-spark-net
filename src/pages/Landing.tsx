@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CosoraLogo from "@/components/CosoraLogo";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHomePath } from "@/hooks/useHomePath";
 import studioHero from "@/assets/cosora-studio-hero.jpg";
 
 /**
@@ -63,6 +65,10 @@ const Reveal = ({
 
 const Landing = () => {
   const reduce = useReducedMotion();
+  // Signed in, "Sign in" and "Get started" open the person's side of Cosora instead (review L-34).
+  const { user } = useAuth();
+  const home = useHomePath();
+  const startTo = user ? home : "/auth/login";
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] font-sans text-zinc-900 antialiased selection:bg-[#C8102E] selection:text-white">
@@ -87,12 +93,14 @@ const Landing = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button variant="ghost" className="rounded-full text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900">
-                Sign in
-              </Button>
-            </Link>
-            <Link to="/auth/login">
+            {!user && (
+              <Link to="/login">
+                <Button variant="ghost" className="rounded-full text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900">
+                  Sign in
+                </Button>
+              </Link>
+            )}
+            <Link to={startTo}>
               <Button
                 className="rounded-full bg-[#C8102E] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#a60d24] active:scale-[0.98]"
               >
@@ -145,7 +153,7 @@ const Landing = () => {
               transition={{ duration: 0.6, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
               className="mt-8 flex flex-col gap-3 sm:flex-row"
             >
-              <Link to="/auth/login" className="sm:w-auto">
+              <Link to={startTo} className="sm:w-auto">
                 <Button
                   size="lg"
                   className="w-full gap-2 rounded-full bg-[#C8102E] px-7 text-base font-semibold text-white shadow-sm transition-all hover:bg-[#a60d24] active:scale-[0.98] sm:w-auto"
@@ -246,7 +254,7 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/auth/login" className="mt-8">
+                <Link to={startTo} className="mt-8">
                   <Button className="w-full gap-2 rounded-full bg-zinc-900 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.98] sm:w-auto">
                     Join as a buyer <ArrowRight className="h-4 w-4" strokeWidth={2} />
                   </Button>
@@ -460,7 +468,7 @@ const Landing = () => {
                 supply chain on Cosora.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link to="/auth/login">
+                <Link to={startTo}>
                   <Button
                     size="lg"
                     className="gap-2 rounded-full bg-white px-8 text-base font-semibold text-[#C8102E] shadow-sm transition-all hover:bg-white/90 active:scale-[0.98]"
@@ -468,7 +476,7 @@ const Landing = () => {
                     Get started <ArrowRight className="h-4 w-4" strokeWidth={2} />
                   </Button>
                 </Link>
-                <Link to="/login">
+                {!user && <Link to="/login">
                   <Button
                     size="lg"
                     variant="outline"
@@ -476,7 +484,7 @@ const Landing = () => {
                   >
                     Sign in
                   </Button>
-                </Link>
+                </Link>}
               </div>
             </div>
           </Reveal>
@@ -522,7 +530,7 @@ const Landing = () => {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link to="/help" className="text-zinc-500 transition-colors hover:text-zinc-900">Help center</Link></li>
                 <li><Link to="/report-fraud" className="text-zinc-500 transition-colors hover:text-zinc-900">Report fraud</Link></li>
-                <li><Link to="/login" className="text-zinc-500 transition-colors hover:text-zinc-900">Sign in</Link></li>
+                {!user && <li><Link to="/login" className="text-zinc-500 transition-colors hover:text-zinc-900">Sign in</Link></li>}
               </ul>
             </div>
           </div>

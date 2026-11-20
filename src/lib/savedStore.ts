@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import type { Gender, ListingProduct } from "@/lib/listingProducts";
 import { supabase } from "@/lib/supabase";
+import { chunks } from "@/lib/chunks";
 import { fetchProductCardsByIds } from "@/lib/queries/products";
 
 // ─────────────────────────────────────────────────────────────
@@ -199,6 +200,34 @@ export async function setSavedUser(nextUserId: string | null) {
   // Nothing of the previous account (or the signed-out list) shows while this one's are read.
   commit({ ...EMPTY_STATE, pending: null }, false);
   await load(nextUserId);
+  await mergeGuestSaves(nextUserId);
+}
+
+/**
+ * Listings saved while signed out join the account at sign-in (review L-32: they stayed in the browser, out of the
+ * account's saves). Into All Saves; the browser's copy is then cleared, so they never reach another account that signs
+ * in on the same device. A listing that's gone (or refused) is skipped.
+ */
+async function mergeGuestSaves(forUser: string) {
+  if (userId !== forUser || sync !== "ready") return;
+  const guest = loadPersisted();
+  const ids = Object.keys(guest.products).filter((id) => isUuid(id) && !state.products[id]);
+  const clearGuest = () => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage unavailable */ } };
+  if (!ids.length) { clearGuest(); return; }
+  let added = 0;
+  for (const group of chunks(ids, 100)) {
+    const rows = group.map((product_id) => ({ buyer_id: forUser, product_id }));
+    const { error } = await supabase.from("saved_items").upsert(rows, { onConflict: "buyer_id,product_id", ignoreDuplicates: true });
+    if (!error) { added += group.length; continue; }
+    // One bad id (a listing deleted since) refuses the whole group: try them one by one.
+    for (const row of rows) {
+      const { error: one } = await supabase.from("saved_items").upsert(row, { onConflict: "buyer_id,product_id", ignoreDuplicates: true });
+      if (!one) added += 1;
+    }
+  }
+  if (userId !== forUser) return;
+  clearGuest();
+  if (added) await load(forUser);
 }
 
 /** Read the account's saves again after a failed read. */
@@ -260,8 +289,9 @@ async function dbAddToFolder(folderId: string, productId: string): Promise<boole
 
 // ── Modal control ──
 // Accepts any product-ish object (the various feed cards have slightly different
-// shapes) and normalizes it to a full SavedProduct with sensible defaults, so
-// wishlisting works identically from every card on every page.
+// shapes) and normalizes it to a full SavedProduct, so wishlisting works identically from every card on every page.
+// A field the card didn't carry stays empty: it was filled with "Cotton", "Regular" and "Manufacturer", which the
+// listing never said (review L-30).
 export function openSaveModal(product: Partial<SavedProduct> & { id: string }) {
   const priceValue =
     product.priceValue ??
@@ -270,7 +300,7 @@ export function openSaveModal(product: Partial<SavedProduct> & { id: string }) {
     id: product.id,
     vendorId: product.vendorId ?? `v-${product.id}`,
     name: product.name ?? "Product",
-    manufacturer: product.manufacturer ?? "Manufacturer",
+    manufacturer: product.manufacturer ?? "",
     location: product.location ?? "",
     price: product.price ?? "",
     priceValue,
@@ -278,9 +308,9 @@ export function openSaveModal(product: Partial<SavedProduct> & { id: string }) {
     views: product.views ?? null,
     enquiries: product.enquiries ?? "",
     rating: product.rating ?? 0,
-    fabric: product.fabric ?? "Cotton",
+    fabric: product.fabric ?? "",
     gsm: product.gsm ?? "",
-    fitType: product.fitType ?? "Regular",
+    fitType: product.fitType ?? "",
     image: product.image ?? "",
     secondaryImage: product.secondaryImage ?? product.image ?? "",
     gender: product.gender ?? "unisex",
