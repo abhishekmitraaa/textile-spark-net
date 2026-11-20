@@ -133,7 +133,7 @@ Last updated: 2026-11-20 — 112 routes (the 404 catch-all `*` not counted).
 | `/search` | `Search` | BuyerFrame |  |
 | `/search/results` | `SearchResults` | BuyerFrame |  |
 | `/seller` | `VendorLanding` |  | Vendor marketing landing. Its FAQ block is `public.faqs` (`seller_registration`), Andy's 10 questions, edited in Cosora-Admin `/faqs` (2026-09-23) |
-| `/service-vendors` | → `/services` |  | Alias of `/services` |
+| `/service-vendors` | → `/services` |  | Old address, redirected (vercel.json too) |
 | `/services` | `ServiceVendors` |  | Printers, logistics, other service providers. **Sample profiles** (2026-11-18): no contact, ratings or reviews |
 | `/services/:vendorId` | `ServiceVendorProfile` | BuyerFrame | Sample profile from app data, no `profiles` row |
 | `/vendor/:id` | `VendorProfile` | BuyerFrame | Contact details are gated |

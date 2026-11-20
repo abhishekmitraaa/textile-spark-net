@@ -25,6 +25,9 @@ export function gettingStartedRows(r: SellerHomeReview): Row[] {
   // Sent back or paused, said here with where to deal with it (review L-77: Seller Home showed neither).
   if (r.productsRejected === 1) rows.push({ key: "rejected-listings", label: "1 listing needs changes. See Cosora's reason", href: "/products?status=rejected", Icon: AlertCircle, action: true });
   else if (r.productsRejected > 1) rows.push({ key: "rejected-listings", label: `${r.productsRejected} listings need changes. See Cosora's reasons`, href: "/products?status=rejected", Icon: AlertCircle, action: true });
+  // Removed by Cosora: said apart from "needs changes", because editing won't bring it back (code review).
+  if (r.productsRemoved === 1) rows.push({ key: "removed-listings", label: "1 listing was removed by Cosora. See why", href: "/products?status=rejected", Icon: AlertCircle, action: false });
+  else if (r.productsRemoved > 1) rows.push({ key: "removed-listings", label: `${r.productsRemoved} listings were removed by Cosora. See why`, href: "/products?status=rejected", Icon: AlertCircle, action: false });
   if (r.productsPaused === 1) rows.push({ key: "paused-listings", label: "1 listing is paused: it's over your plan's limit", href: "/products?status=paused", Icon: PauseCircle, action: true });
   else if (r.productsPaused > 1) rows.push({ key: "paused-listings", label: `${r.productsPaused} listings are paused: they're over your plan's limit`, href: "/products?status=paused", Icon: PauseCircle, action: true });
   if (r.productsInReview === 1) rows.push({ key: "listings", label: "1 listing waiting for review (24–48 hours)", href: "/products", Icon: Package, action: false });

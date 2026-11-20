@@ -64,7 +64,12 @@ const SellerHome = () => {
   const alertsEntitled = Boolean(entitlements?.features.lead_alerts);
   // What is being sent today, read only for a seller the alerts belong to (review L-79: the card ignored it).
   const { data: leadAlerts } = useLeadAlerts(alertsEntitled ? user?.id : undefined);
-  const liveChannels = leadAlerts?.liveChannels ?? [];
+  // Only what reaches this seller (code review): a channel going out today, that the plan includes, and that the
+  // seller's own settings leave on (instant for the rest, the daily summary for the digest). /lead-alerts' rule.
+  const liveChannels = leadAlerts?.available
+    ? leadAlerts.channels.filter((c) => leadAlerts.liveChannels.includes(c)
+        && (c === "digest" ? leadAlerts.settings.digest : leadAlerts.settings.instant))
+    : [];
   const reduced = useReducedMotion();
 
   const topProducts = home?.topProducts ?? [];

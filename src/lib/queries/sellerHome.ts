@@ -29,6 +29,8 @@ export interface SellerHomeReview {
   productsInReview: number;
   /** Listings Cosora sent back, and listings paused over the plan's limit (review L-77, migration 20261120130000). */
   productsRejected: number;
+  /** Taken down by moderation: not something an edit fixes (code review). */
+  productsRemoved: number;
   productsPaused: number;
   premisesInReview: number;
 }
@@ -119,6 +121,7 @@ export function sellerHomeFrom(raw: Raw | null): SellerHome | null {
       documentsRejected: num(r.documents_rejected),
       productsInReview: num(r.products_in_review),
       productsRejected: num(r.products_rejected),
+      productsRemoved: num(r.products_removed),
       productsPaused: num(r.products_paused),
       premisesInReview: num(r.premises_in_review),
     },

@@ -7,7 +7,8 @@
 -- seller_home_summary(), same shape plus:
 --   L-74  a direct request without a photo of its own shows the requested listing's first picture;
 --   L-76  a lead the seller quoted on carries quote_id, so "View quote" opens that quote;
---   L-77  review.products_rejected and review.products_paused, so Seller Home says what needs changes or is paused;
+--   L-77  review.products_rejected (sent back, not removed), review.products_removed (taken down by moderation, which
+--         also sets 'rejected': editing can't bring those back) and review.products_paused;
 --   L-85  my_vendor_private() is read once, not once per column.
 -- Everything else is unchanged: SECURITY INVOKER, so every requirement still passes rfqs_select.
 
@@ -47,7 +48,7 @@ begin
 
   with
   own_products as (
-    select p.id, p.name, p.price_value, p.unit, p.status, p.views_count, p.enquiries_count, p.created_at
+    select p.id, p.name, p.price_value, p.unit, p.status, p.views_count, p.enquiries_count, p.created_at, p.removed_at
       from public.products p where p.vendor_id = me
   ),
   open_leads as (
@@ -100,7 +101,8 @@ begin
       'documents_rejected',  (select count(*) from public.vendor_documents d
                                where d.vendor_id = me and not d.verified and d.rejection_reason is not null),
       'products_in_review',  (select count(*) from own_products where status = 'under_review'),
-      'products_rejected',   (select count(*) from own_products where status = 'rejected'),
+      'products_rejected',   (select count(*) from own_products where status = 'rejected' and removed_at is null),
+      'products_removed',    (select count(*) from own_products where removed_at is not null),
       'products_paused',     (select count(*) from own_products where status = 'paused'),
       'premises_in_review',  (select count(*) from public.vendor_premises_photos ph
                                where ph.vendor_id = me and ph.status = 'under_review')

@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBenchmarks } from "@/lib/queries/ads";
 import { logEngagement } from "@/lib/queries/engagement";
-import { priceText } from "@/lib/currency";
+import { formatCurrency } from "@/lib/currency";
 import LoadFailed from "@/components/LoadFailed";
 import {
   TrendingUp, Eye, Star, Package, Users, BarChart2, Megaphone, ShieldCheck, Info,
@@ -28,8 +28,9 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 const listContainer = { show: { transition: { staggerChildren: 0.055 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
-// Prices keep their paise (review L-83; claude.md: priceText(), never Math.round).
-const inr = (n: number) => priceText("₹", n);
+// The category average is a whole-rupee figure from the server (ad_category_benchmarks rounds it), shown grouped
+// (code review of L-83: priceText dropped the grouping and there are no paise to keep).
+const inr = (n: number) => formatCurrency(n, "INR");
 
 function BenchmarkBar({ label, yours, peer, unit = "" }: { label: string; yours: number; peer: number; unit?: string }) {
   const max = Math.max(yours, peer, 1);

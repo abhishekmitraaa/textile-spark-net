@@ -184,10 +184,14 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
     if (!wanted) return;
     const q = quotes.find((x) => x.id === wanted);
     if (q) setViewing(q);
-    const next = new URLSearchParams(params);
-    next.delete("quote");
-    setParams(next, { replace: true });
-  }, [wanted, quotes]); // eslint-disable-line react-hooks/exhaustive-deps
+    // A quote no longer in the list (withdrawn or removed meanwhile) says so instead of opening nothing (code review).
+    else toast("That quote isn't in your list any more");
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("quote");
+      return next;
+    }, { replace: true });
+  }, [wanted, quotes, setParams]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recent");
   const [sortOpen, setSortOpen] = useState(false);

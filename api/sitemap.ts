@@ -68,7 +68,7 @@ async function fetchGuides(): Promise<{ slug: string; updated_at: string | null 
   if (!url || !anonKey) return [];
   const supabase = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data, error } = await supabase.from("help_guides").select("slug,updated_at").eq("active", true).order("position");
-  if (error) return [];
+  if (error) throw new Error(error.message);
   return (data ?? []) as { slug: string; updated_at: string | null }[];
 }
 
@@ -197,7 +197,8 @@ export default async function handler(req: Req, res: Res) {
   let categories: Listing[] = [];
   let authors: Listing[] = [];
   let degraded = false;
-  const guidesPromise = fetchGuides().catch(() => []);
+  // A failed guides read still answers, with the short cache, like a failed blog read (code review).
+  const guidesPromise = fetchGuides().catch(() => { degraded = true; return [] as { slug: string; updated_at: string | null }[]; });
   try {
     ({ posts, categories, authors } = await fetchBlog());
   } catch {

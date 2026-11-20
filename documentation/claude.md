@@ -1462,6 +1462,16 @@ undocumented. Deep technical rationale for each lives in
   not included). A new table a buyer writes to goes in `buildAllDataJson()`.
 - **Signed out, account settings ask to sign in** (2026-11-20, review L-50): Notifications and Social links; currency
   still works on the device and says "on this device".
+- **The careers page is behind the `careers_page` switch** (Mitra, 2026-11-20, review L-68: "keep it hidden for now").
+  Off, `/careers` is the 404 page and the seller landing page has no "Work with us" link. A switch a signed-out visitor
+  must see is read through its own definer function (`careers_page_on()`, like `featured_listings_on()`), because
+  `my_feature_flags()` answers signed-in accounts only.
+- **Seller Home says what is wrong with a listing** (2026-11-20, review L-77): `seller_home_summary().review` counts
+  listings sent back (`products_rejected`, not removed), removed by moderation (`products_removed`, which also set
+  'rejected': editing doesn't bring them back) and paused over the plan's limit (`products_paused`); Getting started
+  links each to /products. A lead carries `quote_id`, and `/quotes?quote=<id>` opens that quote.
+- **An old address redirects, at Vercel and in the app** (2026-11-20, review L-101): /for-you and /service-vendors
+  (`AliasRedirect` keeps the query). `documentation/sitemap.md` is regenerated from App.tsx when routes change.
 - **A save waits for the database** (2026-11-19, review M-18–M-20): `savedStore` has a sync state (`useSavedSync()`:
   local, loading, ready, error with `retrySaved()`), reads ids 100 at a time, and every save, unsave and folder change is
   undone on screen with a message when refused (never after a sign-out meanwhile). Success messages come after the

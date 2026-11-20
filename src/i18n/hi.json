@@ -9268,5 +9268,8 @@
  "Want to work with us anyway?": "फिर भी हमारे साथ काम करना चाहते हैं?",
  "Tell us who you are and what you'd like to do through Help, and the team will get back to you.": "सहायता के ज़रिए बताएँ कि आप कौन हैं और क्या करना चाहते हैं, टीम आपसे संपर्क करेगी।",
  "Go to Help": "सहायता पर जाएँ",
- "Couldn't load your benchmarks": "आपके बेंचमार्क लोड नहीं हो सके"
+ "Couldn't load your benchmarks": "आपके बेंचमार्क लोड नहीं हो सके",
+ "1 listing was removed by Cosora. See why": "कोसोरा ने 1 लिस्टिंग हटा दी। कारण देखें",
+ "{0} listings were removed by Cosora. See why": "कोसोरा ने {0} लिस्टिंग हटा दीं। कारण देखें",
+ "That quote isn't in your list any more": "वह कोटेशन अब आपकी सूची में नहीं है"
 }

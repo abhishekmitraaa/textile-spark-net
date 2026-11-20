@@ -1,3 +1,16 @@
+- 2026-11-20 (branch `fix/low-batch4-2026-11-20` in both repos; migration `20261120130000_low_batch4.sql`;
+  plan `documentation/low-bugs-batch4-plan-2026-11-20.md`; **built and checked on the local stack, migration rehearsed
+  on production and rolled back; not released**)
+  **Buyer review, Low batch 4 of 5: Seller Home, the careers page, sign-up leftovers, routes and docs** (L-68–L-85,
+  L-99–L-104).
+  - Mitra's call: a careers page behind the `careers_page` switch, off; Cosora-Admin › Feature switches turns it on.
+  - Seller Home: counts wait for the data; leads in units and /unit; a direct request shows its listing's picture;
+    View quote opens the quote; Getting started lists listings sent back, removed and paused; the alerts card names
+    only the channels reaching the seller; no FREE badge; its place held while loading (`seller_home_summary`).
+  - Phone sidebar: no slide on load, hidden and untabbable when closed. Competitor Ads: error state. /products'
+    Upload in the seller colour. Buyer pages drawn as the buyer side from the first render. /auth/callback masked.
+  - /for-you and /service-vendors redirect; the sitemap lists /privacy and the help guides; `sitemap.md` regenerated.
+  - Code review: 10 findings, 9 fixed, 1 accepted (/careers is a soft 404 while off).
 - 2026-11-20 (branch `fix/low-batch3-2026-11-20`; migration `20261120120000_low_batch3.sql`;
   plan `documentation/low-bugs-batch3-plan-2026-11-20.md`; **LIVE 2026-11-20**: migration applied with the CLI, not in the ledger;
   main `422aabb`)

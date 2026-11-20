@@ -5,7 +5,7 @@ const BusinessProfileScorePage = lazyPage(() => import("./pages/BusinessProfileS
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { RealtimeHubProvider } from "./lib/realtimeHub";
@@ -153,6 +153,12 @@ const queryClient = new QueryClient({
 // The pages people open next are fetched in the background after the first one (review M-34).
 scheduleWarmPages();
 
+/** An old address that now lives elsewhere, query and hash kept (review L-101; vercel.json redirects a direct load). */
+function AliasRedirect({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -222,7 +228,7 @@ const App = () => (
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             {/* Aliases go to the page's one address (review L-101); vercel.json redirects a direct load. */}
-            <Route path="/for-you" element={<Navigate to="/home/for-you" replace />} />
+            <Route path="/for-you" element={<AliasRedirect to="/home/for-you" />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/leads" element={<ClarityMask><Leads /></ClarityMask>} />
             {/* Belongs to a plan (subscriptions P6): shown only when lead alerts are this vendor's. */}
@@ -267,7 +273,7 @@ const App = () => (
             <Route path="/chat" element={<BuyerFrame><ClarityMask><Chat /></ClarityMask></BuyerFrame>} />
             <Route path="/post-requirement" element={<ClarityMask><PostRequirement /></ClarityMask>} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
-            <Route path="/service-vendors" element={<Navigate to="/services" replace />} />
+            <Route path="/service-vendors" element={<AliasRedirect to="/services" />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<ClarityMask><Help /></ClarityMask>} />
             <Route path="/help/chat" element={<ClarityMask><SupportChatStart /></ClarityMask>} />
