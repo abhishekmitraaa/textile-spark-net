@@ -6,7 +6,7 @@ import BuyerShell from "@/components/buyer/BuyerShell";
 import type { ProfileData } from "@/lib/profileStore";
 import { usePreferences } from "@/lib/preferencesStore";
 import { interestLabel, OTHER_INTEREST_ID } from "@/lib/buyerCategories";
-import { useSaved } from "@/lib/savedStore";
+import { useSaved, useSavedSync } from "@/lib/savedStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProfileFull, useProfileStats, useSettings, EMPTY_PROFILE } from "@/lib/queries/profile";
@@ -154,7 +154,13 @@ const Profile = () => {
   const displayEmail = view.email || "—";
   const displayPhone = view.phone || "Add phone";
   const displayAvatar = view.avatar || googlePicture || noUserPicture;
+  const savedSync = useSavedSync();
   const savedCount = Object.keys(saved.products).length;
+  // A count that hasn't loaded, or failed to, shows "–", never 0 (review L-41). Saved counts listings and saved video
+  // close-ups together (L-51); "Saved Products" below stays listings only.
+  const countText = (n: number | undefined) => (n == null ? "–" : String(n));
+  const savedKnown = savedSync === "ready" || savedSync === "local";
+  const savedTotal = savedKnown && stats ? savedCount + stats.savedVideos : undefined;
   const notifOn = settings ? Object.values(settings.notifications).some(Boolean) : true;
   // "On" would read as "you are receiving notifications", and nothing is sent yet
   // (MPF-12). Until delivery is live the row says so instead.
@@ -309,10 +315,10 @@ const Profile = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-4 rounded-2xl border border-gray-200 bg-white mt-3 py-3 lg:py-4 divide-x divide-gray-100">
-          <StatCell icon={PhoneCall} value={String(callCount ?? 0)} label="Calls" onClick={() => navigate("/chats?tab=calls")} />
-          <StatCell icon={FileText} value={String(stats?.quotes ?? 0)} label="Quotes" onClick={() => navigate("/requirement/my-quotes")} />
-          <StatCell icon={Heart} value={String(savedCount)} label="Saved" onClick={() => navigate("/saved")} />
-          <StatCell icon={MessageCircle} value={String(stats?.chats ?? 0)} label="Chats" onClick={() => navigate("/chats")} />
+          <StatCell icon={PhoneCall} value={countText(callCount)} label="Calls" onClick={() => navigate("/chats?tab=calls")} />
+          <StatCell icon={FileText} value={countText(stats?.quotes)} label="Quotes" onClick={() => navigate("/requirement/my-quotes")} />
+          <StatCell icon={Heart} value={countText(savedTotal)} label="Saved" onClick={() => navigate("/saved")} />
+          <StatCell icon={MessageCircle} value={countText(stats?.chats)} label="Chats" onClick={() => navigate("/chats")} />
         </div>
 
         {/* Interest & Preferences */}
@@ -344,7 +350,7 @@ const Profile = () => {
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
           <Row icon={ClipboardList} iconColor="text-brand-buyer" label="Post Your Requirement" onClick={() => navigate("/requirement/post-requirement")} />
           <Row icon={FileText} iconColor="text-brand-buyer" label="Quotes Received" badge={stats?.quotes || undefined} onClick={() => navigate("/requirement/my-quotes")} />
-          <Row icon={Bookmark} label="Saved Products" value={String(savedCount)} onClick={() => navigate("/saved")} />
+          <Row icon={Bookmark} label="Saved Products" value={savedKnown ? String(savedCount) : "–"} onClick={() => navigate("/saved")} />
           <Row icon={Star} label="My Reviews" onClick={() => navigate("/profile/reviews")} />
         </div>
 

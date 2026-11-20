@@ -232,6 +232,37 @@ export const CHAT_SCOPE_NOTE =
 
 export interface AllDataExport { filename: string; json: string; counts: Record<string, number> }
 
+/** The most support requests the export holds: support_my_requests() returns at most the newest 100. */
+const SUPPORT_EXPORT_LIMIT = 100;
+
+/**
+ * The account's support requests and their threads, as the requester sees them (review L-46): through the requester
+ * RPCs, which never name staff (D-06). Attachments are listed by type and size; the files stay in Storage.
+ */
+async function supportRequests(): Promise<Row[]> {
+  const { data, error } = await supabase.rpc("support_my_requests", { p_limit: SUPPORT_EXPORT_LIMIT });
+  if (error) throw error;
+  const list = ((data ?? []) as unknown as { ticket_no: string }[]);
+  const out: Row[] = [];
+  // Five at a time: one call per request.
+  for (let i = 0; i < list.length; i += 5) {
+    const part = await Promise.all(list.slice(i, i + 5).map(async (r) => {
+      const { data: detail, error: dErr } = await supabase.rpc("support_request_detail", { p_ticket_no: r.ticket_no });
+      if (dErr) throw dErr;
+      const d = (detail ?? {}) as { ticket?: Row; messages?: Row[]; attachments?: Row[] };
+      return {
+        ...(d.ticket ?? { ticket_no: r.ticket_no }),
+        messages: d.messages ?? [],
+        attachments: (d.attachments ?? []).map((a) => ({
+          message_id: a.message_id, kind: a.kind, mime: a.mime, bytes: a.bytes, duration_ms: a.duration_ms,
+        })),
+      } as Row;
+    }));
+    out.push(...part);
+  }
+  return out;
+}
+
 export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
   // email and phone are not client-selectable on profiles (MPF-3); the export
   // takes them from my_contact_info() and keeps the object's original key order.
@@ -308,6 +339,27 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     supabase.from("saved_vendors").select("vendor_id, created_at").eq("buyer_id", userId)
       .order("created_at", { ascending: true }).order("vendor_id").range(from, to));
 
+  // ── Added 2026-11-20 (review L-46): what the export left out ──
+  // Requirements still waiting for Cosora's review (or turned down): rfq_submissions, without who reviewed them.
+  const requirementSubmissions = await allPages((from, to) =>
+    supabase.from("rfq_submissions")
+      .select("id, title, product_name, quantity, budget_min, budget_max, description, image, images, category_id, attributes, state, buyer_message, review_note, reviewed_at, rfq_id, created_at")
+      .eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to));
+  const savedVideos = await allPages((from, to) =>
+    supabase.from("saved_videos").select("video_id, created_at").eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("video_id").range(from, to));
+  const serviceReviews = await allPages((from, to) =>
+    supabase.from("service_reviews")
+      .select("id, service_id, service_kind, service_name, rating, body, created_at, updated_at")
+      .eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to));
+  // Blocks this account made (the policy shows only those). Who blocked this account is not its data.
+  const blocks = await allPages((from, to) =>
+    supabase.from("chat_blocks").select("blocked_id, created_at, unblocked_at").eq("blocker_id", userId)
+      .order("created_at", { ascending: true }).order("blocked_id").range(from, to));
+  const support = await supportRequests();
+
   // A conversation counterpart is a vendor only if it has a vendor_profiles row,
   // which is exactly what brandNames() returned for them.
   const conversationVendors = others.filter((id) => names.has(id));
@@ -315,7 +367,8 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
   const quoteVendors = quotes.map((q) => String(q.vendor_id));
   const followedVendors = follows.map((f) => String(f.vendor_id));
   const savedVendorIds = savedVendors.map((f) => String(f.vendor_id));
-  const moreNames = await brandNames([...callVendors, ...quoteVendors, ...followedVendors, ...savedVendorIds]);
+  const blockedIds = blocks.map((b) => String(b.blocked_id));
+  const moreNames = await brandNames([...callVendors, ...quoteVendors, ...followedVendors, ...savedVendorIds, ...blockedIds]);
   const vendorList = (ids: string[]) =>
     [...new Set(ids)]
       .map((id) => ({ vendor_id: id, brand_name: names.get(id) || moreNames.get(id) || null }))
@@ -362,22 +415,34 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
       followed_at: f.created_at,
     };
   });
+  const blocksOut = blocks.map((b) => {
+    const id = String(b.blocked_id);
+    return { blocked_id: id, name: names.get(id) || moreNames.get(id) || null, blocked_at: b.created_at, unblocked_at: b.unblocked_at };
+  });
+  const savedVideosOut = savedVideos.map((v) => ({
+    video_id: v.video_id, link: siteLink(`/video-closeups?v=${String(v.video_id)}`), saved_at: v.created_at,
+  }));
   const vendorsContacted = vendorList([...conversationVendors, ...callVendors, ...quoteVendors]);
   const vendorsMessaged = vendorList(messagedVendors);
 
   const counts = {
     rfqs: rfqs.length,
+    requirements_in_review: requirementSubmissions.length,
     quotes_received: quotes.length,
     conversations: conversations.length,
     messages: messages.length,
     reviews: reviews.length,
     product_reviews: productReviews.length,
+    service_reviews: serviceReviews.length,
     vendors_contacted: vendorsContacted.length,
     vendors_messaged: vendorsMessaged.length,
     saved_items: savedItems.length,
     saved_sellers: savedVendors.length,
     saved_folders: savedFolders.length,
     saved_folder_items: folderItems.length,
+    saved_videos: savedVideos.length,
+    support_requests: support.length,
+    blocks: blocks.length,
     recently_viewed: recentlyViewed.length,
     following: following.length,
     ...(seller ? {
@@ -390,11 +455,13 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     export: {
       generated_at: new Date().toISOString(),
       account_id: userId,
-      format_version: 2,
+      format_version: 3,
       contents:
-        "Your profile, business details, RFQs, the quotes you received on them, your conversations and their messages, " +
-        "the reviews you wrote, the vendors you contacted (by chat, call or quote) and those you messaged, " +
-        "your saved items and folders, the products you viewed recently, and the vendors you follow. " +
+        "Your profile, business details, RFQs and the requirements waiting for Cosora's review, the quotes you received, " +
+        "your conversations and their messages, the reviews you wrote (stores, products and services), the vendors you " +
+        "contacted (by chat, call or quote) and those you messaged, your saved items, folders and video close-ups, the " +
+        "products you viewed recently, the vendors you follow, the accounts you blocked, and your newest " +
+        `${SUPPORT_EXPORT_LIMIT} support requests with their messages (files are listed, not included). ` +
         "For a seller, also your store, listings, the quotes you sent, catalogues, videos, business documents, " +
         "invoices, ad orders and CRM.",
       links:
@@ -406,16 +473,21 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     profile: profile ?? null,
     buyer_profile: buyerProfile ?? null,
     rfqs,
+    requirements_in_review: requirementSubmissions,
     quotes_received: quotes,
     conversations: conversationsOut,
     messages,
     reviews,
     product_reviews: productReviews,
+    service_reviews: serviceReviews,
     vendors_contacted: vendorsContacted,
     vendors_messaged: vendorsMessaged,
     saved,
+    saved_videos: savedVideosOut,
     recently_viewed: recentlyViewedOut,
     following,
+    blocks: blocksOut,
+    support_requests: support,
     seller,
   };
 

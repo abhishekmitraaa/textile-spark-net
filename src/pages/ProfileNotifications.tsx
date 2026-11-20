@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ProfileSignedOut } from "@/components/buyer/ProfileEditKit";
 import { useProfileState, updateNotifications, type NotificationSettings } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting } from "@/lib/queries/profile";
@@ -66,7 +67,7 @@ const PUSH_ROWS: { key: keyof NotificationSettings; label: string; description: 
 ];
 
 const ProfileNotifications = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   // Nothing is saved over a read that hasn't arrived or failed (review M-49): the form would hold defaults.
   const settingsQuery = useSettings(user?.id);
@@ -100,6 +101,17 @@ const ProfileNotifications = () => {
       setSaving(false);
     }
   };
+
+  // Signed out there is nothing to save to (review L-50): it used to save in this browser only and say "saved".
+  if (!authLoading && !user) {
+    return (
+      <div className="min-h-screen bg-white">
+        <SettingsHeader title="Notifications" />
+        <ProfileSignedOut message="Sign in to choose your notifications." />
+        <MobileBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

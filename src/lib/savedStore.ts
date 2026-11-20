@@ -121,20 +121,39 @@ function relTimeAgo(iso: string): string {
   return `${Math.floor(day / 7)} week${day >= 14 ? "s" : ""} ago`;
 }
 
+/**
+ * Every row of a read, 1,000 at a time (review L-42): PostgREST stops at 1,000 rows without saying so, and saves past
+ * that used to vanish from "All Saves" and from folders.
+ */
+const READ_PAGE = 1000;
+async function readAllRows<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += READ_PAGE) {
+    const { data, error } = await page(from, from + READ_PAGE - 1);
+    if (error) throw error;
+    out.push(...(data ?? []));
+    if ((data ?? []).length < READ_PAGE) return out;
+  }
+}
+
 async function hydrateSaved(uidValue: string): Promise<PersistedState> {
   // Every read's error counts (2026-11-19, review M-18): a failed read used to come back as an empty "All Saves".
-  const [folderRes, itemRes, fiRes] = await Promise.all([
-    supabase.from("saved_folders").select("id, name, created_at").eq("buyer_id", uidValue).order("created_at", { ascending: true }),
-    supabase.from("saved_items").select("product_id, created_at").eq("buyer_id", uidValue).order("created_at", { ascending: false }),
-    // RLS scopes saved_folder_items to the caller's own folders.
-    supabase.from("saved_folder_items").select("folder_id, product_id, created_at").order("created_at", { ascending: false }),
+  const [folderRows, items] = await Promise.all([
+    readAllRows<{ id: string; name: string; created_at: string }>((a, b) =>
+      supabase.from("saved_folders").select("id, name, created_at").eq("buyer_id", uidValue)
+        .order("created_at", { ascending: true }).order("id").range(a, b)),
+    readAllRows<{ product_id: string; created_at: string }>((a, b) =>
+      supabase.from("saved_items").select("product_id, created_at").eq("buyer_id", uidValue)
+        .order("created_at", { ascending: false }).order("product_id").range(a, b)),
   ]);
-  if (folderRes.error) throw folderRes.error;
-  if (itemRes.error) throw itemRes.error;
-  if (fiRes.error) throw fiRes.error;
-  const folderRows = folderRes.data;
-  const items = itemRes.data ?? [];
-  const fis = fiRes.data ?? [];
+  // A folder's items, by the account's own folder ids (a "my data" read filters on the owner, never RLS alone).
+  const fis: { folder_id: string; product_id: string; created_at: string }[] = [];
+  const folderIds = folderRows.map((f) => f.id);
+  for (const ids of chunks(folderIds, 100)) {
+    fis.push(...await readAllRows<{ folder_id: string; product_id: string; created_at: string }>((a, b) =>
+      supabase.from("saved_folder_items").select("folder_id, product_id, created_at").in("folder_id", ids)
+        .order("created_at", { ascending: false }).order("product_id").range(a, b)));
+  }
   const savedAtById = new Map(items.map((i) => [i.product_id, i.created_at]));
   const allIds = Array.from(new Set([...items.map((i) => i.product_id), ...fis.map((f) => f.product_id)]));
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useStepBack } from "@/hooks/useStepBack";
 import { ArrowLeft, Mail, Phone, LogIn, Clock } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -32,12 +33,8 @@ export function useSupportSide() {
 
 export function SupportFrame({ title, children, back }: { title: string; children: ReactNode; back?: string }) {
   const { isSeller } = useSupportSide();
-  const navigate = useNavigate();
-  const goBack = () => {
-    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-    if (idx > 0) navigate(-1);
-    else navigate(back ?? "/help");
-  };
+  // Falls back in place of this entry (review L-40).
+  const goBack = useStepBack(back ?? "/help");
   if (isSeller) {
     return (
       <DashboardLayout>

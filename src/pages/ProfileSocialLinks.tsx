@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ProfileSignedOut } from "@/components/buyer/ProfileEditKit";
 import { useProfileState, updateSocial, type SocialLinks } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting } from "@/lib/queries/profile";
@@ -79,7 +80,7 @@ function savedLink(key: keyof SocialLinks, v: string): string | null {
 }
 
 const ProfileSocialLinks = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   // Nothing is saved over a read that hasn't arrived or failed (review M-49): the form would hold defaults.
   const settingsQuery = useSettings(user?.id);
@@ -131,6 +132,17 @@ const ProfileSocialLinks = () => {
       setSaving(false);
     }
   };
+
+  // Signed out there is nothing to save to (review L-50): it used to save in this browser only and say "saved".
+  if (!authLoading && !user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <SettingsHeader title="Social media links" />
+        <ProfileSignedOut message="Sign in to add your social media links." />
+        <MobileBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

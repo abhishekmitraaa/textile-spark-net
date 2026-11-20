@@ -38,12 +38,12 @@ export function ProfileSubpageHeader({ title }: { title: string }) {
   );
 }
 
-export function ProfileSignedOut() {
+export function ProfileSignedOut({ message = "Sign in to edit your profile." }: { message?: string }) {
   const navigate = useNavigate();
   return (
     <div className="max-w-2xl mx-auto px-4 pt-24 pb-24 text-center">
       <h2 className="text-lg font-bold text-gray-900">You're signed out</h2>
-      <p className="mt-1 text-sm text-gray-500">Sign in to edit your profile.</p>
+      <p className="mt-1 text-sm text-gray-500">{message}</p>
       <button
         onClick={() => navigate("/login")}
         className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-buyer px-6 py-3 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors"

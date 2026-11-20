@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ShoppingCart, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
-import CosoraLogo from "@/components/CosoraLogo";
+import SignupHeader from "@/components/auth/SignupHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -79,11 +79,8 @@ const RoleSelection = () => {
         transition={{ duration: 0.4 }}
         className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
-        {/* COSORA wordmark */}
-        <div className="flex justify-center mb-1">
-          <CosoraLogo height={30} />
-        </div>
-        <p className="text-center text-xs text-gray-400 mb-10">Business Made Easy &amp; Enjoyable</p>
+        {/* The COSORA wordmark and the step (review L-57) */}
+        <SignupHeader className="mb-8" />
 
         <h2 id="role-title" className="text-2xl font-bold text-gray-900 text-center mb-1">I am a…</h2>
         <p className="text-sm text-gray-500 text-center mb-8">Select your role and get started</p>

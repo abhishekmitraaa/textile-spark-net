@@ -109,13 +109,7 @@ export const INDUSTRIES = [
 ];
 
 export const CURRENCIES = ["₹ INR", "$ USD", "€ EUR", "£ GBP"];
-export const TIMEZONES = [
-  "IST (India Standard Time)",
-  "Eastern Time (ET)",
-  "Pacific Time (PT)",
-  "GMT (Greenwich Mean)",
-  "CET (Central European)",
-];
+// No timezone list: the picker went (Mitra, 2026-11-20, review L-52); every time shows in India time.
 // Only languages that actually translate. "Tamil" used to be offered here and
 // silently fell back to English (no dictionary). Re-exported from i18n so the
 // picker can never drift from what's really supported.

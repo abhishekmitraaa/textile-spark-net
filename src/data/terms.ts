@@ -10,10 +10,12 @@ export interface TermsClause {
   bulletsIntro?: string;
 }
 
-export const TERMS_EFFECTIVE_DATE = "27th October 2025";
+// Version 2026-11-v2 (Mitra, 2026-11-20, review L-59): the date the text took effect, and no "India's premier" (a
+// claim nothing measures). Buyers who accepted v1 aren't asked again ("New text, don't re-ask").
+export const TERMS_EFFECTIVE_DATE = "20th November 2026";
 
 export const TERMS_INTRO =
-  "Welcome to Cosora, India's premier B2B fashion and textile sourcing platform. By accessing or using our website, mobile application, or any associated services (collectively, the \"Platform\"), you agree to be bound by the following terms and conditions (\"Terms\"). Please read them carefully.";
+  "Welcome to Cosora, a B2B fashion and textile sourcing platform. By accessing or using our website, mobile application, or any associated services (collectively, the \"Platform\"), you agree to be bound by the following terms and conditions (\"Terms\"). Please read them carefully.";
 
 export const TERMS_CLAUSES: TermsClause[] = [
   {

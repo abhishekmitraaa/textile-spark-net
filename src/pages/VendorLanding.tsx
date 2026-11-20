@@ -32,6 +32,8 @@ import { useLang } from "@/lib/i18n";
 import { PRIMARY_TYPES } from "@/data/vendorTypes";
 import { SUPPORT_INSTAGRAM } from "@/lib/supportContact";
 import { useOverlayState } from "@/hooks/useBackCloses";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHomePath } from "@/hooks/useHomePath";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 24 },
@@ -63,7 +65,8 @@ const valueProps = [
   {
     icon: Shield,
     title: "Checked before it goes live",
-    desc: "Cosora reviews every listing and every buyer requirement before anyone sees it.",
+    // Requirements open to every seller are reviewed; a request sent to one seller isn't (review L-67).
+    desc: "Cosora reviews every listing, and every requirement posted to all sellers, before anyone sees it.",
   },
 ];
 
@@ -85,6 +88,9 @@ const menuLinks = [
 ];
 
 const VendorLanding = () => {
+  // Signed in, the header offers the account's home instead of Login (review L-67).
+  const { user } = useAuth();
+  const home = useHomePath();
   // Back closes the menu (review M-29).
   const [landingMenuOpen, setLandingMenuOpen] = useOverlayState();
   // Seller Registration FAQs are admin-edited in Cosora-Admin (/faqs) and read
@@ -109,12 +115,12 @@ const VendorLanding = () => {
             />
           </Link>
           <div className="flex items-center gap-2">
-            <Link to="/login">
+            <Link to={user ? home : "/login"}>
               <Button
                 size="sm"
                 className="h-9 rounded-full bg-brand-vendor px-4 text-sm font-semibold text-[#ffffff] hover:bg-brand-vendor/90"
               >
-                Login
+                {user ? (home === "/seller-home" ? "Go to Seller Home" : "Open Cosora") : "Login"}
               </Button>
             </Link>
             <Sheet open={landingMenuOpen} onOpenChange={setLandingMenuOpen}>
@@ -216,7 +222,8 @@ const VendorLanding = () => {
             <div className="mt-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-brand-ink">
                 <Clock className="h-4 w-4 text-brand-vendor" />
-                Get Started - it only takes 10 minutes
+                {/* No promised time (review L-67): it depends on the documents to hand. */}
+                Get started: have these ready
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {documents.map((doc) => (

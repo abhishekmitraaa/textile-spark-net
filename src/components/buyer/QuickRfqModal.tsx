@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { createRfq, uploadRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { createRfq, uploadRfqImages, removeRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
 import { quantityFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { errorMessage } from "@/lib/errorMessage";
@@ -103,8 +103,10 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
     // stay with the notes so nothing the buyer typed is lost.
     const description = [`Quantity: ${qtyText}`, notes.trim()].filter(Boolean).join("\n");
     setSubmitting(true);
+    let images: string[] = [];
+    let written = false;
     try {
-      const images = photos.length ? await uploadRfqImages(user.id, photos.map((p) => p.file)) : [];
+      images = photos.length ? await uploadRfqImages(user.id, photos.map((p) => p.file)) : [];
       await createRfq(user.id, {
         title: name.slice(0, 120),
         productName: name,
@@ -112,12 +114,15 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
         description,
         images,
       });
+      written = true;
       // Waiting for review, it shows under My Quotes' submissions (2026-10-19).
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["rfqs"] }),
         queryClient.invalidateQueries({ queryKey: ["rfq_submissions"] }),
       ]);
     } catch (e) {
+      // Not written: its photos come down again (review L-38).
+      if (!written) void removeRfqImages(images);
       toast.error("Couldn't post your Quick Quote", { description: errorMessage(e) });
       setSubmitting(false);
       return;

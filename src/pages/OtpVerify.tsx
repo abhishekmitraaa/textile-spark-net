@@ -203,7 +203,7 @@ const OtpVerify = () => {
         )}
         <div className="flex items-center justify-center gap-2 mt-2 mb-6">
           <span className="text-sm font-bold text-gray-900">{maskPhone(state.phone, state.countryCode)}</span>
-          <button onClick={() => navigate(back)} className="text-sm font-semibold text-brand-buyer-deep hover:underline">
+          <button onClick={() => navigate(back, { replace: true })} className="text-sm font-semibold text-brand-buyer-deep hover:underline">
             Not You?
           </button>
         </div>
@@ -308,7 +308,7 @@ const OtpVerify = () => {
       >
         <div className="flex gap-3 max-w-sm mx-auto w-full">
           <button
-            onClick={() => navigate(back)}
+            onClick={() => navigate(back, { replace: true })}
             className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
           >
             Previous

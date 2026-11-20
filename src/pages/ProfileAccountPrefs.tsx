@@ -1,15 +1,14 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Globe, Clock, Languages, Download, FileSpreadsheet, Loader2 } from "lucide-react";
+import { ArrowLeft, Globe, Languages, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import {
   useProfileState,
   updateRegional,
   CURRENCIES,
-  TIMEZONES,
   type RegionalSettings,
 } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,14 +41,15 @@ const selectCls = "w-full appearance-none rounded-xl border border-gray-300 bg-w
 
 // Currency converts displayed prices (Phase 20, MPF-11: src/lib/currency.ts). It
 // is DISPLAY ONLY, and the page says so: prices are set, quoted, paid and invoiced
-// in INR. Timezone is still saved but not read: no date renders in the chosen
-// zone (checked repo-wide, 2026-09-23). Like an untranslated language, a choice
-// the app can't honour says so. It is never silently ignored.
+// in INR. There is no timezone picker (Mitra, 2026-11-20, review L-52, "Remove the
+// field"): every time shows in India time, and nothing read the saved choice.
+// `regional.timezone` stays in saved settings, unused.
 const PRICE_CURRENCY = DEFAULT_SETTINGS.regional.currency;   // "₹ INR", what prices are set and paid in
-const DEFAULT_TIMEZONE = DEFAULT_SETTINGS.regional.timezone; // "IST (India Standard Time)"
 
 const ProfileAccountPrefs = () => {
   const { user } = useAuth();
+  // Two addresses, two pages (review L-47): /profile/regional-settings and /profile/data-export showed the same page.
+  const exportPage = useLocation().pathname === "/profile/data-export";
   const queryClient = useQueryClient();
   // Nothing is saved over a read that hasn't arrived or failed (review M-49): the form would hold defaults.
   const settingsQuery = useSettings(user?.id);
@@ -64,25 +64,29 @@ const ProfileAccountPrefs = () => {
 
   useEffect(() => { if (user && settings) setRegional(settings.regional); }, [user, settings]);
 
-  // Persist a single regional field (dropdowns save on change).
-  const patchRegional = async (patch: Partial<RegionalSettings>) => {
+  // Persist a single regional field (dropdowns save on change). Resolves to where it was saved, or null when it wasn't:
+  // the "saved" message comes after the write, never before it (review L-45).
+  const patchRegional = async (patch: Partial<RegionalSettings>): Promise<"account" | "device" | null> => {
     if (settingsUnknown) {
       toast.error("Your settings haven't loaded yet", { description: "Try again in a moment." });
-      return;
+      return null;
     }
+    const before = regional;
     const next = { ...regional, ...patch };
     setRegional(next);
     if (user) {
       try {
         await saveSetting(user.id, "regional", next);
         queryClient.invalidateQueries({ queryKey: ["profile_settings", user.id] });
+        return "account";
       } catch (e) {
+        setRegional(before);
         toast.error("Couldn't save", { description: errorMessage(e) });
-        return;
+        return null;
       }
-    } else {
-      updateRegional(patch);
     }
+    updateRegional(patch);
+    return "device";
   };
 
   // Both exports are built in the browser from the buyer's own rows and
@@ -121,8 +125,8 @@ const ProfileAccountPrefs = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <SettingsHeader title="Regional & Data" />
-      {settingsQuery.isError && !settings && (
+      <SettingsHeader title={exportPage ? "Data & Export" : "Regional Settings"} />
+      {!exportPage && settingsQuery.isError && !settings && (
         <div role="alert" className="mx-auto mt-3 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           Couldn't load your saved settings, so nothing can be changed yet.{" "}
           <button onClick={() => void settingsQuery.refetch()} className="font-semibold underline">Retry</button>
@@ -130,6 +134,7 @@ const ProfileAccountPrefs = () => {
       )}
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-4">
         {/* Regional settings - dropdowns shown directly */}
+        {!exportPage && (
         <section className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900">Regional Settings</h2>
           <p className="text-xs text-gray-500 mt-0.5 mb-4">Customize your regional preferences</p>
@@ -148,9 +153,15 @@ const ProfileAccountPrefs = () => {
                     // (useCurrencySetting). Saved here with the page's other
                     // regional fields, so a quick currency-then-timezone change
                     // can't have one save overwrite the other.
-                    patchRegional({ currency: c });
-                    if (c === PRICE_CURRENCY) toast.success("Currency saved");
-                    else toast.success(`${c} saved`, { description: `Prices show converted to ${currencyCodeOf(c)}, for display only. Payments stay in ${PRICE_CURRENCY}.` });
+                    void patchRegional({ currency: c }).then((where) => {
+                      if (!where) return;
+                      // Signed out it is kept in this browser only, and says so (review L-50).
+                      const device = where === "device";
+                      const description = c === PRICE_CURRENCY ? undefined
+                        : `Prices show converted to ${currencyCodeOf(c)}, for display only. Payments stay in ${PRICE_CURRENCY}.`;
+                      if (c === PRICE_CURRENCY) toast.success(device ? "Currency saved on this device" : "Currency saved");
+                      else toast.success(device ? `${c} saved on this device` : `${c} saved`, { description });
+                    });
                   }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -166,30 +177,6 @@ const ProfileAccountPrefs = () => {
               <p className="mt-1.5 text-[11px] text-gray-500">
                 Display only: vendors quote and are paid in {PRICE_CURRENCY}, and Cosora&rsquo;s plans and GST invoices stay in {PRICE_CURRENCY}. Amounts you type, like an RFQ budget, are in {PRICE_CURRENCY}.
               </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Timezone</label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <select
-                  className={selectCls}
-                  value={regional.timezone}
-                  onChange={(e) => {
-                    const tz = e.target.value;
-                    patchRegional({ timezone: tz });
-                    if (tz === DEFAULT_TIMEZONE) toast.success("Timezone saved");
-                    else toast.info(`${tz} saved`, { description: "Times in Cosora aren't converted to it yet." });
-                  }}
-                >
-                  {TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              {regional.timezone !== DEFAULT_TIMEZONE && (
-                <p className="mt-1.5 text-[11px] text-amber-600">
-                  Saved, but Cosora doesn&rsquo;t use it yet: times aren&rsquo;t converted to this time zone.
-                </p>
-              )}
             </div>
 
             <div>
@@ -219,8 +206,10 @@ const ProfileAccountPrefs = () => {
             </div>
           </div>
         </section>
+        )}
 
         {/* Data & Export */}
+        {exportPage && (
         <section className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900">Data &amp; Export</h2>
           <p className="text-xs text-gray-500 mt-0.5 mb-4">Download or manage your data</p>
@@ -231,7 +220,7 @@ const ProfileAccountPrefs = () => {
                 <Download className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900">Export All Data</p>
-                  <p className="text-xs text-gray-500">Your profile, RFQs, quotes received, chats, reviews, saved items, recently viewed, and the vendors you follow or contacted, as a JSON file</p>
+                  <p className="text-xs text-gray-500">Your profile, RFQs (including those in review), quotes received, chats, reviews, saved items and videos, recently viewed, the vendors you follow or contacted, the accounts you blocked, and your support requests, as a JSON file</p>
                   <p className="text-xs text-gray-500">Sellers also get their store, listings, quotes sent, catalogues, videos and invoices.</p>
                   {/* Said up front so the seller's messages in the file are no surprise. */}
                   <p className="text-[11px] text-gray-400 mt-1">{CHAT_SCOPE_NOTE}</p>
@@ -266,6 +255,7 @@ const ProfileAccountPrefs = () => {
             </div>
           </div>
         </section>
+        )}
       </div>
       <MobileBottomNav />
     </div>

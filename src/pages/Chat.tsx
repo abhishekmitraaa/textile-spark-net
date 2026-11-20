@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useStepBack } from "@/hooks/useStepBack";
+import LoadFailed from "@/components/LoadFailed";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -79,8 +81,10 @@ const Chat = () => {
   // Real conversations and calls only (SH-101): signed out, the page asks to sign in. It used to show three seeded
   // conversations with invented unread counts and hot-linked pictures.
   const { user, loading: authLoading } = useAuth();
-  const { data: dbConvos } = useConversations();
-  const { data: dbCalls } = useCalls(isSeller ? "vendor" : "buyer");
+  const convosQuery = useConversations();
+  const callsQuery = useCalls(isSeller ? "vendor" : "buyer");
+  const dbConvos = convosQuery.data;
+  const dbCalls = callsQuery.data;
   const callVendor = useCallVendor();
   const callBuyer = useCallBuyer();
   // Each chat's unread count, live (it was always 0 for real chats).
@@ -120,11 +124,8 @@ const Chat = () => {
   // Back → wherever the user came from; on a deep link / refresh with no in-app
   // history to pop, fall back to that role's own home rather than stranding a
   // buyer on the seller dashboard.
-  const goBack = () => {
-    const idx = (window.history.state && (window.history.state as { idx?: number }).idx) ?? 0;
-    if (idx > 0) navigate(-1);
-    else navigate(isSeller ? "/seller-home" : "/home/new-arrivals");
-  };
+  // useStepBack replaces this entry when it falls back, so Back after it doesn't return here (review L-40).
+  const goBack = useStepBack(isSeller ? "/seller-home" : "/home/new-arrivals");
 
   const body = (
     <div
@@ -238,7 +239,10 @@ const Chat = () => {
           <AnimatePresence mode="wait">
             {tab === "chats" ? (
               <motion.div key="chats" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} variants={listContainer}>
-                {chats.length === 0 ? (
+                {user && convosQuery.isError && !dbConvos ? (
+                  // A failed read isn't "no conversations" (review L-41).
+                  <LoadFailed label="Couldn't load your chats" onRetry={() => void convosQuery.refetch()} />
+                ) : chats.length === 0 ? (
                   <Empty icon={MessageCircle} label={
                     view === "starred" && !query.trim() ? "No starred chats. Star one from its menu."
                       : view === "archived" && !query.trim() ? "No archived chats"
@@ -256,7 +260,9 @@ const Chat = () => {
               </motion.div>
             ) : (
               <motion.div key="calls" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {filteredGroups.length === 0 ? (
+                {user && callsQuery.isError && !dbCalls ? (
+                  <LoadFailed label="Couldn't load your calls" onRetry={() => void callsQuery.refetch()} />
+                ) : filteredGroups.length === 0 ? (
                   <Empty icon={Phone} label="No calls found" />
                 ) : (
                   filteredGroups.map((g) => (

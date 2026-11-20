@@ -607,7 +607,8 @@ export default function Onboarding() {
   // Only fills blank fields, so it never clobbers anything typed here.
   const { data: prefill } = useProfileFull(user?.id);
   useEffect(() => {
-    if (!prefill) return;
+    // A registration sent back refills from what the seller gave last time (below), not from the buyer profile.
+    if (!prefill || rejected) return;
     if (prefill.businessName) setBusinessName((v) => v || prefill.businessName);
     if (prefill.fullName) setOwnerName((v) => v || prefill.fullName);
     if (prefill.email) setOwnerEmail((v) => v || prefill.email);
@@ -618,28 +619,36 @@ export default function Onboarding() {
       const local = prefill.phone.replace(/\D/g, "").slice(-10);
       if (local.length === 10) setMobile((v) => v || local);
     }
-  }, [prefill]);
+  }, [prefill, rejected]);
 
-  // A registration Cosora asked to change: what the seller gave last time, so they fix it rather than retype it.
+  // A registration Cosora asked to change: what the seller gave last time, so they fix it rather than retype it
+  // (review L-65: the PAN, GSTIN and WhatsApp choice were left out, and the buyer profile's name and address could
+  // win over the registration's). Once, when the store arrives; a saved value replaces what the buyer profile put in.
   // Files aren't refilled (they are attached again).
+  const refilled = useRef(false);
   useEffect(() => {
-    if (!rejected || !myStore) return;
+    if (!rejected || !myStore || refilled.current) return;
+    refilled.current = true;
     const code = COUNTRIES.find((c) => c.name === myStore.country)?.code;
     if (code && (code === "IN" || overseasOn)) setCountry(code);
-    setBusinessName((v) => v || myStore.brandName || "");
-    setArea((v) => v || myStore.area || "");
-    setCity((v) => v || myStore.city || "");
-    setState((v) => v || myStore.state || "");
-    setPincode((v) => v || myStore.postalCode || "");
-    setBuilding((v) => v || myStore.addressLine || "");
-    setLandmark((v) => v || myStore.landmark || "");
-    setOwnerName((v) => v || myStore.ownerName || "");
-    setOwnerEmail((v) => v || myStore.ownerEmail || "");
-    if (myStore.website) { setHasWebsite(true); setWebsiteUrl((v) => v || myStore.website); }
-    if (myStore.phone) setMobile((v) => v || (code === "IN" ? myStore.phone.replace(/^\+91/, "") : myStore.phone));
-    if (myStore.primaryType) setBusinessType((v) => v || myStore.primaryType || "");
-    if (myStore.capabilities?.length) setCapabilities((v) => (v.length ? v : myStore.capabilities));
-    if (myStore.category?.length) setBusinessCategories((v) => (v.length ? v : myStore.category));
+    const put = (setter: (v: string) => void, value: string | null | undefined) => { if (value) setter(value); };
+    put(setBusinessName, myStore.brandName);
+    put(setArea, myStore.area);
+    put(setCity, myStore.city);
+    put(setState, myStore.state);
+    put(setPincode, myStore.postalCode);
+    put(setBuilding, myStore.addressLine);
+    put(setLandmark, myStore.landmark);
+    put(setOwnerName, myStore.ownerName);
+    put(setOwnerEmail, myStore.ownerEmail);
+    if (myStore.website) { setHasWebsite(true); setWebsiteUrl(myStore.website); }
+    if (myStore.phone) setMobile(code === "IN" ? myStore.phone.replace(/^\+91/, "") : myStore.phone);
+    setWhatsappOptIn(Boolean(myStore.whatsapp));
+    if (myStore.primaryType) setBusinessType(myStore.primaryType);
+    if (myStore.capabilities?.length) setCapabilities(myStore.capabilities);
+    if (myStore.category?.length) setBusinessCategories(myStore.category);
+    if (myStore.pan) setPan(myStore.pan.toUpperCase());
+    if (myStore.gstin) { setHasGstin(true); setGstin(myStore.gstin.toUpperCase()); }
   }, [rejected, myStore, overseasOn]);
 
   // Real geolocation → reverse-geocode (BigDataCloud, keyless + CORS-friendly) to fill the address step.
@@ -1132,10 +1141,12 @@ export default function Onboarding() {
   if (showWelcome) {
     // A screen with no button and no hint used to stand here until tapped anywhere (SH-001): now it says what happens
     // next and has one way on.
+    // Only what was sent (review L-66): a registration with a catalogue and no product was promised a listing.
     const nextSteps = [
       { Icon: FileText, text: "Your documents are checked in 3–5 days" },
-      { Icon: Package, text: "Your first listing goes live after review (24–48 hours)" },
-      { Icon: Building2, text: "Your premises photo is reviewed before buyers see it" },
+      ...(hasProduct ? [{ Icon: Package, text: "Your first listing goes live after review (24–48 hours)" }] : []),
+      ...(catalogueFiles.length > 0 ? [{ Icon: Package, text: "Your catalogue is reviewed before buyers see it" }] : []),
+      ...(businessImages.length > 0 ? [{ Icon: Building2, text: "Your premises photo is reviewed before buyers see it" }] : []),
     ];
     return (
       <div className="vendor-shell fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#f0fdf4] px-6 py-10 text-center">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { useStepBack } from "@/hooks/useStepBack";
 import { motion, useReducedMotion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import {
 import { useLang } from "@/lib/i18n";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
+import LoadFailed from "@/components/LoadFailed";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
@@ -102,11 +104,19 @@ export default function SupportThread() {
       </SupportFrame>
     );
   }
-  return <Thread ticketNo={ticketNo} userId={user?.id} />;
+  // The thread is read only once the session is known (review L-43: it was read before, and a signed-out visit got a
+  // 401 from support_request_detail).
+  if (!user) {
+    return (
+      <SupportFrame title="Your request" back="/help/requests">
+        <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      </SupportFrame>
+    );
+  }
+  return <Thread ticketNo={ticketNo} userId={user.id} />;
 }
 
-function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: string | undefined }) {
-  const navigate = useNavigate();
+function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: string }) {
   const reduced = useReducedMotion();
   const qc = useQueryClient();
   const { accent } = useSupportSide();
@@ -126,16 +136,21 @@ function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: st
     endRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
   }, [newest, reduced]);
 
-  const goBack = () => {
-    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-    if (idx > 0) navigate(-1);
-    else navigate("/help/requests");
-  };
+  // Falls back in place of this entry (review L-40).
+  const goBack = useStepBack("/help/requests");
 
   if (thread.isPending) {
     return (
       <SupportFrame title="Your request" back="/help/requests">
         <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      </SupportFrame>
+    );
+  }
+  if (!d && thread.isError) {
+    // A failed read isn't "no such request" (review L-41).
+    return (
+      <SupportFrame title="Your request" back="/help/requests">
+        <LoadFailed label="Couldn't load this request" onRetry={() => void thread.refetch()} className="py-6 text-center" />
       </SupportFrame>
     );
   }
@@ -221,6 +236,10 @@ function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: st
             onSent={() => void qc.invalidateQueries({ queryKey: ["support", "request", ticketNo] })}
             onEnd={canEnd ? () => setConfirmEnd(true) : undefined}
           />
+        ) : t.can_reply && status.isError && !status.data ? (
+          <div className="shrink-0 border-t border-gray-200 bg-white p-3">
+            <LoadFailed label="Couldn't check whether replies are open" onRetry={() => void status.refetch()} className="py-2 text-center" />
+          </div>
         ) : t.can_reply && !status.isPending ? (
           <div className="shrink-0 border-t border-gray-200 bg-white p-3">
             <SupportUnavailable title="Replying in the app isn't available yet." subject={`About ${t.ticket_no}`} />

@@ -345,13 +345,35 @@ export async function uploadRfqImages(buyerId: string, files: File[]): Promise<s
   // Shrunk first (lib/shrinkImage.ts), then uploaded side by side: five phone photos at full size
   // took long enough on mobile data that buyers gave up.
   const prepared = await Promise.all(files.slice(0, RFQ_MAX_IMAGES).map((f) => shrinkImage(f)));
-  return Promise.all(prepared.map(async ({ blob, ext }, i) => {
+  const results = await Promise.allSettled(prepared.map(async ({ blob, ext }, i) => {
     const path = `${buyerId}/rfq/${batchId}/${i}.${ext}`;
     const { error } = await supabase.storage.from("product-images")
       .upload(path, blob, { upsert: true, contentType: blob.type || undefined, cacheControl: "31536000" });
     if (error) throw error;
     return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
   }));
+  const urls = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (failed) {
+    // One photo failed: the requirement isn't written, so the ones that went up are taken down (review L-38).
+    await removeRfqImages(urls);
+    throw failed.reason;
+  }
+  return urls;
+}
+
+/**
+ * Takes down requirement photos uploaded for a requirement that was then not written (review L-38). Best effort: a
+ * failure leaves the files, as before, and never replaces the error the buyer is shown.
+ */
+export async function removeRfqImages(urls: string[]): Promise<void> {
+  const marker = "/storage/v1/object/public/product-images/";
+  const paths = urls.map((u) => {
+    const at = u.indexOf(marker);
+    return at < 0 ? null : decodeURIComponent(u.slice(at + marker.length).split("?")[0]);
+  }).filter((p): p is string => Boolean(p));
+  if (!paths.length) return;
+  try { await supabase.storage.from("product-images").remove(paths); } catch { /* best effort */ }
 }
 
 /** The most pictures a requirement takes (the forms say "up to 5"). */
@@ -522,8 +544,10 @@ export class QuoteChangedError extends Error {
 // itself, so a revision landing at the same moment can't slip between them.
 export async function setQuoteStatusDb(id: string, status: QuoteStatus, seen?: QuoteTerms): Promise<void> {
   if (status !== "accepted" || !seen) {
-    const { error } = await supabase.from("quotes").update({ status }).eq("id", id);
+    // A refused update matches no row and returns no error (RLS): say so instead of reporting success (review L-39).
+    const { data, error } = await supabase.from("quotes").update({ status }).eq("id", id).select("id");
     if (error) throw error;
+    if (!data?.length) throw new Error("This quote couldn't be updated. Refresh and try again.");
     return;
   }
   let q = supabase.from("quotes").update({ status }).eq("id", id).eq("currency", seen.currency);

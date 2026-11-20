@@ -2,10 +2,10 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import CosoraLogo from "@/components/CosoraLogo";
+import SignupHeader from "@/components/auth/SignupHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   accountInfoFrom, EMPTY_PROFILE, saveAccountInfo, useProfileFull, type AccountInfoValues,
@@ -148,14 +148,8 @@ const AccountInfo = () => {
         transition={{ duration: 0.4 }}
         className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
-        <div className="mb-6 flex items-center gap-2">
-          <button type="button" onClick={back} aria-label="Back" className="-ml-1.5 p-1.5 rounded-full hover:bg-gray-100">
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          {/* COSORA wordmark */}
-          <CosoraLogo height={30} />
-        </div>
-        <div className="h-px bg-gray-200 mb-6" />
+        {/* Back, the COSORA wordmark and the step (review L-57) */}
+        <SignupHeader onBack={back} />
 
         <h2 className="text-lg font-bold text-gray-900 mb-3">Account Information</h2>
 
@@ -292,7 +286,7 @@ const AccountInfo = () => {
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >
-          {saving ? "Saving…" : "NEXT"}
+          {saving ? "Saving…" : "Continue"}
         </button>
       </motion.div>
     </div>

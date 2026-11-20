@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOverlayState } from "@/hooks/useBackCloses";
+import { useStepParam } from "@/hooks/useStepParam";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -356,14 +357,22 @@ function StepDots({ step }: { step: number }) {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
+const INTRO_STEPS = ["welcome", "interests", "locations"] as const;
+
 const ForYou = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const t = useT();
   const prefs = usePreferences();
 
-  // Onboarding local step state
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  // The first-run screen's step is in the address, one history entry per step (review L-61): Back goes to the step
+  // before, not off the page. Finishing replaces the entry without it, so the feed's address is plain again.
+  const steps = useStepParam("intro", INTRO_STEPS, "welcome");
+  const step = INTRO_STEPS.indexOf(steps.step) as 0 | 1 | 2;
+  const finishIntro = (skip: boolean) => {
+    completeOnboarding(skip);
+    steps.replace("welcome");
+  };
   const [locQuery, setLocQuery] = useState("");
 
   // Feed state
@@ -585,12 +594,12 @@ const ForYou = () => {
                 </p>
                 <div className="my-7"><StepDots step={0} /></div>
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => steps.go("interests")}
                   className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Start
                 </button>
-                <button onClick={() => completeOnboarding(true)} className="mt-3 text-sm text-gray-400 hover:text-gray-600">
+                <button onClick={() => finishIntro(true)} className="mt-3 text-sm text-gray-400 hover:text-gray-600">
                   Skip for now
                 </button>
               </motion.div>
@@ -611,7 +620,7 @@ const ForYou = () => {
                 <CategoryPicker selected={prefs.categories} />
                 <div className="my-6"><StepDots step={1} /></div>
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => steps.go("locations")}
                   className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Next
@@ -634,7 +643,7 @@ const ForYou = () => {
                 <LocationPicker selected={prefs.locations} query={locQuery} setQuery={setLocQuery} />
                 <div className="my-6"><StepDots step={2} /></div>
                 <button
-                  onClick={() => completeOnboarding(false)}
+                  onClick={() => finishIntro(false)}
                   className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Next

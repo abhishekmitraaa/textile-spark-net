@@ -11,6 +11,7 @@ import { useEditableProfile } from "@/hooks/useEditableProfile";
 import { BUSINESS_TYPES, INDUSTRIES } from "@/lib/profileStore";
 import { errorMessage } from "@/lib/errorMessage";
 import { useStepBack } from "@/hooks/useStepBack";
+import LoadFailed from "@/components/LoadFailed";
 
 // /profile/business-details: the Business tab of the former Edit Profile modal,
 // now a real route (2026-09-23). Same fields, saved through the hook
@@ -22,7 +23,7 @@ const ProfileBusinessDetails = () => {
   // /profile, so Back from there came back here, and round again).
   const goBack = useStepBack("/profile");
   const [params] = useSearchParams();
-  const { signedOut, form, set, save } = useEditableProfile();
+  const { signedOut, form, set, save, loadFailed, retry } = useEditableProfile();
   const [saving, setSaving] = useState(false);
 
   const onSave = async () => {
@@ -45,7 +46,9 @@ const ProfileBusinessDetails = () => {
         <ProfileSignedOut />
       ) : (
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-4">
-          {!form ? (
+          {loadFailed ? (
+            <LoadFailed label="Couldn't load your profile" onRetry={retry} />
+          ) : !form ? (
             <ProfileFormLoading />
           ) : (
             <>

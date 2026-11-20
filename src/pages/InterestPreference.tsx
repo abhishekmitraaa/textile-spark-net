@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
+import SignupHeader from "@/components/auth/SignupHeader";
 import { cn } from "@/lib/utils";
 import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
 import { toast } from "sonner";
@@ -61,6 +62,18 @@ const InterestPreference = () => {
   const canSave = isValid && ready && !saving;
   const count = selected.length;
 
+  // The grid's last row stays above the pinned Save bar (review L-58): the page's bottom padding follows the bar's real
+  // height, which grows with the "Others" hint and the phone's safe area.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = useState(112);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setBarHeight(el.getBoundingClientRect().height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const handleSave = async () => {
     if (!canSave) return;
     // Persist to the real account-tied store (DB when signed in, local otherwise), and move on only once it is saved.
@@ -79,6 +92,7 @@ const InterestPreference = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
+      {inProfile ? (
       <header className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center gap-2 px-3 py-3">
           <button
@@ -92,12 +106,20 @@ const InterestPreference = () => {
           <h1 className="text-base font-bold text-gray-900">Interest Preference</h1>
         </div>
       </header>
+      ) : (
+        // A sign-up step: the steps' one header (review L-57).
+        <div className="mx-auto w-full max-w-lg px-4 pt-6">
+          <SignupHeader onBack={back} className="mb-2" />
+          <h1 className="text-center text-base font-bold text-gray-900">Interest Preference</h1>
+        </div>
+      )}
 
       <motion.main
         initial={reduced ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mx-auto w-full max-w-lg flex-1 px-4 pt-4 pb-28"
+        className="mx-auto w-full max-w-lg flex-1 px-4 pt-4"
+        style={{ paddingBottom: barHeight + 24 }}
       >
         <div className="rounded-xl bg-gray-50 px-4 py-3.5">
           <p className="text-sm font-semibold text-gray-900">Choose the categories you source.</p>
@@ -129,7 +151,7 @@ const InterestPreference = () => {
         </fieldset>
       </motion.main>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-100 bg-white/95 backdrop-blur">
+      <div ref={barRef} className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-100 bg-white/95 backdrop-blur">
         <div className="mx-auto max-w-lg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {otherMissing && (
             <p className="mb-2 text-center text-xs text-gray-500">Tell us what “Others” is, or unselect it.</p>
@@ -145,7 +167,7 @@ const InterestPreference = () => {
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             )}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : inProfile ? "Save" : "Continue"}
           </button>
         </div>
       </div>

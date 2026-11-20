@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { createRfq, uploadRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { createRfq, uploadRfqImages, removeRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
 import { quantityFrom, amountFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
@@ -342,9 +342,10 @@ const PostRequirement = () => {
     }
 
     setSubmitting(true);
+    let images: string[] = [];
     try {
       // Photos first, so the requirement is written once, complete, with its cover.
-      const images = files.length ? await uploadRfqImages(user.id, files) : [];
+      images = files.length ? await uploadRfqImages(user.id, files) : [];
       await createRfq(user.id, {
         title, productName, quantity, budgetMin, budgetMax, description, images,
         categoryId: categoryDbId,
@@ -356,6 +357,8 @@ const PostRequirement = () => {
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
       queryClient.invalidateQueries({ queryKey: ["rfq_submissions"] });
     } catch (e) {
+      // Not written: its photos come down again (review L-38). The invalidations above can't throw.
+      void removeRfqImages(images);
       toast.error("Couldn't submit your requirement", { description: errorMessage(e) });
       setSubmitting(false);
       return;
@@ -368,7 +371,8 @@ const PostRequirement = () => {
   // Success -> redirect to My Previous Quotes
   useEffect(() => {
     if (step !== "success") return;
-    const t = window.setTimeout(() => navigate("/requirement/my-quotes"), 5000);
+    // Replaces the success screen, so Back from My Quotes doesn't land on it again (review L-38).
+    const t = window.setTimeout(() => navigate("/requirement/my-quotes", { replace: true }), 5000);
     return () => window.clearTimeout(t);
   }, [step, navigate]);
 
@@ -535,7 +539,7 @@ const PostRequirement = () => {
         <p className="mt-2 text-white/90 text-sm max-w-xs">
           Cosora checks every requirement before sellers see it. This usually takes 3–5 minutes, and we'll notify you.
         </p>
-        <button onClick={() => navigate("/requirement/my-quotes")} className="mt-8 text-white/80 text-sm underline underline-offset-4">
+        <button onClick={() => navigate("/requirement/my-quotes", { replace: true })} className="mt-8 text-white/80 text-sm underline underline-offset-4">
           See it in My Quotes
         </button>
       </div>

@@ -4,20 +4,29 @@ import { errorMessage } from "@/lib/errorMessage";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { ArrowLeft } from "lucide-react";
-import CosoraLogo from "@/components/CosoraLogo";
+import SignupHeader from "@/components/auth/SignupHeader";
 import { useStepBack } from "@/hooks/useStepBack";
 import TermsClauses from "@/components/TermsClauses";
 import { useAuth } from "@/contexts/AuthContext";
 import { TERMS_EFFECTIVE_DATE, TERMS_INTRO } from "@/data/terms";
-import { acceptBuyerTerms, isStaleTerms } from "@/lib/buyerTerms";
+import { acceptBuyerTerms, isStaleTerms, BUYER_TERMS_VERSION } from "@/lib/buyerTerms";
 import { finishAuthFlow } from "@/lib/authHistory";
+
+// The "I agree" tick, kept in this tab for this version of the Terms (review L-60): reading the full Terms and coming
+// back used to clear it. It is only the box on screen; acceptance is recorded by accept_buyer_terms when Continue is
+// pressed.
+const AGREED_KEY = `cosora.termsTicked.${BUYER_TERMS_VERSION}`;
+const readTicked = () => { try { return sessionStorage.getItem(AGREED_KEY) === "1"; } catch { return false; } };
+const writeTicked = (on: boolean) => {
+  try { if (on) sessionStorage.setItem(AGREED_KEY, "1"); else sessionStorage.removeItem(AGREED_KEY); } catch { /* private mode */ }
+};
 
 const Terms = () => {
   const navigate = useNavigate();
   const back = useStepBack("/auth/interest-preference");
   const { refreshProfile } = useAuth();
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreedState] = useState(readTicked);
+  const setAgreed = (on: boolean) => { setAgreedState(on); writeTicked(on); };
   const [saving, setSaving] = useState(false);
 
   // Accepting is the last sign-up step: the database records which Terms were accepted and when, and only then is the
@@ -46,13 +55,8 @@ const Terms = () => {
         transition={{ duration: 0.4 }}
         className="flex-1 min-h-0 flex flex-col max-w-sm mx-auto w-full"
       >
-        {/* Back, and the COSORA wordmark */}
-        <div className="relative flex justify-center mb-4">
-          <button type="button" onClick={back} aria-label="Back" className="absolute left-0 top-1/2 -translate-y-1/2 -ml-1.5 p-1.5 rounded-full hover:bg-white/10">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <CosoraLogo height={30} variant="white" />
-        </div>
+        {/* Back, the COSORA wordmark and the step (review L-57) */}
+        <SignupHeader onBack={back} dark className="mb-4" />
 
         {/* T&C white card */}
         <div className="flex-1 min-h-0 bg-white rounded-2xl p-5 overflow-y-auto mb-4">
@@ -89,7 +93,7 @@ const Terms = () => {
               : "bg-white/30 text-white/50 cursor-not-allowed"
           )}
         >
-          {saving ? "Saving…" : "NEXT"}
+          {saving ? "Saving…" : "Continue"}
         </button>
       </motion.div>
     </div>

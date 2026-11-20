@@ -742,19 +742,29 @@ function relTime(iso: string | null): string {
 
 interface RawConv { id: string; user_a: string; user_b: string; last_message: string | null; last_message_at: string | null }
 
+/** The most chats the list reads, newest first (review L-42): PostgREST stops at 1,000 rows without saying so. */
+export const CHAT_LIST_LIMIT = 500;
+
 async function fetchConversations(userId: string): Promise<ChatSummary[]> {
-  const [{ data, error }, { data: states, error: stateError }] = await Promise.all([
-    supabase
-      .from("conversations")
-      .select("id, user_a, user_b, last_message, last_message_at")
-      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-      .order("last_message_at", { ascending: false }),
-    // My own view of each chat: starred, archived, deleted-for-me (the policy returns only mine).
-    supabase.from("conversation_member_state").select("conversation_id, starred_at, archived_at, cleared_at").eq("user_id", userId),
-  ]);
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("id, user_a, user_b, last_message, last_message_at")
+    .or(`user_a.eq.${userId},user_b.eq.${userId}`)
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: false })
+    .limit(CHAT_LIST_LIMIT);
   if (error) throw error;
-  if (stateError) throw stateError;
-  const stateOf = new Map((states ?? []).map((s) => [s.conversation_id, s]));
+  // My own view of each listed chat: starred, archived, deleted-for-me (the policy returns only mine), 100 ids a request.
+  const listedIds = ((data ?? []) as RawConv[]).map((c) => c.id);
+  const states: { conversation_id: string; starred_at: string | null; archived_at: string | null; cleared_at: string | null }[] = [];
+  for (let i = 0; i < listedIds.length; i += 100) {
+    const { data: part, error: stateError } = await supabase.from("conversation_member_state")
+      .select("conversation_id, starred_at, archived_at, cleared_at").eq("user_id", userId)
+      .in("conversation_id", listedIds.slice(i, i + 100));
+    if (stateError) throw stateError;
+    states.push(...(part ?? []));
+  }
+  const stateOf = new Map(states.map((s) => [s.conversation_id, s]));
   // A chat deleted for me stays out of the list until a newer message arrives.
   const rows = ((data ?? []) as RawConv[]).filter((c) => {
     const cleared = stateOf.get(c.id)?.cleared_at;

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import SignupHeader from "@/components/auth/SignupHeader";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,17 +50,14 @@ const SubRole = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col px-6 py-6">
-      {/* Back arrow */}
-      <button onClick={back} aria-label="Back" className="mb-4 -ml-1 p-1.5 self-start">
-        <ArrowLeft className="w-5 h-5 text-gray-700" />
-      </button>
-
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
+        {/* Back, the COSORA wordmark and the step (review L-57) */}
+        <SignupHeader onBack={back} />
         <h2 id="subrole-title" className="text-xl font-bold text-gray-900 mb-1">What best describes you?</h2>
         <p className="text-sm text-gray-400 mb-6">Select your primary role</p>
 

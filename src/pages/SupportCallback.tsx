@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import LoadFailed from "@/components/LoadFailed";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ import {
   istDayLabel, labelIn, requestCallback, supportError, useCallbackSlots, useSupportStatus, useSupportTopics, type CallbackSlot,
 } from "@/lib/queries/support";
 import { useLang } from "@/lib/i18n";
+import { normalizeContactPhone } from "@/lib/contactPhone";
 import { SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
 
 /**
@@ -35,6 +37,14 @@ export default function SupportCallback() {
     return (
       <SupportFrame title="Request a callback">
         <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      </SupportFrame>
+    );
+  }
+  if (status.isError && !status.data) {
+    // Not knowing isn't "not available" (review L-41).
+    return (
+      <SupportFrame title="Request a callback">
+        <LoadFailed label="Couldn't check whether support is open" onRetry={() => void status.refetch()} className="py-6 text-center" />
       </SupportFrame>
     );
   }
@@ -74,10 +84,13 @@ function CallbackForm() {
   const submit = async () => {
     if (!topic) return toast.error("Choose what it's about.");
     if (!phone.trim()) return toast.error("Give the number we should call.");
+    // Staff dial what is stored, so it goes in as one number (+91…), the profile phone's rule (review L-44).
+    const callNumber = normalizeContactPhone(phone);
+    if (!callNumber) return toast.error("Enter a 10-digit Indian mobile number, or a number with its +country code.");
     if (!slot) return toast.error("Choose a time.");
     setBusy(true);
     try {
-      const r = await requestCallback({ category: topic, phone, date: slot.date, start: slot.start, note });
+      const r = await requestCallback({ category: topic, phone: callNumber, date: slot.date, start: slot.start, note });
       setDone({ ticket_no: r.ticket_no, when: `${istDayLabel(r.date)}, ${r.start}–${r.end} IST` });
     } catch (e) {
       toast.error(supportError(e));

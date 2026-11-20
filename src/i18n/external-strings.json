@@ -540,7 +540,7 @@
   "/msg",
   "Tag a product",
   "Not live yet",
-  "27th October 2025"
+  "20th November 2026"
  ],
  "otp_server_source": "Messages the otp-dev-verify edge function returns (supabase/functions/otp-dev-verify/index.ts), shown on the code screen.",
  "otp_server": [

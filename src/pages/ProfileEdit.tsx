@@ -11,6 +11,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import { BUYER_ROLES } from "@/data/buyerRoles";
 import noUserPicture from "@/assets/Buyer/profile section/No user Picture.jpg";
 import { useStepBack } from "@/hooks/useStepBack";
+import LoadFailed from "@/components/LoadFailed";
 
 // /profile/edit: photo + personal details. It was the Photo and Personal tabs of
 // the Edit Profile modal on /profile, now a real route that survives a refresh
@@ -27,7 +28,7 @@ const ProfileEdit = () => {
   // /profile, so Back from there came back here, and round again).
   const goBack = useStepBack("/profile");
   const [params] = useSearchParams();
-  const { signedOut, form, set, save, uploadPhoto } = useEditableProfile();
+  const { signedOut, form, set, save, pickPhoto: holdPhoto, photoSrc, photoPending, loadFailed, retry } = useEditableProfile();
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -38,11 +39,10 @@ const ProfileEdit = () => {
     if (!file) return;
     setUploadingPhoto(true);
     try {
-      const url = await uploadPhoto(file);
-      set({ avatar: url });
-      toast.success("Photo uploaded — press Save Changes to apply");
+      // Shrunk and shown now; uploaded when the profile is saved (review L-48).
+      await holdPhoto(file);
     } catch (err) {
-      toast.error("Upload failed", { description: errorMessage(err) });
+      toast.error("Couldn't use that photo", { description: errorMessage(err) });
     } finally {
       setUploadingPhoto(false);
     }
@@ -68,7 +68,9 @@ const ProfileEdit = () => {
         <ProfileSignedOut />
       ) : (
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-4">
-          {!form ? (
+          {loadFailed ? (
+            <LoadFailed label="Couldn't load your profile" onRetry={retry} />
+          ) : !form ? (
             <ProfileFormLoading />
           ) : (
             <>
@@ -78,18 +80,20 @@ const ProfileEdit = () => {
                 <div className="flex flex-col items-center text-center">
                   <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
                   <button type="button" onClick={() => photoRef.current?.click()} disabled={uploadingPhoto} className="relative" aria-label="Change photo">
-                    <img src={form.avatar || noUserPicture} alt="Profile" className="w-28 h-28 rounded-full object-cover bg-gray-100" />
+                    <img src={photoSrc || noUserPicture} alt="Profile" className="w-28 h-28 rounded-full object-cover bg-gray-100" />
                     <span className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand-buyer flex items-center justify-center">
                       {uploadingPhoto ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
                     </span>
                   </button>
-                  <p className="text-xs text-gray-500 mt-3">Tap the photo to change it</p>
+                  <p className="text-xs text-gray-500 mt-3">
+                    {photoPending ? "New photo: press Save Changes to keep it" : "Tap the photo to change it"}
+                  </p>
                   <button
                     onClick={() => photoRef.current?.click()}
                     disabled={uploadingPhoto}
                     className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors disabled:opacity-60"
                   >
-                    <Upload className="w-4 h-4" /> {uploadingPhoto ? "Uploading…" : "Upload New Photo"}
+                    <Upload className="w-4 h-4" /> {uploadingPhoto ? "Preparing…" : "Choose New Photo"}
                   </button>
                   <p className="text-[11px] text-gray-400 mt-2">Recommended: Square image, at least 200x200px</p>
                 </div>

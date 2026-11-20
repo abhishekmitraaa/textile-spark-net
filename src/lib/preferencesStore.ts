@@ -45,6 +45,21 @@ function cleanOther(categories: string[], text: unknown): string {
   return clipOtherInterest(text);
 }
 
+/**
+ * The accounts that finished (or skipped) For You's first-run screen in this browser (review L-62). The flag used to be
+ * one per browser, so the next account to sign in on it skipped the screen, and a guest's skip counted for everyone.
+ * An account with saved interests counts as finished on any device; one that skipped without picks, on this one.
+ */
+function completedAccounts(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const list = raw ? (JSON.parse(raw) as { completedAccounts?: unknown }).completedAccounts : null;
+    return Array.isArray(list) ? list.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function load(): BuyerPreferences {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -91,11 +106,18 @@ function writeLocal() {
     // them, so leave the previously stored (signed-out) ones untouched, to
     // avoid one account's picks leaking into the next signed-out session.
     const stored = load();
-    const toSave: BuyerPreferences = {
+    // Signed in, the flag is this account's (completedAccounts); signed out, the browser's own (hasCompleted).
+    const accounts = new Set(completedAccounts());
+    if (userId) {
+      if (state.hasCompleted) accounts.add(userId);
+      else accounts.delete(userId);
+    }
+    const toSave: BuyerPreferences & { completedAccounts: string[] } = {
       categories: userId ? stored.categories : state.categories,
       otherInterest: userId ? stored.otherInterest : state.otherInterest,
       locations: userId ? stored.locations : state.locations,
-      hasCompleted: state.hasCompleted,
+      hasCompleted: userId ? stored.hasCompleted : state.hasCompleted,
+      completedAccounts: [...accounts].slice(-20),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch {
@@ -167,7 +189,7 @@ async function readAccount(uid: string): Promise<void> {
     categories: cats,
     otherInterest: data?.preferred_interest_other ?? "",
     locations: locs,
-    hasCompleted: state.hasCompleted || cats.length > 0 || locs.length > 0,
+    hasCompleted: completedAccounts().includes(uid) || cats.length > 0 || locs.length > 0,
   });
   setSync("ready");
   if (carryUp) saveInBackground();
@@ -184,6 +206,9 @@ export async function setPreferencesUser(nextUserId: string | null) {
     setSync("local");
     return;
   }
+  // Until the account is read, the flag is the account's own, never the guest's or the last account's (review L-62).
+  state = { ...state, hasCompleted: completedAccounts().includes(nextUserId) };
+  notify();
   try {
     await readAccount(nextUserId);
   } catch {

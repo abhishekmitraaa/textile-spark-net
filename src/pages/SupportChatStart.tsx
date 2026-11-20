@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import LoadFailed from "@/components/LoadFailed";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, MessageCircle, ShieldCheck, ChevronRight } from "lucide-react";
@@ -36,6 +37,14 @@ export default function SupportChatStart() {
     return (
       <SupportFrame title="Chat with Cosora Support">
         <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      </SupportFrame>
+    );
+  }
+  if (status.isError && !status.data) {
+    // Not knowing isn't "not available" (review L-41).
+    return (
+      <SupportFrame title="Chat with Cosora Support">
+        <LoadFailed label="Couldn't check whether support is open" onRetry={() => void status.refetch()} className="py-6 text-center" />
       </SupportFrame>
     );
   }

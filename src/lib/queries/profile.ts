@@ -9,6 +9,7 @@ type BuyerProfileInsert = Database["public"]["Tables"]["buyer_profiles"]["Insert
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 import type { ProfileData, SocialLinks, NotificationSettings, RegionalSettings } from "@/lib/profileStore";
 import { normalizeContactPhone } from "@/lib/contactPhone";
+import { shrinkImage } from "@/lib/shrinkImage";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer profile — the real, DB-backed identity + business details shown on
@@ -166,12 +167,33 @@ export async function saveBuyerRole(userId: string, role: BuyerRoleId): Promise<
 
 // Upload a new avatar to the avatars bucket and return its public URL. Files
 // are namespaced by uid so a user can only overwrite their own.
-export async function uploadAvatar(userId: string, file: File): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${userId}/avatar-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+/**
+ * Uploads an already-shrunk profile photo (review L-48: `shrinkAvatar()` when it is picked, the upload only on Save) and
+ * returns its address.
+ */
+export async function uploadAvatar(userId: string, photo: { blob: Blob; ext: string }): Promise<string> {
+  const path = `${userId}/avatar-${Date.now()}.${photo.ext}`;
+  const { error } = await supabase.storage.from("avatars")
+    .upload(path, photo.blob, { upsert: true, contentType: photo.blob.type || undefined, cacheControl: "31536000" });
   if (error) throw error;
   return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+}
+
+/** A profile photo as stored: a 512 px JPEG (it shows at 112 px at most). */
+export const shrinkAvatar = (file: File) => shrinkImage(file, 512, "jpeg");
+
+/**
+ * Removes a photo of the account's own from the avatars bucket, by its address (review L-48): one uploaded for a save
+ * that then failed, or the one a saved new photo replaced. Anything else (a Google picture) is left alone. Best effort.
+ */
+export async function removeOwnAvatar(userId: string, url: string | null | undefined): Promise<void> {
+  if (!url) return;
+  const marker = "/storage/v1/object/public/avatars/";
+  const at = url.indexOf(marker);
+  if (at < 0) return;
+  const path = decodeURIComponent(url.slice(at + marker.length).split("?")[0]);
+  if (!path.startsWith(`${userId}/`)) return;
+  try { await supabase.storage.from("avatars").remove([path]); } catch { /* best effort */ }
 }
 
 // ── Settings (social / notifications / regional) stored as JSON on buyer_profiles ──
@@ -305,13 +327,13 @@ export async function saveAccountInfo(userId: string, before: AccountInfoValues,
 //     links to (/requirement/my-quotes, its "Total Quotes").
 //   • Chats  = conversations the user is a party to, the same filter as the
 //     /chats list (useConversations in queries/chat.ts).
-export interface ProfileStats { quotes: number; chats: number }
+export interface ProfileStats { quotes: number; chats: number; savedVideos: number }
 
 export function useProfileStats(userId: string | undefined) {
   return useQuery({
     queryKey: ["profile_stats", userId],
     queryFn: async (): Promise<ProfileStats> => {
-      const [quotesRes, chatsRes] = await Promise.all([
+      const [quotesRes, chatsRes, videosRes] = await Promise.all([
         supabase
           .from("quotes")
           .select("id, rfqs!inner(buyer_id)", { count: "exact", head: true })
@@ -320,10 +342,17 @@ export function useProfileStats(userId: string | undefined) {
           .from("conversations")
           .select("*", { count: "exact", head: true })
           .or(`user_a.eq.${userId},user_b.eq.${userId}`),
+        // Saved video close-ups count in Profile's "Saved" (review L-51): the live ones, as My Saves lists them.
+        supabase
+          .from("saved_videos")
+          .select("video_id, product_videos!inner(status)", { count: "exact", head: true })
+          .eq("buyer_id", userId as string)
+          .eq("product_videos.status", "live"),
       ]);
       if (quotesRes.error) throw quotesRes.error;
       if (chatsRes.error) throw chatsRes.error;
-      return { quotes: quotesRes.count ?? 0, chats: chatsRes.count ?? 0 };
+      if (videosRes.error) throw videosRes.error;
+      return { quotes: quotesRes.count ?? 0, chats: chatsRes.count ?? 0, savedVideos: videosRes.count ?? 0 };
     },
     enabled: Boolean(userId),
   });

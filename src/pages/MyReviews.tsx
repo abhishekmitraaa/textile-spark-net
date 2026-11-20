@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/lib/errorMessage";
 import { useBackCloses } from "@/hooks/useBackCloses";
 import { useStepBack } from "@/hooks/useStepBack";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -121,6 +122,8 @@ const MyReviews = () => {
   } = useReviewMutations();
   const [filter, setFilter] = useState<"All" | ReviewType>("All");
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  // Delete asks first (review L-49): one tap in the menu used to delete the review.
+  const [confirmDelete, setConfirmDelete] = useState<MyReview | null>(null);
   const [editing, setEditing] = useState<MyReview | null>(null);
   // Back closes the edit sheet and a review's menu (review M-29).
   useBackCloses(editing !== null, () => setEditing(null));
@@ -302,7 +305,7 @@ const MyReviews = () => {
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                             <Pencil className="w-4 h-4" /> Edit
                           </button>
-                          <button onClick={() => remove(r)}
+                          <button onClick={() => { setMenuFor(null); setConfirmDelete(r); }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
                             <Trash2 className="w-4 h-4" /> Delete
                           </button>
@@ -456,6 +459,15 @@ const MyReviews = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Delete this review?"
+        body="It will be removed from the page it's on. You can write a new one later."
+        confirmLabel="Delete"
+        onConfirm={() => { const r = confirmDelete; setConfirmDelete(null); if (r) void remove(r); }}
+        onCancel={() => setConfirmDelete(null)}
+      />
 
       <MobileBottomNav />
     </div>
