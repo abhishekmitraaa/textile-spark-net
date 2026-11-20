@@ -708,6 +708,11 @@ undocumented. Deep technical rationale for each lives in
   - **Revoking a column that clients read is ordered:** ship the new readers and the code,
     deploy both front ends, check the live bundles, and only then revoke. Phase 11 revoked
     first and broke `cosora.in` and the admin panel (MPF-19).
+  - **The database reads a column as the browser too.** Before revoking, list every function that isn't SECURITY
+    DEFINER and names the column (`select proname from pg_proc where not prosecdef and prosrc ~ '<column>'`), and
+    every policy that does: a trigger or policy that runs as the caller and SELECTs it fails once it's gone. Low
+    batch 5's revoke of `account_status` (2026-11-20) broke every signed-in write to `profiles` and `buyer_profiles`
+    through `guard_deleted_account()` for an evening (hotfix `20261120140200`). Reading `NEW`/`OLD` needs no grant.
   - MPF-19 closed 2026-09-24: the interim grant is revoked, so no client role can read the
     two columns.
   - Detail: `technicalimplementation.md` → "Profile contact details".
