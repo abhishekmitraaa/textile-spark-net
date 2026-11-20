@@ -49,8 +49,8 @@ const ANON = env.VITE_SUPABASE_ANON_KEY;
 
 const BUYER_ID = "11111111-1111-1111-1111-111111111111";
 const VENDOR_ID = "22222222-2222-2222-2222-222222222222";
-/** Every profiles column a client may read. email and phone are the two left out. */
-const READABLE = "id,full_name,avatar_url,active_role,onboarded,account_status,created_at";
+/** Every profiles column a client may read. email, phone and (since review L-89) account_status are left out. */
+const READABLE = "id,full_name,avatar_url,active_role,onboarded,created_at";
 
 const results = [];
 let failures = 0;
@@ -108,7 +108,7 @@ for (const [fn, args] of [
 
 // ── demo-buyer ──
 const buyer = await signIn("buyer");
-for (const col of ["email", "phone"]) {
+for (const col of ["email", "phone", "account_status"]) {
   const { data, error } = await buyer.db.from("profiles").select(col).eq("id", VENDOR_ID);
   check(`buyer cannot read another user's ${col}`, error?.code === "42501" && !data, error?.code ?? "no error");
   const f = await buyer.db.from("profiles").select("id").not(col, "is", null);

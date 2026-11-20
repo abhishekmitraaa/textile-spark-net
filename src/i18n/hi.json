@@ -9272,5 +9272,6 @@
  "1 listing was removed by Cosora. See why": "कोसोरा ने 1 लिस्टिंग हटा दी। कारण देखें",
  "{0} listings were removed by Cosora. See why": "कोसोरा ने {0} लिस्टिंग हटा दीं। कारण देखें",
  "That quote isn't in your list any more": "वह कोटेशन अब आपकी सूची में नहीं है",
- "This account can't be contacted right now.": "इस अकाउंट से अभी संपर्क नहीं किया जा सकता।"
+ "This account can't be contacted right now.": "इस अकाउंट से अभी संपर्क नहीं किया जा सकता।",
+ "Couldn't load your settings": "आपकी सेटिंग्स लोड नहीं हो सकीं"
 }

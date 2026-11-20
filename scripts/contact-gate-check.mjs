@@ -73,12 +73,13 @@ async function signIn({ email, password }) {
 
 /** A faithful port of callGate() from src/lib/queries/calls.ts. */
 async function callGate(db, meId, otherId) {
-  const ids = meId && meId !== otherId ? [meId, otherId] : [otherId];
-  const { data: rows } = await db.from("profiles").select("id, account_status").in("id", ids);
-  const statusOf = (id) => rows?.find((r) => r.id === id)?.account_status ?? "active";
-
-  if (meId && statusOf(meId) === "suspended") return "caller_suspended";
-  if (statusOf(otherId) === "suspended") return "target_suspended";
+  if (!meId) return null;
+  // One answer from contact_check() (review L-89): account_status isn't client-readable.
+  const { data: verdict, error } = await db.rpc("contact_check", { p_other: otherId });
+  if (error) return "check_failed";
+  if (verdict === "caller_suspended") return "caller_suspended";
+  if (verdict === "target_unavailable") return "target_suspended";
+  if (verdict !== "ok") return "check_failed";
 
   if (meId) {
     const [a, b] = [meId, otherId].sort();

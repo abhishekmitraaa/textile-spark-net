@@ -147,8 +147,9 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await unlockConversation();
   for (const id of [F.buyerA, F.vendorA]) {
-    const { data } = await support.db.from("profiles").select("account_status").eq("id", id).single();
-    if (data?.account_status !== "active") await setAccountStatus(id, "active");
+    // account_status isn't client-readable (review L-89): staff read it through admin_account_statuses().
+    const { data } = await support.db.rpc("admin_account_statuses", { p_ids: [id] });
+    if ((data as { account_status?: string }[] | null)?.[0]?.account_status !== "active") await setAccountStatus(id, "active");
   }
 });
 
@@ -323,7 +324,7 @@ test("T9.2/9.3/9.4 signed-in clear vs blocked, registry data survives", async ({
   await page.goto(`/vendor/${F.vendorA}`);
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(/Contact details aren't available/i)).toBeVisible();
-  await expect(page.getByText(/This account is currently suspended/i)).toBeVisible();
+  await expect(page.getByText(/This account can't be contacted right now/i)).toBeVisible();
   let body = await page.locator("body").innerText();
   expect(body, "phone must be gone when the target is suspended").not.toContain("90000 00003");
   // 9.4 registry data stays — paused, not erased.

@@ -44,20 +44,33 @@ alter table public.follows add constraint follows_not_self check (follower_id <>
 -- ── L-89: readers that answer only what a screen needs ─────────────────────────────────────────────────────────
 -- Whether this account may reach another, without naming the other's status (a signed-in account could read anyone's
 -- account_status). 'caller_suspended' (the caller's own), 'target_unavailable' (suspended or deleted), or 'ok'.
+-- The other's state is answered only where the caller has a reason to reach them: a registered seller (any buyer
+-- may), a quote between them, a message between them, or staff. Anyone else gets 'ok': no screen offers a way to
+-- reach them, and the contact functions refuse on their own rules (call_buyer_contact, call_vendor_contact).
 create or replace function public.contact_check(p_other uuid)
  returns text
  language sql
  stable security definer
  set search_path to ''
 as $function$
+  with me as (select (select auth.uid()) as id)
   select case
-    when (select auth.uid()) is null then 'signed_out'
-    when coalesce((select p.account_status::text from public.profiles p where p.id = (select auth.uid())), 'active') = 'suspended'
+    when me.id is null then 'signed_out'
+    when coalesce((select p.account_status::text from public.profiles p where p.id = me.id), 'active') = 'suspended'
       then 'caller_suspended'
+    when not (
+         coalesce(public.is_admin(), false)
+      or exists (select 1 from public.vendor_profiles v where v.id = p_other and v.onboarding_complete)
+      or exists (select 1 from public.quotes q join public.rfqs r on r.id = q.rfq_id
+                  where (q.vendor_id = me.id and r.buyer_id = p_other) or (q.vendor_id = p_other and r.buyer_id = me.id))
+      or exists (select 1 from public.conversations c join public.messages m on m.conversation_id = c.id
+                  where c.user_a = least(me.id, p_other) and c.user_b = greatest(me.id, p_other))
+    ) then 'ok'
     when coalesce((select p.account_status::text from public.profiles p where p.id = p_other), 'active') <> 'active'
       then 'target_unavailable'
     else 'ok'
   end
+  from me
 $function$;
 revoke all on function public.contact_check(uuid) from public, anon;
 grant execute on function public.contact_check(uuid) to authenticated, service_role;
@@ -106,6 +119,50 @@ as $function$
 $function$;
 revoke all on function public.my_vendor_settings() from public, anon;
 grant execute on function public.my_vendor_settings() to authenticated, service_role;
+
+-- account_is_active() and account_not_deleted() answered any id to anyone, which named any account's state. Every
+-- policy and function passes the caller's own id; a browser asking about another account is refused. Cosora's jobs,
+-- migrations and the service role (admin.trusted_caller()) may still ask about any account.
+create or replace function public.account_is_active(p_id uuid)
+ returns boolean
+ language plpgsql
+ stable security definer
+ set search_path to 'public', 'pg_temp'
+as $function$
+begin
+  if p_id is distinct from auth.uid() and not admin.trusted_caller() then
+    raise exception 'own_account_only' using errcode = '42501';
+  end if;
+  -- coalesce to FALSE: a missing profiles row means "unknown", and a content-creation gate must fail closed.
+  return coalesce((select account_status = 'active' from public.profiles where id = p_id), false);
+end
+$function$;
+
+create or replace function public.account_not_deleted(p_id uuid)
+ returns boolean
+ language plpgsql
+ stable security definer
+ set search_path to ''
+as $function$
+begin
+  if p_id is distinct from auth.uid() and not admin.trusted_caller() then
+    raise exception 'own_account_only' using errcode = '42501';
+  end if;
+  -- coalesce to FALSE, as account_is_active(): a missing profiles row fails closed.
+  return coalesce((select account_status <> 'deleted' from public.profiles where id = p_id), false);
+end
+$function$;
+
+-- The one caller that asks about another account (ads, lead alerts, featured places, follow-ups: all definer code,
+-- and not browser-callable) reads the status itself.
+create or replace function public.vendor_account_in_good_standing(p_vendor uuid)
+ returns boolean
+ language sql
+ stable security definer
+ set search_path to 'public', 'pg_temp'
+as $function$
+  select coalesce((select account_status = 'active' from public.profiles where id = p_vendor), false);
+$function$;
 
 -- messages_insert read the sender's account_status as the sender; account_is_active() reads it as the owner, with the
 -- same answer (no row → not active), so the policy keeps working once the column is withdrawn.
@@ -411,6 +468,10 @@ begin
   end if;
   if to_regprocedure('public.ad_frequency_capped(uuid,text,integer)') is not null then
     raise exception 'low_batch5: unused functions still there';
+  end if;
+  if (select p.prosrc from pg_proc p where p.oid = 'public.vendor_account_in_good_standing(uuid)'::regprocedure) ~ 'account_is_active'
+     or (select p.prosrc from pg_proc p where p.oid = 'public.account_is_active(uuid)'::regprocedure) !~ 'own_account_only' then
+    raise exception 'low_batch5: account status helpers';
   end if;
   if exists (select 1 from public.follows where follower_id = vendor_id) then
     raise exception 'low_batch5: self-follows left';

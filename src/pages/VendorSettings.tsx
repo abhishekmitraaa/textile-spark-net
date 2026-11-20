@@ -19,6 +19,7 @@ import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 import { chooseLang } from "@/lib/languagePreference";
 import { cn } from "@/lib/utils";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
+import LoadFailed from "@/components/LoadFailed";
 import { useFeatureFlag } from "@/lib/queries/featureFlags";
 import { setContactConsent, useContactChannels } from "@/lib/queries/contactChannels";
 import {
@@ -143,7 +144,7 @@ const VendorSettings = () => {
   const qc = useQueryClient();
   const { user, signOut } = useAuth();
   const { data: profile } = useMyVendorProfile(user?.id);
-  const { data: settings } = useVendorSettings(user?.id);
+  const { data: settings, isError: settingsFailed, refetch: refetchSettings } = useVendorSettings(user?.id);
   const lang = useLang();
 
   // Notification prefs held in local state, seeded from the DB. Toggling saves
@@ -258,6 +259,13 @@ const VendorSettings = () => {
                 </p>
               )}
 
+              {/* A failed read says so; the switches wait for the saved choices (review M-49). */}
+              {settingsFailed && (
+                <div className="px-4 pt-3">
+                  <LoadFailed label="Couldn't load your settings" onRetry={() => void refetchSettings()} />
+                </div>
+              )}
+
               <SubgroupHeader icon={Mail} label="Email" />
               {!NOTIFICATION_DELIVERY_LIVE && (
                 <p className="px-4 text-xs text-gray-400">Saved for when Cosora starts sending email</p>
@@ -268,7 +276,7 @@ const VendorSettings = () => {
                     description={r.key === "emailPlanExpiry" && planRemindersLive
                       ? "Emailed 7, 4, 2 and 1 days before your plan ends, and on the day. Off stops the emails, not the notices in your bell."
                       : r.description}
-                    checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} />
+                    checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} disabled={!settings} />
                 ))}
               </div>
 
@@ -281,7 +289,7 @@ const VendorSettings = () => {
               <div className="divide-y divide-gray-100">
                 {PUSH_ROWS.map((r) => (
                   <ToggleRow key={r.key} label={r.label} description={r.description}
-                    checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} />
+                    checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} disabled={!settings} />
                 ))}
               </div>
 

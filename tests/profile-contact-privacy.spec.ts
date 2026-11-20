@@ -210,8 +210,9 @@ test("vendor Call Buyer gets the number from call_buyer_contact(), and is refuse
   const quote = (candidates ?? []).find((q) => (q.rfqs as unknown as { image: string | null }).image);
   expect(quote, "a pending demo-vendor quote on a demo-buyer RFQ with an image").toBeTruthy();
 
-  const { data: before } = await buyer.db.from("profiles").select("account_status").eq("id", BUYER_ID).single();
-  if (before?.account_status === "suspended") await setStatus(admin.db, BUYER_ID, "active"); // a crashed earlier run
+  // The account's own status through my_account_status() (review L-89: the column isn't client-readable).
+  const { data: before } = await buyer.db.rpc("my_account_status");
+  if (before === "suspended") await setStatus(admin.db, BUYER_ID, "active"); // a crashed earlier run
 
   const ctx = await contextFor(browser, vendor);
   const page = await ctx.newPage();
@@ -240,7 +241,7 @@ test("vendor Call Buyer gets the number from call_buyer_contact(), and is refuse
     expect(r.status(), "refused by the database, not only by the UI").toBe(403);
     expect((await r.json()).message).toBe("target_suspended");
     await expect(page.getByText("Calling is unavailable").first()).toBeVisible();
-    await expect(page.getByText("This account is currently suspended.").first()).toBeVisible();
+    await expect(page.getByText("This account can't be contacted right now.").first()).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.screenshot({ path: path.join(SHOTS, "mpf3-call-buyer-suspended.png") });
   } finally {
@@ -250,8 +251,8 @@ test("vendor Call Buyer gets the number from call_buyer_contact(), and is refuse
   }
   const { data: after } = await buyer.db.from("quotes").select("status").eq("id", quote!.id).single();
   expect(after?.status, "quote restored").toBe("pending");
-  const { data: status } = await buyer.db.from("profiles").select("account_status").eq("id", BUYER_ID).single();
-  expect(status?.account_status, "buyer reinstated").toBe("active");
+  const { data: status } = await buyer.db.rpc("my_account_status");
+  expect(status, "buyer reinstated").toBe("active");
 });
 
 test("Cosora-Admin still finds accounts by email and resolves chat participants", async ({ browser }) => {

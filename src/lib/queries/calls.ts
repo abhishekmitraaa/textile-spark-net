@@ -132,6 +132,8 @@ export async function callGate(meId: string | undefined, otherId: string): Promi
   if (checkError) return "check_failed";
   if (verdict === "caller_suspended") return "caller_suspended";
   if (verdict === "target_unavailable") return "target_suspended";
+  // Anything but "ok" (signed out by now, or an answer this build doesn't know) is "couldn't check" (review L-31).
+  if (verdict !== "ok") return "check_failed";
 
   // A plain SELECT on the canonical (sorted) pair — deliberately NOT
   // ensureConversation(), which would CREATE a row as a side effect of merely
