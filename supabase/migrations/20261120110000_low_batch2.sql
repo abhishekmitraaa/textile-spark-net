@@ -16,9 +16,9 @@
 --      and v.ad_verified_until is null;
 --
 -- L-18: cards printed "MOQ: 2" with no unit. Upload stores the MOQ as typed and the price unit apart. feed_products()
--- now returns a bare-number MOQ with the listing's unit ("2 pieces"); an MOQ that already says its unit, or a listing
--- without one, is returned as listed. Same rule as src/lib/moq.ts (moqWithUnit): change both together. Columns,
--- parameters and order are unchanged; only the three `p.moq` select items change.
+-- now returns a bare-number MOQ with the listing's unit ("2 pieces") through public.moq_text(); an MOQ that already
+-- says its unit, or a listing without one, is returned as listed. Same rule as src/lib/moq.ts (moqWithUnit): change
+-- both together. Columns, parameters and order are unchanged; only the three `p.moq` select items change.
 
 begin;
 
@@ -57,15 +57,37 @@ update public.vendor_profiles v
    and v.ad_verified_until = o.previous_verified_until;
 
 -- ── L-18 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+-- The rule of src/lib/moq.ts (moqWithUnit). Called by feed_products() only (a definer function, run as its owner).
+create or replace function public.moq_text(p_moq text, p_unit text)
+returns text
+language sql
+immutable
+set search_path to ''
+as $$
+  select case
+    when btrim(coalesce(p_moq, '')) !~ '^[0-9]+$' or btrim(coalesce(p_unit, '')) = '' then p_moq
+    else btrim(p_moq) || ' ' || u.unit
+      || case when btrim(p_moq) <> '1' and u.unit in
+                ('piece', 'set', 'metre', 'dozen', 'yard', 'roll', 'pair', 'project', 'hour', 'day', 'month')
+              then 's' else '' end
+  end
+  from (select case lower(btrim(coalesce(p_unit, '')))
+                 when 'pieces' then 'piece' when 'pcs' then 'piece' when 'pc' then 'piece'
+                 when 'sets' then 'set' when 'metres' then 'metre' when 'meters' then 'metre' when 'meter' then 'metre'
+                 when 'kgs' then 'kg' when 'dozens' then 'dozen' when 'yards' then 'yard' when 'rolls' then 'roll'
+                 when 'pairs' then 'pair' when 'projects' then 'project' when 'hours' then 'hour' when 'days' then 'day'
+                 when 'months' then 'month'
+                 else lower(btrim(coalesce(p_unit, ''))) end as unit) u
+$$;
+revoke all on function public.moq_text(text, text) from public, anon, authenticated;
+comment on function public.moq_text(text, text) is
+  'A bare-number MOQ with its unit, plural for any count but 1 (review L-18); the rule of src/lib/moq.ts.';
+
 do $patch$
 declare
   v_def  text;
   v_old  constant text := 'p.compare_at_price, p.moq, p.fabric';
-  v_new  constant text := 'p.compare_at_price, '
-    || 'case when btrim(coalesce(p.moq, '''')) ~ ''^[0-9]+$'' and btrim(coalesce(p.unit, '''')) <> '''' '
-    || 'then btrim(p.moq) || '' '' || btrim(p.unit) || case when btrim(p.moq) <> ''1'' and btrim(p.unit) in '
-    || '(''yard'', ''meter'', ''piece'', ''dozen'', ''set'', ''project'', ''hour'', ''day'', ''month'') then ''s'' else '''' end '
-    || 'else p.moq end, p.fabric';
+  v_new  constant text := 'p.compare_at_price, public.moq_text(p.moq, p.unit), p.fabric';
   v_n    integer;
 begin
   select replace(pg_get_functiondef(p.oid), E'\r\n', E'\n') into v_def
@@ -90,12 +112,17 @@ begin
    where title like '%[demo]' and status not in ('archived', 'expired', 'ended', 'rejected');
   select count(*) into v_seal from admin.demo_ads_offline o join public.vendor_profiles v on v.id = o.vendor_id
    where o.previous_verified_until is not null and v.ad_verified_until = o.previous_verified_until;
+  if public.moq_text('2', 'Pcs') <> '2 pieces' or public.moq_text('1', 'piece') <> '1 piece'
+     or public.moq_text('10', 'kg') <> '10 kg' or public.moq_text('50 pieces', 'piece') <> '50 pieces'
+     or public.moq_text('10', null) <> '10' or public.moq_text(null, 'piece') is not null then
+    raise exception 'low batch 2 self-check: moq_text is wrong';
+  end if;
   select pg_get_functiondef(p.oid) into v_def
     from pg_proc p where p.proname = 'feed_products' and p.pronamespace = 'public'::regnamespace;
   if v_running <> 0 or v_seal <> 0 then
     raise exception 'low batch 2 self-check: % demo campaigns running, % demo seals left', v_running, v_seal;
   end if;
-  if position('p.compare_at_price, p.moq, p.fabric' in v_def) > 0 or position('btrim(p.unit)' in v_def) = 0 then
+  if position('p.compare_at_price, p.moq, p.fabric' in v_def) > 0 or position('public.moq_text(p.moq, p.unit)' in v_def) = 0 then
     raise exception 'low batch 2 self-check: feed_products moq not patched';
   end if;
 end

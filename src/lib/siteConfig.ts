@@ -12,7 +12,7 @@ import { parseSearchTrends, type SearchTrends } from "@/lib/searchTrends";
 // READ PATH, as FAQs (lib/queries/faqs.ts): site-config/site.json on the Storage CDN
 // first, rebuilt by the `site-config-snapshot` edge function after every committed write
 // and hourly; the tables second, on any failure (network, non-200, bad JSON, wrong
-// shape) or after two timeouts (3 s, then 10 s; review L-33). An edit reaches new page loads within about a minute (Smart CDN); a tab
+// shape) or past 6 s (review L-33; it was 3 s). An edit reaches new page loads within about a minute (Smart CDN); a tab
 // already open keeps what it has for SITE_CONFIG_STALE_TIME_MS.
 //
 // EVERYTHING IS CHECKED AGAIN HERE, because it becomes CSS and links: colours must be
@@ -99,8 +99,9 @@ export const SITE_CONFIG_BUCKET = "site-config";
 export const SITE_CONFIG_MAX_AGE_S = 300;
 /** How long a loaded config counts as fresh in this tab. */
 export const SITE_CONFIG_STALE_TIME_MS = 10 * 60_000;
-const SNAPSHOT_TIMEOUT_MS = 3_000;
-const SNAPSHOT_RETRY_TIMEOUT_MS = 10_000;
+// One wait, long enough for a slow CDN (review L-33: past 3 s every visitor fell back to five database reads). A
+// second try would throw away a request already under way (code review of batch 2), so there is none.
+const SNAPSHOT_TIMEOUT_MS = 6_000;
 
 const HEX = /^#[0-9a-f]{6}$/;
 // JPEG only, like the tables' checks since 20261017100000.
@@ -208,36 +209,25 @@ export function parseSiteConfig(doc: unknown): SiteConfig | null {
   };
 }
 
-/** The snapshot, or why not: `slow` when it timed out, `failed` for anything else. */
-async function fromSnapshot(timeoutMs: number): Promise<SiteConfig | "slow" | "failed"> {
+async function fromSnapshot(): Promise<SiteConfig | null> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const timer = setTimeout(() => ctrl.abort(), SNAPSHOT_TIMEOUT_MS);
   try {
     const url = supabase.storage.from(SITE_CONFIG_BUCKET).getPublicUrl("site.json").data.publicUrl;
     // "no-cache" revalidates with the CDN, never the database (see faqs.ts).
     const res = await fetch(url, { cache: "no-cache", signal: ctrl.signal });
-    if (!res.ok) return "failed";
-    return parseSiteConfig(await res.json()) ?? "failed";
+    if (!res.ok) return null;
+    return parseSiteConfig(await res.json());
   } catch {
-    return ctrl.signal.aborted ? "slow" : "failed";
+    return null;
   } finally {
     clearTimeout(timer);
   }
 }
 
-/**
- * The snapshot first; a slow one gets a second, longer try before the tables (review L-33: past 3 s every visitor
- * fell back to five database reads, so a slow CDN put the whole audience on the database). Only a snapshot that
- * fails, or is slow twice, reads the tables.
- */
+/** The snapshot first, the tables only when it fails or takes over SNAPSHOT_TIMEOUT_MS. */
 async function loadSiteConfig(): Promise<SiteConfig> {
-  const first = await fromSnapshot(SNAPSHOT_TIMEOUT_MS);
-  if (typeof first === "object") return first;
-  if (first === "slow") {
-    const second = await fromSnapshot(SNAPSHOT_RETRY_TIMEOUT_MS);
-    if (typeof second === "object") return second;
-  }
-  return fromTables();
+  return (await fromSnapshot()) ?? (await fromTables());
 }
 
 /** The tables, which RLS limits to the theme, the active banners and carousel picks that haven't ended

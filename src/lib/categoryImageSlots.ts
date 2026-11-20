@@ -56,9 +56,14 @@ export const NEW_ARRIVALS_TILE_CATEGORIES: Record<string, readonly string[]> = {
   "Winter Wear": ["Winter Wear"],
 };
 
-/** The categories a `?category=` name opens: a tile's own list, else the name itself. */
-export function categoriesForBrowse(name: string): string[] {
-  return [...(NEW_ARRIVALS_TILE_CATEGORIES[name] ?? [name])];
+/**
+ * The categories a New Arrivals tile opens (`?category=<tile>`), or null for any other name: the Categories page's
+ * sub-category labels ("Bags", "Frocks / Dresses") aren't category names, and keep their text search (code review of
+ * batch 2).
+ */
+export function categoriesForBrowse(name: string | null | undefined): string[] | null {
+  const list = name ? NEW_ARRIVALS_TILE_CATEGORIES[name] : undefined;
+  return list ? [...list] : null;
 }
 
 export type NewArrivalsTileKey = (typeof NEW_ARRIVALS_TILES)[number]["key"];

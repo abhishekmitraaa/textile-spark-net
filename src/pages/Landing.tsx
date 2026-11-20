@@ -254,7 +254,7 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to={startTo} className="mt-8">
+                <Link to={user ? "/home/new-arrivals" : "/auth/login"} className="mt-8">
                   <Button className="w-full gap-2 rounded-full bg-zinc-900 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.98] sm:w-auto">
                     Join as a buyer <ArrowRight className="h-4 w-4" strokeWidth={2} />
                   </Button>

@@ -180,17 +180,44 @@ export function useFeedSlice(filters: FeedFilters, limit: number, { enabled = tr
  * filters what has loaded and asks for the next 96 as the buyer scrolls. It used to download the
  * whole catalogue (useCatalogue), cut at 1,000 rows.
  */
-export function useBrowseCatalogue(enabled: boolean, supplier: SupplierLocation | null = null, sort: FeedSort = "newest") {
+/**
+ * The ids of the categories with these names, and of their children (a tile's list names parents such as "Fashion
+ * Accessories (Unisex)"; several names exist twice in the taxonomy). Null until read, or for no names.
+ */
+export function useCategoryIdsByName(names: readonly string[] | null) {
+  const key = names ? [...names].sort().join("|") : "";
+  return useQuery({
+    queryKey: ["category-ids-by-name", key],
+    enabled: key.length > 0,
+    staleTime: 30 * 60_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase.from("categories").select("id").in("name", names as string[]);
+      if (error) throw error;
+      const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+      if (!ids.length) return [];
+      const { data: kids, error: kidsError } = await supabase.from("categories").select("id").in("parent_id", ids);
+      if (kidsError) throw kidsError;
+      return [...new Set([...ids, ...((kids ?? []) as { id: string }[]).map((r) => r.id)])];
+    },
+  });
+}
+
+export function useBrowseCatalogue(
+  enabled: boolean, supplier: SupplierLocation | null = null, sort: FeedSort = "newest",
+  /** A tile's categories, filtered by the database (review L-25), so an older category isn't lost past 960 rows. */
+  categoryIds: readonly string[] | null = null,
+) {
   const PAGE = 96;
   const q = useInfiniteQuery({
     // The supplier location is filtered by the database: sellers outside India are few, and filtering
     // loaded pages would read up to 960 listings to find them.
-    queryKey: ["feed", "browse-catalogue", supplier, sort],
+    queryKey: ["feed", "browse-catalogue", supplier, sort, categoryIds ? [...categoryIds].sort().join("|") : null],
     queryFn: async ({ pageParam }): Promise<{ rows: CatalogueRow[]; count: number }> => {
       // The order only (review L-29): the listings are then read once, with the fields the facets need. This used to
       // download every card here and the same listings again below.
       const { data, error } = await supabase.rpc("feed_products", {
         p_sort: sort, p_limit: PAGE, p_offset: pageParam as number, p_supplier: supplier ?? undefined,
+        p_category_ids: categoryIds ? [...categoryIds] : undefined,
       }).select("id");
       if (error) throw error;
       const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);

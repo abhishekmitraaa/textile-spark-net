@@ -204,35 +204,62 @@ export async function setSavedUser(nextUserId: string | null) {
 }
 
 /**
- * Listings saved while signed out join the account at sign-in (review L-32: they stayed in the browser, out of the
- * account's saves). Into All Saves; the browser's copy is then cleared, so they never reach another account that signs
- * in on the same device. A listing that's gone (or refused) is skipped.
+ * What was saved while signed out joins the account at sign-in (review L-32: it stayed in the browser, out of the
+ * account's saves): the listings into All Saves, and each folder into the account's folder of the same name (made
+ * when there is none) with its listings. A listing that's gone (or refused) is skipped. The browser's copy is cleared
+ * once every folder is on the account, so nothing reaches another account that signs in on the same device; a folder
+ * that couldn't be made keeps the copy for the next sign-in or Retry (code review of batch 2).
  */
 async function mergeGuestSaves(forUser: string) {
   if (userId !== forUser || sync !== "ready") return;
   const guest = loadPersisted();
-  const ids = Object.keys(guest.products).filter((id) => isUuid(id) && !state.products[id]);
   const clearGuest = () => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage unavailable */ } };
-  if (!ids.length) { clearGuest(); return; }
-  let added = 0;
-  for (const group of chunks(ids, 100)) {
-    const rows = group.map((product_id) => ({ buyer_id: forUser, product_id }));
-    const { error } = await supabase.from("saved_items").upsert(rows, { onConflict: "buyer_id,product_id", ignoreDuplicates: true });
-    if (!error) { added += group.length; continue; }
-    // One bad id (a listing deleted since) refuses the whole group: try them one by one.
-    for (const row of rows) {
-      const { error: one } = await supabase.from("saved_items").upsert(row, { onConflict: "buyer_id,product_id", ignoreDuplicates: true });
-      if (!one) added += 1;
+  const upsertEach = async <R,>(rows: R[], write: (rows: R[]) => PromiseLike<{ error: unknown }>) => {
+    let added = 0;
+    for (const group of chunks(rows, 100)) {
+      const { error } = await write(group);
+      if (!error) { added += group.length; continue; }
+      // One bad id (a listing deleted since) refuses the whole group: try them one by one.
+      for (const row of group) {
+        const { error: one } = await write([row]);
+        if (!one) added += 1;
+      }
     }
+    return added;
+  };
+
+  const ids = Object.keys(guest.products).filter((id) => isUuid(id) && !state.products[id]);
+  let added = await upsertEach(ids.map((product_id) => ({ buyer_id: forUser, product_id })), (rows) =>
+    supabase.from("saved_items").upsert(rows, { onConflict: "buyer_id,product_id", ignoreDuplicates: true }));
+
+  let folderFailed = false;
+  const accountFolders = new Map(
+    state.folders.filter((f) => f.id !== ALL_SAVES_ID).map((f) => [f.name.trim().toLowerCase(), f.id] as const),
+  );
+  for (const folder of guest.folders) {
+    if (userId !== forUser) return;
+    const productIds = folder.productIds.filter(isUuid);
+    if (folder.id === ALL_SAVES_ID || !productIds.length || !folder.name.trim()) continue;
+    let folderId = accountFolders.get(folder.name.trim().toLowerCase());
+    if (!folderId) {
+      folderId = newFolderId();
+      const { error } = await supabase.from("saved_folders").insert({ id: folderId, buyer_id: forUser, name: folder.name.trim() });
+      if (error) { folderFailed = true; continue; }
+      accountFolders.set(folder.name.trim().toLowerCase(), folderId);
+      added += 1;
+    }
+    added += await upsertEach(productIds.map((product_id) => ({ folder_id: folderId as string, product_id })), (rows) =>
+      supabase.from("saved_folder_items").upsert(rows, { onConflict: "folder_id,product_id", ignoreDuplicates: true }));
   }
   if (userId !== forUser) return;
-  clearGuest();
+  if (!folderFailed) clearGuest();
   if (added) await load(forUser);
 }
 
-/** Read the account's saves again after a failed read. */
+/** Read the account's saves again after a failed read, then add what was saved signed out. */
 export function retrySaved() {
-  if (userId) void load(userId);
+  const forUser = userId;
+  if (forUser) void load(forUser).then(() => mergeGuestSaves(forUser));
 }
 
 // Every write waits for the database; a refusal is undone on screen and said (2026-11-19, review M-19: they were

@@ -12,7 +12,7 @@ import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useFollowing } from "@/lib/queries/follows";
 import { fetchCatalogueByIds, isInternationalSupplier } from "@/lib/queries/products";
-import { useBrowseCatalogue, type FeedSort } from "@/lib/queries/feed";
+import { useBrowseCatalogue, useCategoryIdsByName, type FeedSort } from "@/lib/queries/feed";
 import { useQuery } from "@tanstack/react-query";
 import { useProductSearch } from "@/lib/queries/search";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
@@ -593,10 +593,14 @@ const SearchResults = () => {
   const reduced = useReducedMotion();
   const t = useT();
   const [params, setParams] = useSearchParams();
-  // ?category= opens a category browse, not a text search for the name (review L-25): the category filter is picked
-  // with the tile's categories (categoriesForBrowse) and the live listings are read in feed order.
-  const query = params.get("q") || "";
-  const categoryParam = query ? null : (params.get("category")?.trim() || null);
+  // A New Arrivals tile (?category=<tile>) opens a browse of its categories, not a text search for its label (review
+  // L-25): the category filter is picked with the tile's list and the database reads only those categories. Any other
+  // ?category= (the Categories page's sub-category labels) is still a text search for the name.
+  const rawCategory = params.get("category")?.trim() || null;
+  const typedQ = params.get("q");
+  const tileCategories = useMemo(() => (typedQ ? null : categoriesForBrowse(rawCategory)), [typedQ, rawCategory]);
+  const categoryParam = tileCategories ? rawCategory : null;
+  const query = params.get("q") || (tileCategories ? "" : rawCategory ?? "");
 
   // Tab, sort and the facet picks live in the address, so Back to the results keeps them (2026-11-19, review M-30).
   const [tab, setTab] = useUrlState<Tab>("tab", "product", ["product", "brand"]);
@@ -629,10 +633,15 @@ const SearchResults = () => {
   const rawSelections = params.get("f");
   const fromUrl = useMemo<Record<string, string[]>>(
     () => parseSelections(rawSelections)
-      ?? (categoryParam
-        ? { ...defaultSelections(categoryParam), category: categoriesForBrowse(categoryParam) }
+      ?? (tileCategories
+        // The tile's name pre-picks a gender ("Women's Apparel" → Women) only when the tile also opens a category that
+        // doesn't name one ("Men's Jeans" includes "Jeans"); otherwise its categories already say it, and a listing
+        // with no gender stated would be filtered out.
+        ? { ...(tileCategories.every((n) => /^(Women's|Men's) /.test(n) || n === "Sarees" || n === "Lehengas")
+              ? {} : defaultSelections(categoryParam)),
+            category: tileCategories }
         : defaultSelections(query)),
-    [rawSelections, query, categoryParam],
+    [rawSelections, query, categoryParam, tileCategories],
   );
   // The screen follows a pick at once; the address is written 300 ms after the last change, so dragging the price
   // slider doesn't replace the history entry dozens of times a second (browsers throttle and refuse that).
@@ -643,7 +652,7 @@ const SearchResults = () => {
   const writeTimer = useRef<number | undefined>(undefined);
   useEffect(() => { setDraft(null); }, [rawSelections, query, categoryParam]);
   // A new search drops a write still waiting for the last one's picks.
-  useEffect(() => () => window.clearTimeout(writeTimer.current), [query]);
+  useEffect(() => () => window.clearTimeout(writeTimer.current), [query, categoryParam]);
   useEffect(() => () => window.clearTimeout(writeTimer.current), []);
   const setSelections = useCallback(
     (next: Record<string, string[]> | ((prev: Record<string, string[]>) => Record<string, string[]>)) => {
@@ -665,7 +674,11 @@ const SearchResults = () => {
   // Browsing (nothing typed), the database applies Supplier location and the order (2026-11-19, review M-15: price,
   // rating, discount and popular sorted only the 96 listings loaded so far). With a query the 200 results are the
   // whole answer, so they are sorted and filtered here.
-  const browse = useBrowseCatalogue(!hasQuery, supplierFromLabel(selections.supplier), BROWSE_SORT[sort]);
+  const { data: tileCategoryIds = null } = useCategoryIdsByName(tileCategories);
+  const browse = useBrowseCatalogue(
+    !hasQuery && (!tileCategories || tileCategoryIds !== null), supplierFromLabel(selections.supplier), BROWSE_SORT[sort],
+    tileCategories ? tileCategoryIds : null,
+  );
   const browseData = hasQuery ? undefined : browse.rows;
   const browseLoading = browse.isLoading;
   const browseMoreRef = useRef<HTMLDivElement | null>(null);
@@ -798,7 +811,8 @@ const SearchResults = () => {
   };
 
   // A category page: opened from a category (?category=, no typed q), or browsing with a category picked.
-  const categoryName = (!hasQuery ? selections.category?.[0] : null) || null;
+  // A tile of several categories has no one category for Featured places (before L-25 its label resolved to none).
+  const categoryName = (!hasQuery && !(tileCategories && tileCategories.length > 1) ? selections.category?.[0] : null) || null;
   const categoryBrowse = Boolean(categoryName);
   const { data: browseCategoryId = null } = useResolvedCategoryId([categoryName]);
   const { data: featuredPlaces = [] } = useFeaturedListings(categoryBrowse && tiersOn ? browseCategoryId : null);
@@ -940,7 +954,8 @@ const SearchResults = () => {
     return best;
   }, [products]);
   const { data: adCategoryId } = useResolvedCategoryId(
-    [selections.category?.[0], dominantCategory, query.trim() || null],
+    // A tile of several categories: the category most of its results are in, not its first one.
+    [tileCategories && tileCategories.length > 1 ? null : selections.category?.[0], dominantCategory, query.trim() || null],
   );
   const adSlot = AD_SLOTS.searchResultsSponsored;
 

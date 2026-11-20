@@ -8,7 +8,8 @@
   - MOQ with its unit, "1 product", curated looks that match their pictures.
   - Category tiles browse their categories; "Most Enquired" and "More from this seller" sort on real numbers.
   - Guest saves join the account at sign-in; the save dialog fills nothing in; a failed contact check isn't "allowed".
-  - Fewer reads: browse asks for ids once, a slow site config is retried before five table reads, a bad store address
+  - Code review: 10 findings fixed (tile pages read by the database, sub-category links unchanged, guest folders kept).
+  - Fewer reads: browse asks for ids once, a slow site config is waited for 6 s, a bad store address
     sends no failing requests; `/go/post-rfq` signed out keeps its destination; stale ad-cap comments corrected.
 - 2026-11-20 (branch `fix/low-batch1-2026-11-20`; no migration; plan `documentation/low-bugs-batch1-plan-2026-11-20.md`;
   **built and checked on the local stack, not released**)

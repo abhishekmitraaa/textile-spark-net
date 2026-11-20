@@ -150,29 +150,34 @@ interface StyledTrend {
   id: string;
   image: Pic;
   title: string;
+  /** What a tap searches for: broad enough to find listings, apart from the descriptive title. */
+  search: string;
   tags: string[];
 }
 
 // EDITORIAL (no trends job exists — see ToDo.md): "Hot Trends, Styled for You" — refreshed via "View More Styles".
 // Each title and tag says what its picture shows (review L-24: "Wide-Leg Denim" showed mustard trousers, and a plain
-// white tee was tagged "#Screen printing #Gray"). The title is also the search a tap opens.
+// white tee was tagged "#Screen printing #Gray"). A tap searches `search`, not the title.
 const STYLED_TRENDS: StyledTrend[] = [
   {
     id: "st1",
     image: ["menswear", "T-Shirts"],
     title: "Plain Crew-Neck Tee",
+    search: "T-shirts/Tops",
     tags: ["#White", "#Basics"],
   },
   {
     id: "st2",
     image: ["womenswear", "Dresses"],
     title: "Floral Sundress",
+    search: "Floral dress",
     tags: ["#Summer", "#Floral print"],
   },
   {
     id: "st3",
     image: ["womenswear", "Bottomwear"],
     title: "Wide-Leg Trousers",
+    search: "Trousers",
     tags: ["#High-waist", "#Mustard"],
   },
 ];
@@ -516,7 +521,7 @@ const Trends = () => {
               /product/st1 — an id that has never existed — and a Save button
               stored the look in the buyer's collections with an invented MOQ.
               It opens a real search for the look instead. */}
-          <Link to={`/search/results?q=${encodeURIComponent(styled.title)}`} className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100">
+          <Link to={`/search/results?q=${encodeURIComponent(styled.search)}`} className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100">
             <img src={pic(styled.image)} alt={styled.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
             <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">
