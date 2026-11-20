@@ -20,7 +20,13 @@ update public.profiles
  where id = '11111111-1111-1111-1111-111111111111'
    and terms_version is distinct from public.buyer_terms_version();
 
--- demo-vendor: a registered seller.
+-- demo-vendor: a registered seller, with the Supplier Agreement on file as submit_vendor_registration() would leave it
+-- (code review: registered with no contract is a state a real registration can't reach). The agreement version is
+-- SUPPLIER_AGREEMENT_VERSION (src/lib/supplierAgreement.ts); a test account, so no drawn signature.
+insert into public.vendor_contracts (vendor_id, signed_name, signature_url, agreement_version)
+select '22222222-2222-2222-2222-222222222222', 'Demo Vendor (test account)', null, '2026-09-v1'
+ where not exists (select 1 from public.vendor_contracts c
+                    where c.vendor_id = '22222222-2222-2222-2222-222222222222' and c.agreement_version = '2026-09-v1');
 update public.vendor_profiles set onboarding_complete = true
  where id = '22222222-2222-2222-2222-222222222222' and onboarding_complete is distinct from true;
 
@@ -32,6 +38,9 @@ begin
   end if;
   if not exists (select 1 from public.vendor_profiles v where v.id = '22222222-2222-2222-2222-222222222222' and v.onboarding_complete) then
     raise exception 'demo reseed: demo-vendor is not registered';
+  end if;
+  if not exists (select 1 from public.vendor_contracts c where c.vendor_id = '22222222-2222-2222-2222-222222222222') then
+    raise exception 'demo reseed: demo-vendor has no Supplier Agreement on file';
   end if;
   if exists (select 1 from public.products x where x.vendor_id = '22222222-2222-2222-2222-222222222222' and x.status = 'live') then
     raise notice 'demo reseed: demo-vendor has live listings (buyers can see them)';

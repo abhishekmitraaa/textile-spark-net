@@ -198,8 +198,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
     if (error) throw error;
     if (data && profileRef.current?.id === id) {
-      readSeq.current++; // a read still under way would bring back the role before this one
-      setProfile({ ...profileRef.current, ...(data as ProfileRow) });
+      const saved = data as ProfileRow;
+      setProfile({ ...profileRef.current, ...saved });
+      // A load already under way may have read the row before this update: once it lands, the saved role is put back
+      // over it, and everything else it read (admin status, email, the error state) is kept (code review).
+      const pending = inflight.current;
+      if (pending) {
+        void pending.then(() => {
+          const cur = profileRef.current;
+          if (cur?.id === id && cur.active_role !== saved.active_role) setProfile({ ...cur, active_role: saved.active_role });
+        }, () => undefined);
+      }
     } else {
       await loadProfile(id, "row");
     }

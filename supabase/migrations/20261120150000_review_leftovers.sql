@@ -1,8 +1,10 @@
 -- The 2026-11-18 buyer review's leftovers (2026-11-20): H-12's follow-ups, M-75's remaining foreign-key indexes, and the
 -- visitor write grants found while releasing Low batch 5.
 --
--- Deploy the edge function `product-thumbs` (its `remove` action) BEFORE applying this: the last block asks it to
--- delete four superseded thumbnails, and the triggers below call it from then on.
+-- Order: deploy the edge function `product-thumbs` (its `remove` action), apply this, then push the app at once. The
+-- last block asks the function to delete four superseded thumbnails, and the triggers call it from then on. The app
+-- stops sending an ad's engagement event itself once ad_impressions() records it: until a tab reloads the new app, it
+-- sends both (a short double count), which beats a gap with none.
 --
 -- Mitra (2026-11-20, H-12 follow-up): "Remove on delete only". A listing taken down (or otherwise no longer live, other
 -- than paused) loses its thumbnails, which come back when it goes live again (trg_products_thumbs); a deleted listing
@@ -74,6 +76,7 @@ begin
     url     := 'https://vxdhhgdfubqedfpwfyrb.supabase.co/functions/v1/product-thumbs',
     headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || v_key),
     body    := jsonb_build_object('remove', jsonb_build_object(
+                 'at', to_jsonb(clock_timestamp()),
                  'thumbs', to_jsonb(coalesce(p_thumbs, '{}')),
                  'originals', to_jsonb(coalesce(p_originals, '{}')),
                  'legacy', to_jsonb(coalesce(p_legacy, '{}')))),
@@ -84,7 +87,8 @@ end
 $function$;
 revoke all on function admin.queue_product_photo_removal(text[], text[], text[]) from public, anon, authenticated;
 
--- Leaving live (but not for a pause: a paused listing comes back as it was) drops the thumbnails; deleting the listing
+-- Leaving live or paused for anything else (a pause keeps them: a paused listing comes back as it was) drops the
+-- thumbnails; deleting the listing
 -- drops its photos. Never fails the write that fires it.
 create or replace function admin.trg_products_photos_follow()
  returns trigger
@@ -111,7 +115,7 @@ drop trigger if exists trg_products_thumbs_off on public.products;
 create trigger trg_products_thumbs_off
   after update of status on public.products
   for each row
-  when (old.status = 'live' and new.status is distinct from 'live' and new.status is distinct from 'paused')
+  when (old.status in ('live', 'paused') and new.status is distinct from 'live' and new.status is distinct from 'paused')
   execute function admin.trg_products_photos_follow();
 
 -- BEFORE: the listing's photo rows go with it (cascade), so they are read first.
@@ -130,7 +134,7 @@ declare
   v_name text;
 begin
   for r in
-    select c.conrelid, n.nspname, t.relname, c.conkey,
+    select c.conrelid, c.conname, n.nspname, t.relname, c.conkey,
            (select string_agg(quote_ident(a.attname), ', ' order by k.ord)
               from unnest(c.conkey) with ordinality k(attnum, ord)
               join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) as cols,
@@ -145,7 +149,8 @@ begin
                         where i.indrelid = c.conrelid
                           and (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] = c.conkey::int2[])
   loop
-    v_name := left(r.relname || '_' || r.colnames, 55) || '_fk_idx';
+    -- A short hash of the constraint keeps two long names on one table apart (code review).
+    v_name := left(r.relname || '_' || r.colnames, 48) || '_' || substr(md5(r.conname), 1, 6) || '_fki';
     execute format('create index if not exists %I on %I.%I (%s)', v_name, r.nspname, r.relname, r.cols);
   end loop;
 end

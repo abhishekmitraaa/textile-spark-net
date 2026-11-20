@@ -65,7 +65,7 @@ export function thumbPathFor(path: string): string {
 // A thumbnail written before the <path>.jpg naming: <owner>/onboarding-product/<name>.jpg, never a doubled extension.
 const LEGACY_THUMB_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/onboarding-product\/[A-Za-z0-9._-]{1,120}\.jpg$/i;
 
-interface RemoveRequest { thumbs?: unknown; originals?: unknown; legacy?: unknown }
+interface RemoveRequest { thumbs?: unknown; originals?: unknown; legacy?: unknown; at?: unknown }
 
 const asPaths = (v: unknown, re: RegExp): string[] =>
   Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string" && re.test(x) && !x.includes("..")))].slice(0, 50) : [];
@@ -93,12 +93,25 @@ async function removePhotos(url: string, auth: Record<string, string>, body: Rem
     return r.ok;
   };
 
+  // When the removal was queued. A thumbnail written after it belongs to the listing going live again in between (the
+  // rebuild and this removal run independently): it stays (code review of the leftovers batch).
+  const queuedAt = typeof body.at === "string" ? Date.parse(body.at) : NaN;
+  const writtenAfterQueue = async (thumbPath: string): Promise<boolean> => {
+    if (!Number.isFinite(queuedAt)) return false;
+    const r = await fetch(`${url}/storage/v1/object/info/${THUMB_BUCKET}/${thumbPath}`, { headers: auth });
+    if (!r.ok) return false; // gone already, or unreadable: removing is harmless
+    const info = (await r.json().catch(() => null)) as { updated_at?: string; created_at?: string; last_modified?: string } | null;
+    const t = Date.parse(info?.last_modified ?? info?.updated_at ?? info?.created_at ?? "");
+    return Number.isFinite(t) && t > queuedAt;
+  };
+
   const thumbs: string[] = [];
   const originals: string[] = [];
   const kept: string[] = [];
   for (const path of asPaths(body.thumbs, PATH_RE)) {
     const live = await isLivePhoto(path);
-    if (live === false) thumbs.push(thumbPathFor(path)); else kept.push(path); // unknown → keep
+    if (live === false && !(await writtenAfterQueue(thumbPathFor(path)))) thumbs.push(thumbPathFor(path));
+    else kept.push(path); // live again, rebuilt since, or unknown → keep
   }
   for (const path of asPaths(body.originals, PATH_RE)) {
     const used = await inUse(path);

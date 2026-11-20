@@ -1,3 +1,14 @@
+- 2026-11-21 (branch `fix/review-leftovers-2026-11-20`; migration `20261120150000_review_leftovers.sql`; plan
+  `documentation/review-leftovers-plan-2026-11-21.md`; **built and checked, rehearsed on production; not released**)
+  **Buyer review leftovers: H-12 follow-ups, M-58, L-63, L-64, M-25/M-33/M-75 follow-ups.**
+  - Hotfix LIVE 2026-11-21 (`20261120140200`): batch 5's revoke had broken every signed-in write to `profiles` and
+    `buyer_profiles` through `guard_deleted_account()`.
+  - Thumbnails go when a listing is taken down, photos when it's deleted (unless still shown elsewhere); four old
+    thumbnails removed. Google sign-up's Back no longer shows Home for every step. Register's role wins for an
+    unfinished account. A phone sign-up makes 8 profile requests instead of 13. The product page reads each seller with
+    its listing (14 → 10). Ad impression events ride in the batch. 60 foreign-key indexes. Visitors' write grants gone.
+  - Demo accounts re-seeded on production; the local sign-up specs brought up to date (54/54). Code review: 7 of 9
+    fixed, 2 checked.
 - 2026-11-20 (branch `fix/low-batch5-2026-11-20` in both repos; migrations `20261120140000_low_batch5.sql` and, after
   both apps are live, `20261120140100_low_batch5_revoke.sql`; plan `documentation/low-bugs-batch5-plan-2026-11-20.md`;
   **LIVE 2026-11-20**: rehearsed on production and rolled back, applied with the CLI, buyer main `1e1fb52`, Cosora-Admin

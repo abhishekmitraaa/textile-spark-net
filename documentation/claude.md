@@ -48,6 +48,9 @@ Rules decided before or outside of Claude Code sessions.
   > it is on (Help & Support D-14). The routing and toggle rules above hold. Replacing the
   > dummy means configuring an SMS provider, not rebuilding the form. Sign-in is not changed
   > by other work.
+  > One exception, by Mitra's word (2026-11-20, review L-63 / L-64, "Fix both"): the code screen gives an account that
+  > hadn't finished signing up the role picked on Register, and sign-up reads the profile less (`awaitProfile`,
+  > `refreshProfile(parts)`). The same OTP flow; nothing else in sign-in changed.
 - **"Video Closeups", never "Reels"** — product videos in the buyer feed are called Video
   Closeups. Deliberate brand/product naming decision.
 - **Every Video Closeups control leads somewhere real** (Mitra, 2026-10-16). Save lands in My Saves; the card
