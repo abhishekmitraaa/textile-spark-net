@@ -1,6 +1,6 @@
 - 2026-11-20 (branch `fix/low-batch3-2026-11-20`; migration `20261120120000_low_batch3.sql`;
-  plan `documentation/low-bugs-batch3-plan-2026-11-20.md`; **built and checked on the local stack, migration rehearsed
-  on production and rolled back; not released**)
+  plan `documentation/low-bugs-batch3-plan-2026-11-20.md`; **LIVE 2026-11-20**: migration applied with the CLI, not in the ledger;
+  main `422aabb`)
   **Buyer review, Low batch 3 of 6: requirements, chats, help, profile and sign-up** (L-38–L-62, L-65–L-67).
   - Mitra's calls: timezone picker removed; Terms 2026-11-v2 (no "India's premier", dated 20th November 2026) without
     asking v1 buyers again; OtpVerify's Previous / Not you? replace history; every interest kept.
