@@ -1,5 +1,6 @@
 - 2026-11-21 (branch `fix/review-leftovers-2026-11-20`; migration `20261120150000_review_leftovers.sql`; plan
-  `documentation/review-leftovers-plan-2026-11-21.md`; **built and checked, rehearsed on production; not released**)
+  `documentation/review-leftovers-plan-2026-11-21.md`; **LIVE 2026-11-21**: product-thumbs deployed, migration
+  applied with the CLI, buyer main `91ac3c9`; old thumbnails removed (4), checked on production)
   **Buyer review leftovers: H-12 follow-ups, M-58, L-63, L-64, M-25/M-33/M-75 follow-ups.**
   - Hotfix LIVE 2026-11-21 (`20261120140200`): batch 5's revoke had broken every signed-in write to `profiles` and
     `buyer_profiles` through `guard_deleted_account()`.

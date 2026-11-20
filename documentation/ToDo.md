@@ -17,36 +17,21 @@ with no need to dictate format, context, or reference each time.
 - Mitra's decisions for High (2026-11-18): H-04 take the demo data off live; H-11 precomputed feed + a scheduled job;
   H-12 thumbnails, then server-made once a browser-made one was found to skip review; H-13 keep Service Vendors / Freelancers but remove the fakes.
 - Reference: 2026-11-18 review sessions (two passes), SESSION-CONTEXT.md.
-- Status: Open (High: H-12's follow-ups; Medium: M-58; Low: L-63, L-64). Low batches 1–5 (L-01–L-104 but L-63, L-64) LIVE 2026-11-20
-  (buyer main `1e1fb52`, Cosora-Admin `2cfd65f`; plans `documentation/low-bugs-batch1…5-plan-2026-11-20.md`). Low batch 5
-  follow-ups: (1) `anon` still holds column INSERT/UPDATE grants on `profiles` (account_status included; no policy
-  admits a signed-out write, so hygiene only): revoke them; (2) the production demo fixtures are stale: demo-vendor
-  isn't a registered seller (`call_buyer_contact` answers `not_a_vendor`) and demo-buyer has no Terms record (its test
-  conversation is refused), so `scripts/contact-gate-check.mjs` and three checks of
-  `scripts/profile-contact-privacy-check.mjs` can't pass until they are re-seeded. Medium batches 1 and 2 (39 items) LIVE 2026-11-19 (buyer main `927a527`, migrations `20261119100000`,
-  `20261119110000`; plans `documentation/medium-bugs-batch1-plan-2026-11-19.md`, `…batch2…`); M-58 left open (needs a
-  real Google sign-in to test). Batches 3 (20 items) and 4 (14 items; plans
-  `documentation/medium-bugs-batch3-plan-2026-11-19.md`, `…batch4-plan-2026-11-20.md`) LIVE 2026-11-20 with the
-  follow-up (migrations `20261119110100`, `20261119120000`, `20261120100000` via the CLI, not in the ledger; buyer main
-  `a32f71b`). M-36 needed no
-  change (no service or freelancer page shows reviews since H-13). Batch 4 follow-ups: (1) the product page still makes
-  ~20 of its own requests (listing, related, recently viewed, the seller block each read separately): one data function
-  for the page (M-25's request count); (2) engagement events are still one request per ad shown: a batch function for
-  `log_engagement_event` (M-33); (3) 59 more unindexed foreign keys (M-75 listed 64; 5 added).
+- Status: everything LIVE except M-58's check. Low batches 1–5 LIVE 2026-11-20 (buyer main `1e1fb52`, Cosora-Admin
+  `2cfd65f`); the review leftovers (H-12 follow-ups, M-58, L-63, L-64, and the M-25 / M-33 / M-75 and batch 5
+  follow-ups) LIVE 2026-11-21 (buyer main `91ac3c9`, migration `20261120150000` and hotfix `20261120140200` via the CLI,
+  edge function `product-thumbs`; plan `documentation/review-leftovers-plan-2026-11-21.md`). Medium and High batches LIVE
+  earlier (plans in documentation/).
 
 - Local specs failing on main too (found 2026-11-21, review leftovers batch; none caused by it): buyer-minor-fixes-b 3b
   (Quick Quote), buyer-minor-fixes 2 (card text opens the product), feeds (New Arrivals page by page), first-fixes
   "Looking for these?", vendor-6-10 #8 (lead funnel), vendor-serious #1 and #2 (photo edits), views (once per viewer
   per day). Look at each: stale expectation or a real bug.
 
-**High**
-- H-12 follow-ups (the fix itself is LIVE 2026-11-18): (1) remove a listing's thumbnails, and decide about its public original photos, when it is taken down or deleted (commit security review: a thumbnail stays public after takedown, as the original already does); (2) delete the 4 superseded thumbnails named `…/onboarding-product/<id>.jpg` in `product-thumbs` (made before the `<path>.jpg` naming; unused).
+**Check**
+- M-58 (LIVE 2026-11-21): Mitra signs up once with a Google account, then presses Back from Home. Expected: the page
+  before sign-in, not Home again (the sign-up steps no longer stay in history).
 
-**Medium**
-- M-58 — Google sign-up: Back shows Home 4–5 times. AuthCallback.tsx:43
-
-**Low**
-- L-63, L-64 — Register: an unfinished account's old role wins (plausible; Register/OtpVerify, sign-in files: needs Mitra); ~15–18 profile reads per sign-up (AuthContext, sign-in file: needs Mitra).
 
 ### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
 - Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.
