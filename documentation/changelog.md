@@ -1,5 +1,6 @@
 - 2026-11-21 (branch `fix/local-spec-failures-2026-11-21`; migration `20261121100000_views_fold_deleted_listing.sql`;
-  **built and checked locally; not released**)
+  **LIVE 2026-11-21**: migration applied with the CLI,
+  rehearsed first; main `ed00e9d`)
   **The 8 local specs that failed on main, and the bug one of them found.**
   - `admin.product_views_fold()` failed whenever the queue held a view of a listing deleted before the minute's fold:
     the whole fold rolled back and stayed stuck, so no view on Cosora was counted until the row went. It now takes
