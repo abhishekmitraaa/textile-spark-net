@@ -84,7 +84,8 @@ test("2. the text under a product's picture opens the product", async ({ browser
   await page.goto(`${BUYER_URL}/home/followings`);
   const popular = page.locator("section").filter({ has: page.getByRole("heading", { name: "Most Popular", exact: true }) });
   const feedCard = popular.locator("div.rounded-xl").filter({ has: page.getByRole("img", { name: s.names[0], exact: true }) }).first();
-  await tapText(page, feedCard.getByText("Fit Type", { exact: false }));
+  // Cards show only the specs a listing states (<CardSpecs>, review L-19): this one has fabric and GSM, no fit.
+  await tapText(page, feedCard.getByText("Fabric:", { exact: false }));
   await expect(page).toHaveURL(new RegExp(`/product/${s.ids[0]}$`));
   expect(errors).toEqual([]);
   await ctx.close();
