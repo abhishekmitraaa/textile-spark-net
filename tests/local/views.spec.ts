@@ -21,7 +21,11 @@ test.afterAll(() => {
   }
 });
 
-const views = (id: string) => sql(`select views_count from public.products where id = '${id}'`);
+// Views are queued and added up every minute since review M-35 (product-views-fold): fold before reading.
+const views = (id: string) => {
+  sql(`select admin.product_views_fold()`);
+  return sql(`select views_count from public.products where id = '${id}'`);
+};
 
 test("a view counts once per viewer per day, and cards show real views", async ({ browser }) => {
   test.setTimeout(150_000);

@@ -6,6 +6,19 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Test M-58 on production: a Google sign-up, then Back from Home — added 2026-11-21
+- Task: Mitra signs up once on www.cosora.in with a Google account that has never used Cosora, finishes the sign-up
+  steps (role, sub-role, account information, interests, Terms, the "what next" screen), lands on Home, and presses
+  the device's or browser's Back. Expected: the page that was open before signing in (Home if sign-in started there),
+  not Home again and again. Report what Back showed.
+- Context: review item M-58 ("Google sign-up: Back shows Home 4–5 times"). The fix (LIVE 2026-11-21, buyer main
+  `91ac3c9`): AuthCallback marks its own history entry as where sign-up starts, so Terms rewinds over the steps as it
+  does after a phone sign-in; before, every step stayed in history and each one sent Back to Home. Only a real Google
+  sign-in can test it: neither the local stack nor an agent session can do one. The phone and email-link paths were
+  checked locally (`tests/local/review-leftovers.spec.ts`, M-58 test, starts on /auth/callback with a session).
+- Reference: 2026-11-21 session, review leftovers release; Mitra asked to add it ("Add the above task to todo.md").
+- Status: Open
+
 ### Buyer-side review 2026-11-18: the full bug list (13 High, 75 Medium, 104 Low) — added 2026-11-18
 - Task: fix every item below; remove each line here once its fix is live. High H-01–H-11 and H-13 are LIVE (2026-11-18,
   buyer main `33db067`, migrations `20261118140000`, `20261118160000`; plan `documentation/high-bugs-fixes-plan-2026-11-18.md`).
