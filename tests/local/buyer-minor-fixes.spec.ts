@@ -48,7 +48,15 @@ async function seller(letter: string, listings = 2) {
 /** Taps where a piece of text is on screen, the way a finger does (whatever lies on top of it gets the tap). */
 async function tapText(page: import("@playwright/test").Page, loc: import("@playwright/test").Locator) {
   await loc.scrollIntoViewIfNeeded();
-  await expect.poll(async () => JSON.stringify(await loc.boundingBox())).toBe(JSON.stringify(await loc.boundingBox()));
+  // Settled once two readings in a row agree (the expected value used to be read once, so a card that moved as the
+  // page above it finished loading never matched it).
+  let prev = "";
+  await expect.poll(async () => {
+    const now = JSON.stringify(await loc.boundingBox());
+    const settled = now === prev;
+    prev = now;
+    return settled;
+  }, { intervals: [250] }).toBe(true);
   const b = (await loc.boundingBox())!;
   await page.mouse.click(b.x + Math.min(20, b.width / 2), b.y + b.height / 2);
 }
