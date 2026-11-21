@@ -1,3 +1,14 @@
+- 2026-11-21 (branch `fix/local-spec-failures-2026-11-21`; migration `20261121100000_views_fold_deleted_listing.sql`;
+  **built and checked locally; not released**)
+  **The 8 local specs that failed on main, and the bug one of them found.**
+  - `admin.product_views_fold()` failed whenever the queue held a view of a listing deleted before the minute's fold:
+    the whole fold rolled back and stayed stuck, so no view on Cosora was counted until the row went. It now takes
+    such views off the queue uncounted. Production's queue was empty and its runs succeeding when found.
+  - The specs were stale, not the app: views read before the fold (M-35); added photos re-encoded as JPEG
+    (2026-11-18); the lead funnel leaving out past-deadline requirements (SH-078); the feed's overlapping second page
+    (L-04) and a longer local catalogue; "Looking for these?" ranked by demand; cards showing only stated specs
+    (L-19); Quick Quote asking signed-out visitors to sign in first (H-03); a flawed "position settled" wait.
+  - ToDo: the M-58 Google sign-up test for Mitra.
 - 2026-11-21 (branch `fix/review-leftovers-2026-11-20`; migration `20261120150000_review_leftovers.sql`; plan
   `documentation/review-leftovers-plan-2026-11-21.md`; **LIVE 2026-11-21**: product-thumbs deployed, migration
   applied with the CLI, buyer main `91ac3c9`; old thumbnails removed (4), checked on production)

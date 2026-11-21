@@ -1395,7 +1395,8 @@ undocumented. Deep technical rationale for each lives in
   `20261120100000`). `increment_product_view()` keeps its daily dedupe and signed-out cap, then queues a row in
   `admin.product_view_queue`; the job `product-views-fold` adds the queue into `views_count`, recent demand and Standing's
   viewer ledger, and clears ledger days before yesterday. Counts lag by up to a minute; a test that reads them runs
-  `admin.product_views_fold()` first. Nothing in a buyer's view writes `products`.
+  `admin.product_views_fold()` first. Nothing in a buyer's view writes `products`. A view of a listing deleted before the fold is taken off the queue uncounted
+  (`20261121100000`): one such row used to fail the whole fold, every minute. A new queue folded by a job does the same.
 - **An ad impression counts when the ad is on screen** (2026-11-20, review M-33): `ref={track(ad.adId)}` from
   `useAdImpressions()` (half the card visible, once per mount); `logAdImpression()` sends the ids together a second later
   through `ad_impressions()` (each campaign once per call, at most 48). A new ad surface uses the hook, never a mount effect.

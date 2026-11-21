@@ -36,11 +36,6 @@ with no need to dictate format, context, or reference each time.
   edge function `product-thumbs`; plan `documentation/review-leftovers-plan-2026-11-21.md`). Medium and High batches LIVE
   earlier (plans in documentation/).
 
-- Local specs failing on main too (found 2026-11-21, review leftovers batch; none caused by it): buyer-minor-fixes-b 3b
-  (Quick Quote), buyer-minor-fixes 2 (card text opens the product), feeds (New Arrivals page by page), first-fixes
-  "Looking for these?", vendor-6-10 #8 (lead funnel), vendor-serious #1 and #2 (photo edits), views (once per viewer
-  per day). Look at each: stale expectation or a real bug.
-
 **Check**
 - M-58 (LIVE 2026-11-21): Mitra signs up once with a Google account, then presses Back from Home. Expected: the page
   before sign-in, not Home again (the sign-up steps no longer stay in history).
