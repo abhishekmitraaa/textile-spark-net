@@ -218,8 +218,29 @@ with no need to dictate format, context, or reference each time.
   over renaming the heading; the heading stays as it is until the feature exists. The "no invented urgency" rule
   (claude.md) still holds: no timer without a stored end. Replaces the 2026-10-14 entry "Decide whether the Sale page
   keeps its 'MEGA SALE' heading".
+- Found 2026-11-22: no seller form writes `compare_at_price` (only the bulk CSV import, which is off, and seeds), so
+  sellers can't set even their own discount today. Cosora has no checkout: buyers get prices through quotes, which
+  sellers write freely, so a sale price is a shown price unless quotes are held to it.
+- **Mitra's answers so far (2026-11-22):**
+  - How a listing gets into a sale: **Cosora invites the sellers or picks the listings** (not sellers joining
+    themselves, not apply-and-approve).
+  - The sale price: **Cosora sets a minimum discount for the sale; the invited seller accepts and enters the sale
+    price**, which must meet it. Nothing shows until the seller accepts.
+- **Proposed by Claude, not yet confirmed:** the discount is measured against the listing's price on the day the
+  seller joins, and raising the listing's price during the sale takes it out; the sale price is per unit at the
+  listing's MOQ; between sales the page shows no heading or timer, only the next scheduled sale's name and start
+  when there is one.
+- **Still to ask Mitra:**
+  - Must a seller quote the sale price during the sale? (a) Yes, for requests about that listing: a quote on it
+    can't be above the sale price while the sale runs; requirements posted to everyone aren't affected (Claude's
+    pick: otherwise "sale" is again a claim with nothing behind it). (b) No, shown only: the quote form shows the
+    seller the sale price, and they quote what they like.
+  - Who in Cosora-Admin creates sales and invites sellers (super admins and managers, or another role)?
+  - Is there a limit on listings per seller per sale, and can a seller leave a running sale?
+  - Is a sale's invitation sent in the app only, or by email / WhatsApp too (both still need Resend / Meta set up)?
 - Reference: 2026-11-20 session, low-priority batch 2 of the buyer review; L-09 answered "Build a real sale feature".
-- Status: Open
+  2026-11-22: design questions started, then put on hold by Mitra ("hold this off").
+- Status: On hold (Mitra, 2026-11-22)
 
 ### Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10
 - Task: when every subscription feature switch is on for everyone, apply
