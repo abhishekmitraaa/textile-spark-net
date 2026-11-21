@@ -75,8 +75,12 @@ test("New Arrivals and Trends load page by page, every listing once", async ({ b
   const names = (await ours(page)).filter((n) => /FD \S+ \d\d$/.test(n));
   expect(new Set(names).size).toBe(30);                       // all 30, none twice
   expect(names.slice(0, 3)).toEqual([`FD ${tag} 30`, `FD ${tag} 29`, `FD ${tag} 28`]); // newest first (no plan)
-  expect(feedCalls.filter((b) => b.includes('"p_offset":24')).length).toBeGreaterThan(0); // a second page was asked for
-  await expect(page.getByText("You've seen everything new")).toBeVisible();
+  // A second page was asked for: 24 on, overlapping the first by 4 since review L-04 (PAGE_OVERLAP), so from 20.
+  expect(feedCalls.filter((b) => b.includes('"p_offset":20')).length).toBeGreaterThan(0);
+  // The local copy holds other live listings too: keep scrolling until the feed says it has ended.
+  const ended = page.getByText(/You've seen everything new|That's the newest \d+/);
+  await scrollToEnd(page, async () => ended.isVisible());
+  await expect(ended).toBeVisible();
 
   await page.goto(`${BUYER_URL}/home/trends`);
   await expect(page.locator(`img[alt^="FD ${tag} "]`).first()).toBeVisible({ timeout: 30_000 });
