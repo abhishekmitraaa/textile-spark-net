@@ -51,6 +51,14 @@ async function bytesAt(url: string): Promise<string> {
   return sha(Buffer.from(await res.arrayBuffer()));
 }
 
+/** A photo added in the form is re-encoded as a JPEG before it's stored (2026-11-18, shrinkImage(…, "jpeg")), so its
+ *  bytes are never the file that was picked: check it's a stored JPEG instead. */
+async function storedJpeg(url: string): Promise<boolean> {
+  const res = await fetch(`${url}?nocache=${Date.now()}`);
+  const b = Buffer.from(await res.arrayBuffer());
+  return res.ok && b.length > 2 && b[0] === 0xff && b[1] === 0xd8;
+}
+
 function listingUrls(pid: string): string[] {
   const out = sql(`select coalesce(string_agg(url, '|' order by position), '') from public.product_images where product_id = '${pid}'`);
   return out ? out.split("|") : [];
@@ -89,7 +97,8 @@ test("#1 adding a photo while editing keeps the listing's existing photos", asyn
   expect(after).toHaveLength(3);
   expect(new Set(after).size).toBe(3);
   expect(after.slice(0, 2)).toEqual(urls);
-  expect(await bytesAt(after[2])).toBe(sha(png("added-1")));
+  expect(after[2]).toMatch(/\.jpe?g$/i);
+  expect(await storedJpeg(after[2])).toBe(true);
   await ctx.close();
 });
 
@@ -108,7 +117,8 @@ test("#2 removing an existing photo in the edit form removes it and keeps the ne
   expect(after).toHaveLength(2);
   expect(after).not.toContain(urls[0]);
   expect(after[0]).toBe(urls[1]);
-  expect(await bytesAt(after[1])).toBe(sha(png("added-2")));
+  expect(after[1]).toMatch(/\.jpe?g$/i);
+  expect(await storedJpeg(after[1])).toBe(true);
   await ctx.close();
 });
 
