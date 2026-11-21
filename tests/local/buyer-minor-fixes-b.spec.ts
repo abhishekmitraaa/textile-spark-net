@@ -235,10 +235,10 @@ test("3b. Quick Quote saves the requirement with its photo; signed out it asks t
   const anon = await anonCtx.newPage();
   await anon.goto(`${BUYER_URL}/requirement/post-requirement`);
   await anon.getByRole("button", { name: /Quick Quote/ }).first().click();
-  await anon.getByPlaceholder("e.g., Cotton T-Shirt, Leather Wallet").fill(`QQ anon ${tag}`);
-  await anon.getByPlaceholder("e.g., 500 pieces, 1000 units").fill("100");
-  await anon.getByRole("button", { name: /Submit Quick Quote/ }).click();
+  // Since 2026-11-18 (review H-03) the form asks a signed-out visitor to sign in before it starts, instead of at
+  // the end with nothing kept: the fields aren't offered at all.
   await expect(anon.getByText("Sign in to post a requirement")).toBeVisible();
+  await expect(anon.getByPlaceholder("e.g., Cotton T-Shirt, Leather Wallet")).toHaveCount(0);
   expect(sql(`select count(*) from public.rfq_submissions where title = 'QQ anon ${tag}'`)).toBe("0");
   await anonCtx.close();
 
