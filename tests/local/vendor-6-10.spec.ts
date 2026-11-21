@@ -95,7 +95,8 @@ test("#8 the lead funnel counts open requirements and requests to this seller on
   requirement(buyer.id, `V8 ${tag} open`);
   const expected = asAccount(seller.id, `select count(*) from public.rfqs
     where status = 'active' and buyer_id <> '${seller.id}' and (vendor_id is null or vendor_id = '${seller.id}')
-      and created_at >= now() - interval '7 days'`);
+      and created_at >= now() - interval '7 days'
+      and expires_at > now()`); // past its deadline a requirement takes no quotes (SH-078, 2026-11-17)
   const page = await openAs(browser, seller.session, "/analytics");
   const value = page.getByText("Buyer requirements you could quote on", { exact: true }).locator("xpath=..").locator("p").nth(1);
   await expect(value).toHaveText(expected, { timeout: 30_000 });
