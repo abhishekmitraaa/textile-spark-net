@@ -246,7 +246,15 @@ test("'Looking for these?' shows real live listings", async ({ browser }) => {
   const heading = page.getByRole("heading", { name: "Looking for these?" });
   await expect(heading).toBeVisible({ timeout: 30_000 });
   const section = heading.locator("xpath=following-sibling::div[1]");
-  await expect(section.locator(`a[href="/product/${product}"]`).first()).toBeAttached();
+  // The row is the live listings with the most recent demand (feed_products('trending')), so on a local copy full of
+  // other test listings this new one needn't be in it: every card it shows must be a real, live listing.
+  await expect(section.locator('a[href^="/product/"]').first()).toBeAttached();
+  const ids = [...new Set((await section.locator('a[href^="/product/"]').evaluateAll((as) => as.map((a) => a.getAttribute("href") ?? "")))
+    .map((h) => h.replace("/product/", "")))];
+  expect(ids.length).toBeGreaterThan(0);
+  expect(ids.every((id) => /^[0-9a-f-]{36}$/.test(id))).toBe(true);
+  expect(sql(`select count(*) from public.products where status = 'live' and id in (${ids.map((i) => `'${i}'`).join(",")})`))
+    .toBe(String(ids.length));
   await expect(page.getByText("$499")).toHaveCount(0);
   await expect(page.locator('a[href^="/product/lft"]')).toHaveCount(0);
   await ctx.close();
