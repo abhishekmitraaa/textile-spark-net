@@ -9,7 +9,8 @@ migrations and edge functions are applied/deployed one by one after a read-only 
 - AR-H01 autopay: the admin action cancels the Razorpay autopay too; if Razorpay refuses, the action stops and says why.
 - AR-H07 refund of a credited invoice: an upgrade charges only the difference, so the earlier invoice's value lives in
   the new plan; a full refund of it is refused (refunds go on the newest invoice). Mitra's words: "while upgrading to
-  gold, the difference between the plan should only be taken at the transaction".
+  gold, the difference between the plan should only be taken at the transaction". Confirmed 2026-11-23: "yes, difference
+  only at the transaction".
 - AR-H11 Approve on the Rejected tab: kept, with a confirmation, and the seller gets the normal "approved" notice.
 - AR-H13 test and demo money: left out of the totals and shown on their own line; the ledger gets a money filter.
 - AR-H14 credit notes: shown to finance and to the seller, with a PDF.

@@ -1,3 +1,13 @@
+- 2026-11-23 (branch `fix/admin-review-low3-2026-11-23` in both repos, on top of Low batch 2; migration
+  `20261123110000_admin_review_low3.sql`; plan `documentation/admin-review-low3-plan-2026-11-23.md`; **built and tested on the
+  local stack, NOT released**)
+  **Cosora-Admin review: Low batch 3 (AR-L41–L48, L50–L52).** Mitra kept the demo restore tables (L49 open) and confirmed
+  AR-H07's reading.
+  - Database: `admin_vendor_import_batches()` and `admin_contact_reveals()` show staff a seller's bulk imports and the
+    contact reveals around an account (L41), with an index for "who revealed this seller's number".
+  - Cosora-Admin: one in-app confirmation for every "are you sure?" (L51), `/leads?lead=` links (L43; Support's request
+    links now open the request), table scroll cues and phone-width tables, Products tab counts, larger back links, the
+    rail's "More below", clearer review notes, the search length.
 - 2026-11-23 (branch `fix/admin-review-low2-2026-11-23` in both repos, on top of Low batch 1; migration
   `20261123100000_admin_review_low2.sql`; plan `documentation/admin-review-low2-plan-2026-11-23.md`; **built and tested on the
   local stack, NOT released**)

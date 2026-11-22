@@ -23,6 +23,8 @@ with no need to dictate format, context, or reference each time.
 - Status: Open. The 18 High and 46 Medium items are LIVE (2026-11-22) and removed from this list. Low batch 1
   (AR-L01–L20) built and tested on branch `fix/admin-review-low1-2026-11-22`, not released; L11 was already live (AR-H06).
   Low batch 2 (AR-L21–L40) built and tested on branch `fix/admin-review-low2-2026-11-23` (on top of batch 1), not released.
+  Low batch 3 (AR-L41–L48, L50–L52) built and tested on branch `fix/admin-review-low3-2026-11-23` (on top of batch 2), not
+  released. AR-L49 stays open: Mitra keeps the demo restore tables for now (2026-11-23).
 
 **Low**
 - AR-L01 Approving in a deep Products queue refetches every loaded page.
@@ -74,7 +76,7 @@ with no need to dictate format, context, or reference each time.
 - AR-L47 Review queue cards say "message is not available" without saying why.
 - AR-L48 The Subscriptions search accepts more than 100 characters, which the RPC refuses with a raw error.
 - AR-L49 `admin.demo_ads_offline` / `demo_catalogue_offline` are restore copies of the removed demo data: drop them once
-  Mitra decides the demo data is gone for good.
+  Mitra decides the demo data is gone for good. Asked 2026-11-23: "Keep for now".
 - AR-L50 The phone navigation drawer has no visible scroll cue for its lower sections.
 - AR-L51 The refund confirm is a browser `confirm()`, unlike every other confirmation.
 - AR-L52 Moderation-reason, keyword and block-reason tables are cut at phone width (columns hidden behind a scroll).

@@ -2209,6 +2209,15 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **System Health shows the embedding cost and the buyer site's CSP reports** through `admin_embedding_usage()` and
     `admin_csp_violations()`; a new System Health reader is a definer function gated on super_admin / vendor_ops with a
     capped page.
+- **Cosora-Admin review: the rules Low batch 3 settled** (branch `fix/admin-review-low3-2026-11-23`, not released):
+  - **Every confirmation in Cosora-Admin is `useConfirm()`** (`components/Confirm.tsx`), never the browser's `confirm()`;
+    `danger: true` for anything that removes, refunds or can't be undone (focus starts on Cancel).
+  - **A link to one record opens it from the address and then cleans it** (`/leads?lead=`): read once, removed with
+    `replace`, so the dialog's own history entry stays and Back closes it.
+  - **A short table that must fit a phone uses `<Table fit>`**; a wide one keeps the 640 px floor and the "Scroll ›" cue.
+  - **The demo restore tables stay** (`admin.demo_ads_offline`, `demo_catalogue_offline`; Mitra, 2026-11-23, "Keep for now").
+  - **AR-H07 is Mitra's rule** (confirmed 2026-11-23): an upgrade charges only the difference, so a credited invoice is
+    never refunded in full; refunds go on the newest invoice.
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 
 `engagement_events` + `log_engagement_event` are **live on the project** (migration

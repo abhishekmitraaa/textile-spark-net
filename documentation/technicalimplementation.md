@@ -4871,3 +4871,19 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **Queue page (L34).** `QUEUE_PAGE` is 15 when `(max-width: 640px)` matches at load, 50 otherwise; keyset paging takes any size.
 - **Tap targets (L33).** `@media (pointer: coarse)`: min 24 px on buttons, tabs, selects, summaries, checkboxes, radios, and
   `a:not(p a, li a)` as inline-flex.
+
+## Cosora-Admin review 2026-11-23: Low batch 3 (branch `fix/admin-review-low3-2026-11-23`, not released)
+
+- **Bulk imports (L41).** `admin_vendor_import_batches(vendor, limit ≤ 100)`: `product_import_batches` newest first, the
+  first 20 row errors of each (`errors` is `[{row, error}]`). super_admin, vendor_ops, support.
+- **Contact reveals (L41).** `admin_contact_reveals(profile, limit ≤ 200)`: `theirs_by` (someone revealed this account's
+  number) and `by_them` (it revealed someone's), from `admin.vendor_contact_reveals` (one row per caller and seller, the
+  latest) and `admin.buyer_contact_reveals` (every reveal); named by brand, else full name. The roles of
+  `admin_vendor_private()`. New index `vendor_contact_reveals_vendor_time_idx (vendor_id, revealed_at desc)`.
+- **Confirmations (L51).** `ConfirmProvider` (inside the router in App.tsx) renders one `Modal`; `ask()` resolves false
+  on Cancel, Esc, the backdrop or Back, and a second `ask()` answers the first false. The Modal now focuses
+  `[data-autofocus]` first (React's `autoFocus` sets no attribute, and the Modal's focus took it away).
+- **Lead links (L43).** `?lead=` (or the older `?open=`) is read in an effect, removed with `replace`, then the dialog
+  opens, so the Modal's history entry is pushed over the cleaned address.
+- **Tables (L44, L52).** `Table` measures its scroller (ResizeObserver on it and the table) and shows the cue while
+  `scrollLeft + clientWidth < scrollWidth`; `fit` removes `min-w-[640px]`.

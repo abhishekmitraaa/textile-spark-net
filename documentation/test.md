@@ -5166,3 +5166,16 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
   All 49 routes: 0 crashes, 0 blank pages, 0 page errors, 0 CSP violations.
 - **Production, read-only:** both anchors once; nothing depends on `embedding_usage_daily`; the archive index exists;
   1,243 CSP report rows (the panel shows the newest 100).
+
+## 2026-11-23 — Cosora-Admin review, Low batch 3 (local stack)
+- **Database harness** (rolled back): L41 bulk imports newest first, capped at 100, 20 errors each, support reads, a
+  product moderator refused; contact reveals in both directions around a seller and a buyer, named, newest first, a
+  buyer refused, anon can't call either; the seller lookup uses the new index. **3/3.**
+- **Browser** (production build against the local stack with vercel.json's headers): L51 in-app dialog, no browser
+  dialog, Cancel first and nothing sent; L41 panels with a row error and a reveal; L42 every card has photos or the tile;
+  L43 `?lead=` opens the request, the address is cleaned, Back closes it on Leads, `?open=` too; L45 tab counts equal the
+  database's; L47; L48; on a phone L44 cue gone at the end, L46 44 px, L50, L52 three tables fit; no page errors. **12/12.**
+- Earlier suites on the same build: 15/15, 13/13, 9/9, 16/16 (batch 2's L21 and L27 now answer the in-app dialog);
+  database harnesses 10, 5, 3, 7, 3 all pass. All 49 routes: 0 crashes, 0 blank pages, 0 page errors, 0 CSP violations.
+- **Production, read-only:** the three tables have the columns the readers use; neither reader nor the index exists yet;
+  4 seller reveals, 1 buyer reveal, 0 bulk imports.
