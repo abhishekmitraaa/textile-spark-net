@@ -1,6 +1,14 @@
+- 2026-11-22 (branch `fix/admin-review-medium3-2026-11-22`; migration `20261122130000_admin_review_medium3.sql`; plan
+  `documentation/admin-review-medium3-plan-2026-11-22.md`; **LIVE 2026-11-22**: `20261122110000`, `120000` and `130000`
+  applied through the CLI, then both mains pushed)
+  **Cosora-Admin review: Medium batch 3 (AR-M42–M46), and all three Medium batches released.**
+  - A video goes live only with a file and within 60 seconds (`trg_product_videos_live_requirements`); the per-seller
+    bulk approve leaves the others in the queue (M42). Live Activity is computed once per window every 30 seconds for all
+    admins (`admin.live_activity_cache`, M44). A feature switch saves only over what was loaded (M46).
+  - Cosora-Admin: Subscriptions and Invoices keyset paging (M43); Content-Security-Policy and noindex (M45).
 - 2026-11-22 (branch `fix/admin-review-medium2-2026-11-22` in both repos, on top of Medium batch 1; migration
-  `20261122120000_admin_review_medium2.sql`; plan `documentation/admin-review-medium2-plan-2026-11-22.md`; **built and tested
-  on the local stack, NOT released**, held by Mitra)
+  `20261122120000_admin_review_medium2.sql`; plan `documentation/admin-review-medium2-plan-2026-11-22.md`; **LIVE 2026-11-22**
+  with batches 1 and 3)
   **Cosora-Admin review: Medium batch 2 (AR-M22–M41).**
   - Mitra's call: Customers is rebuilt by a 10-minute job, never in a page request (AR-M28).
   - Database: trigram indexes for account search (M25); `customer-summary-refresh` job with `admin.customer_summary_rebuild`
@@ -8,7 +16,7 @@
     (M31); indexes for the chats list (M32), the requirement queue and Certificates (M36).
   - Cosora-Admin: see its CHANGELOG.
 - 2026-11-22 (branch `fix/admin-review-medium1-2026-11-22` in both repos; migration `20261122110000_admin_review_medium1.sql`;
-  plan `documentation/admin-review-medium1-plan-2026-11-22.md`; **built and tested on the local stack, NOT released**)
+  plan `documentation/admin-review-medium1-plan-2026-11-22.md`; **LIVE 2026-11-22** with batches 2 and 3)
   **Cosora-Admin review: Medium batch 1 (AR-M01–M05, M07–M21).**
   - Mitra's calls: the chat review page keeps the whole chat, without the reloads (AR-M18); review queues oldest first
     with a toggle kept in the address (AR-M13).

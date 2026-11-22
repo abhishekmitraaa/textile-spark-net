@@ -4753,7 +4753,7 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
   `keepPreviousData` on Chats and the Subscriptions worklist (AR-H17); `grid-cols-1` base on the ticket and carousel
   grids (AR-H18); `admin-staff` / `admin-invite` / `admin-refund-payment` confirm the caller with `/auth/v1/user` (AR-H06).
 
-## Cosora-Admin review 2026-11-22: Medium batch 1 (branch `fix/admin-review-medium1-2026-11-22`, not released)
+## Cosora-Admin review 2026-11-22: Medium batch 1 (LIVE 2026-11-22)
 
 - **Address state (M04).** `useUrlState(key, fallback, allowed?)` and `useUrlFilters(defaults, prefix?)` in Cosora-Admin
   write with `setSearchParams(…, { replace: true, state: history.state.usr })`. Filter fields are read back by their
@@ -4794,7 +4794,7 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **System Health (M10).** `expectedGapMinutes(schedule)`: every minute → 10; `*/N` → 2N (min 10); hourly → 120; listed
   hours → 2 × 1440 / count; daily → 2880; day-of-week → 2 weeks; day-of-month → 2 months. Only active jobs are late.
 
-## Cosora-Admin review 2026-11-22: Medium batch 2 (branch `fix/admin-review-medium2-2026-11-22`, not released)
+## Cosora-Admin review 2026-11-22: Medium batch 2 (LIVE 2026-11-22)
 
 - **Customers (M28).** `admin.customer_summary_meta` gains `last_attempt_at`, `last_error`. `admin.customer_summary_rebuild()`
   takes `pg_try_advisory_xact_lock(hashtext('admin_customer_refresh'))`, refreshes concurrently and records success or the
@@ -4824,3 +4824,20 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **UI (M34–M41).** `refreshMoney(qc)`; plan dialogs read `limits.product_cap`; `Tabs` measures its scroll edges
   (ResizeObserver) and scrolls the open tab into view; `Explainer` (`<details>`, open at ≥ 640 px); `RoleLink`;
   `ownStorageUrl` (origin of `VITE_SUPABASE_URL`, `/storage/v1/object/public/` or `/storage/v1/render/image/public/`).
+
+## Cosora-Admin review 2026-11-22: Medium batch 3 (LIVE 2026-11-22)
+
+- **Videos (M42).** `trg_product_videos_live_requirements` (BEFORE UPDATE OF status): moving to live needs `video_url`
+  or `bunny_video_id`, and `duration_seconds` ≤ 60 (null passes); 22023 with the reason. `approve_vendor_videos_bulk`
+  filters on the same.
+- **Live Activity (M44).** The old body moved by anchored text to `admin.live_activity_compute(int)`;
+  `public.admin_live_activity` (now VOLATILE) returns `admin.live_activity_cache.payload` when under 30 s old, else takes
+  `pg_try_advisory_xact_lock('admin_live_activity:<minutes>')`, recomputes and upserts; without the lock it returns the
+  last payload.
+- **Feature switches (M46).** Five-argument `admin_feature_flag_set` locks the row, compares `updated_at` with the
+  loaded value (hint `changed_since_loaded`) and calls the four-argument form.
+- **Admin site headers (M45).** `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'
+  fonts.googleapis.com; font-src 'self' data: fonts.gstatic.com; img-src/media-src 'self' data:/blob: https:;
+  connect-src 'self' *.supabase.co (https, wss) api.pwnedpasswords.com tile.openstreetmap.org; worker-src 'self' blob:;
+  frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';
+  upgrade-insecure-requests`, plus X-Robots-Tag, HSTS, COOP same-origin-allow-popups (signed links open in new tabs).

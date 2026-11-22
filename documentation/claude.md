@@ -2147,8 +2147,7 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **A dialog never throws away typed work without asking**, and Back closes a dialog rather than leaving the page
     (Cosora-Admin `Modal`). Admin lists that can grow read pages from the database (Vendors: `admin_vendor_list`).
 
-- **Cosora-Admin review 2026-11-22: the rules Medium batch 1 settled** (branch `fix/admin-review-medium1-2026-11-22`, not
-  released; plan `documentation/admin-review-medium1-plan-2026-11-22.md`):
+- **Cosora-Admin review 2026-11-22: the rules Medium batch 1 settled** (LIVE 2026-11-22; plan `documentation/admin-review-medium1-plan-2026-11-22.md`):
   - **An admin page's tabs, filters and searches live in its address** (`useUrlState` / `useUrlFilters` in Cosora-Admin's
     `src/hooks/useUrlState.ts`: replace, never push; a default is left out). A new list page does the same.
   - **Back on a detail page is `<BackLink fallback label>`** (Cosora-Admin): back in the app's history when there is some
@@ -2167,8 +2166,7 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **System Health watches every scheduled job**: its overdue gap is twice the job's own schedule
     (`expectedGapMinutes`); a new job needs only a purpose line in `JOBS`.
   - Kept as decided: the chat review page reads the whole chat (Mitra, AR-M18), now without a reload on every focus.
-- **Cosora-Admin review 2026-11-22: the rules Medium batch 2 settled** (branch `fix/admin-review-medium2-2026-11-22`, not
-  released; plan `documentation/admin-review-medium2-plan-2026-11-22.md`):
+- **Cosora-Admin review 2026-11-22: the rules Medium batch 2 settled** (LIVE 2026-11-22; plan `documentation/admin-review-medium2-plan-2026-11-22.md`):
   - **Customers is rebuilt by a job every 10 minutes** (Mitra, 2026-11-22, "Add a 10-minute job";
     `customer-summary-refresh` → `admin.customer_summary_rebuild()`, which records its last error). The page reads
     `admin_customer_refresh()` for the time and never rebuilds. This replaces "Don't schedule it" under Customers above.
@@ -2182,6 +2180,16 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **A picture someone else wrote is shown in Cosora-Admin only from this project's Storage** (`ownStorageUrl()`).
   - **A page's explanation is an `<Explainer>`**: closed on phones, plain words, no table or function names.
   - **Ad money counted on Ads Monitoring is live money in India-time days**, as on Payments and Reports.
+- **Cosora-Admin review 2026-11-22: the rules Medium batch 3 settled** (LIVE 2026-11-22; plan
+  `documentation/admin-review-medium3-plan-2026-11-22.md`):
+  - **A video goes live only with a file and within 60 seconds**, checked on the move to live
+    (`admin.video_live_requirements`); a bulk approve leaves the others for a decision of their own.
+  - **Cosora-Admin sends a Content-Security-Policy** (`vercel.json`): scripts from the site only; connections to Supabase,
+    the password-breach check and OpenStreetMap tiles; images and media from any https host (stored addresses vary). A
+    new external script, API or embed must be added there, or the browser blocks it. The site is noindex.
+  - **A staff-wide live figure is computed once and shared** (Live Activity: 30 s per window, `admin.live_activity_cache`),
+    never once per open tab.
+  - **A feature switch saves only over the version loaded** (`p_expected_updated_at`).
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 
 `engagement_events` + `log_engagement_event` are **live on the project** (migration

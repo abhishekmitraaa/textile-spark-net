@@ -870,7 +870,11 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
-### Changed 2026-11-22 (Cosora-Admin review, Medium batch 2; branch `fix/admin-review-medium2-2026-11-22`, not live)
+### Changed 2026-11-22 (Cosora-Admin review, Medium batch 3; LIVE 2026-11-22)
+- Videos go live only with a file and within 60 seconds; Live Activity is shared across admins; feature switch saves
+  can't overwrite a colleague's; the admin site sends a security policy and stays out of search engines.
+
+### Changed 2026-11-22 (Cosora-Admin review, Medium batch 2; LIVE 2026-11-22)
 - Customers is rebuilt every 10 minutes by a job and says when; Ads, its review queue, Certificates and the requirement
   queue read in pages; Ads Monitoring counts live money in India time.
 - Leaving Theme, the carousel or Billing details with unsaved edits asks first; Support settings panels keep each
@@ -878,7 +882,7 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - A changed role reaches an open tab within a minute; invite and recovery sign-ins are logged; requirement approval is
   confirmed; phone tab strips show more tabs; explanations fold away on phones.
 
-### Changed 2026-11-22 (Cosora-Admin review, Medium batch 1; branch `fix/admin-review-medium1-2026-11-22`, not live)
+### Changed 2026-11-22 (Cosora-Admin review, Medium batch 1; LIVE 2026-11-22)
 - Tabs, filters and searches stay in the address on every list page; Back on a detail page returns where you came from;
   sign-in returns to the page asked for; signing out clears what the last person loaded.
 - Products, Video Closeups and Catalogues read 50 at a time, oldest first on the review tab with an order switch.

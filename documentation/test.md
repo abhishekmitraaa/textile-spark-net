@@ -5124,3 +5124,16 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
 - **Production, read-only:** `admin_customer_refresh` and `admin_audit_log_actors` are the versions this migration
   replaces; `pg_trgm` in `extensions`; no `customer-summary-refresh` job yet.
 - **Not run:** M33 by browser (code: reset keyed on saved JSON); M26 by browser (invalidation of `["accounts"]`).
+
+## 2026-11-22 — Cosora-Admin review, Medium batch 3, and the Medium release
+- **Database harness** (local, rolled back): M42 a pending video with no file and a 75 s one are refused going live, the
+  bulk approve puts the good one live and leaves both; M44 a second admin within 30 s gets the cached answer and a
+  stale one is recomputed; M46 a save over a stale view is refused, the current one applies, the old form works.
+  **3/3 pass.**
+- **Security policy:** a production build against the local stack, served with `vercel.json`'s headers (only the
+  Supabase host swapped for the local one): all 49 routes, 0 violations, 0 crashes (Geography's map included). Batch 1's
+  15 and batch 2's 13 browser checks on that build: **all pass.**
+- **Production, before:** the replaced function bodies matched (`approve_vendor_videos_bulk`, the Live Activity
+  header once, `admin_feature_flag_set` four-argument only), no pending video would be blocked. **After** applying
+  `20261122110000`, `120000`, `130000`: every new function, overload, trigger, index, constraint and the
+  `customer-summary-refresh` job present.
