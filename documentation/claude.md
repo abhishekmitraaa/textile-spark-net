@@ -2190,6 +2190,15 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **A staff-wide live figure is computed once and shared** (Live Activity: 30 s per window, `admin.live_activity_cache`),
     never once per open tab.
   - **A feature switch saves only over the version loaded** (`p_expected_updated_at`).
+- **Cosora-Admin review: the rules Low batch 1 settled** (branch `fix/admin-review-low1-2026-11-22`, not released):
+  - **An overseas registration is approved only after its documents are reviewed** (Mitra, 2026-11-23, "Overseas only";
+    `documents_unreviewed`). Indian registrations can still be approved first.
+  - **vendor_ops reviews KYC documents** (Mitra, 2026-11-23), with support and super admins (`admin.vendor_document_decide`).
+  - **A blog button link is https://, a Cosora path, mailto: or tel:** (`blog_href_ok()`, checked in `blog_blocks_valid` and
+    the hero settings save). A new blog link field uses it.
+  - **Cosora-Admin shows times in India time** (`lib/ist.ts`); a new time on a page uses it, never `format(new Date…)`.
+  - **A banner destination is checked against the app's routes** (`lib/cosoraRoutes.ts`, a copy of App.tsx's paths): refresh
+    it when the app adds a page a banner may point at.
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 
 `engagement_events` + `log_engagement_event` are **live on the project** (migration

@@ -870,6 +870,11 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
+### Changed 2026-11-23 (Cosora-Admin review, Low batch 1; branch `fix/admin-review-low1-2026-11-22`, not live)
+- Overseas registrations wait for their documents; vendor_ops reviews documents; a resumed campaign tells the seller.
+- View on site links; a support request's subject opens; times in India time; plan names, not ids; blog button links
+  and banner destinations checked; blog pictures nothing uses are removed.
+
 ### Changed 2026-11-22 (Cosora-Admin review, Medium batch 3; LIVE 2026-11-22)
 - Videos go live only with a file and within 60 seconds; Live Activity is shared across admins; feature switch saves
   can't overwrite a colleague's; the admin site sends a security policy and stays out of search engines.

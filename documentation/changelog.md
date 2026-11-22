@@ -1,3 +1,12 @@
+- 2026-11-23 (branch `fix/admin-review-low1-2026-11-22` in both repos; migration `20261122140000_admin_review_low1.sql`; plan
+  `documentation/admin-review-low1-plan-2026-11-23.md`; **built and tested on the local stack, NOT released**)
+  **Cosora-Admin review: Low batch 1 (AR-L01–L20).**
+  - Mitra's calls: overseas registrations wait for their documents to be reviewed (L03); vendor_ops reviews KYC
+    documents (L04).
+  - Database: the two above; one-call reason swaps (L05); billing incidents page (L12); resuming a Cosora-paused
+    campaign notifies the seller (`ad_resumed`, L14); blog button links checked (`blog_href_ok`, L18); which blog
+    pictures are unused (L19).
+  - Buyer app: the `ad_resumed` notice's Hindi and Gujarati.
 - 2026-11-22 (branch `fix/admin-review-medium3-2026-11-22`; migration `20261122130000_admin_review_medium3.sql`; plan
   `documentation/admin-review-medium3-plan-2026-11-22.md`; **LIVE 2026-11-22**: `20261122110000`, `120000` and `130000`
   applied through the CLI, then both mains pushed)

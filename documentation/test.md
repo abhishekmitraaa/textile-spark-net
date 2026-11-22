@@ -5137,3 +5137,19 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
   header once, `admin_feature_flag_set` four-argument only), no pending video would be blocked. **After** applying
   `20261122110000`, `120000`, `130000`: every new function, overload, trigger, index, constraint and the
   `customer-summary-refresh` job present.
+
+## 2026-11-23 — Cosora-Admin review, Low batch 1 (local stack)
+- **Database harness** (rolled back): L03 an overseas registration with an unreviewed document is refused, the same one
+  marked Indian is approved; L04 vendor_ops verifies a document; L05 two reasons swap in one call; L12 incidents (five
+  sharing a time) read 2 a page with none missed; L14 resuming a Cosora-paused campaign writes one `ad_resumed` notice;
+  L18 `javascript:`, `data:` and `//host` refused, https, paths, mailto and tel accepted, a `javascript:` button makes
+  the blocks invalid; L19 an unused picture is listed, a used one and a non-blog path aren't. **7/7.**
+- **Browser** (production build against the local stack, served with vercel.json's headers): L06 View on site on live
+  listings; L02 no Reject/Remove on Paused; L01 no product page refetched after an approval; L13 Finished asks for
+  budget_exhausted and archived; L15 no raw plan ids; L07 the key hint names "_"; L20 "/advertisment" flagged,
+  "/advertisements" not; L05 one swap call; L09 a support message shows its India time in a New York browser. **9/9.**
+  Medium suites on the same build: 15/15 and 13/13. All 49 routes: 0 crashes, 0 blank pages, 0 page errors, 0 CSP
+  violations (the sweep now also catches uncaught page errors and blank pages: it found the reasons page's hook-order
+  crash in this batch, fixed before commit).
+- **Production, read-only:** each anchored patch's anchor once; no saved blog link would be refused; no pending overseas
+  registration is affected.

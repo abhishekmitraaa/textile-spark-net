@@ -20,7 +20,8 @@ with no need to dictate format, context, or reference each time.
 - Priority rule: High = money, security, lost work, or a primary job broken or wrong at scale (10,000 users);
   Medium = materially degraded with a workaround; Low = polish.
 - Reference: 2026-11-22 admin review session (SESSION-CONTEXT.md).
-- Status: Open. The 18 High and 46 Medium items are LIVE (2026-11-22) and removed from this list; the 52 Low are open.
+- Status: Open. The 18 High and 46 Medium items are LIVE (2026-11-22) and removed from this list. Low batch 1
+  (AR-L01–L20) built and tested on branch `fix/admin-review-low1-2026-11-22`, not released; L11 was already live (AR-H06).
 
 **Low**
 - AR-L01 Approving in a deep Products queue refetches every loaded page.
@@ -33,7 +34,6 @@ with no need to dictate format, context, or reference each time.
 - AR-L08 A support ticket about a requirement, quote or product gives no link to it.
 - AR-L09 Support and blog times use the browser's time zone, not IST.
 - AR-L10 A confirmed fraud record's ticket number isn't a link.
-- AR-L11 `admin-refund-payment` reads the token without asking Supabase Auth and doesn't check the invoice id is a UUID.
 - AR-L12 Billing incidents' resolved view stops at 200.
 - AR-L13 `budget_exhausted` and `archived` campaigns appear in no Ads tab.
 - AR-L14 Resuming a paused campaign sends the seller no notice.

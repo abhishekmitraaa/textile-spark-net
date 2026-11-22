@@ -4841,3 +4841,20 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
   connect-src 'self' *.supabase.co (https, wss) api.pwnedpasswords.com tile.openstreetmap.org; worker-src 'self' blob:;
   frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';
   upgrade-insecure-requests`, plus X-Robots-Tag, HSTS, COOP same-origin-allow-popups (signed links open in new tabs).
+
+## Cosora-Admin review 2026-11-23: Low batch 1 (branch `fix/admin-review-low1-2026-11-22`, not released)
+
+- **Patches.** The migration patches `admin_vendor_registration_decide`, `admin.vendor_document_decide`,
+  `resume_ad_campaign`, `blog_blocks_valid` and `admin_blog_settings_save` by anchored text (`pg_temp.patch_fn`, CRLF
+  normalised, exactly one anchor or the migration fails; an already-applied patch is skipped).
+- **Overseas (L03).** On approve: `vendor_registrations.country_code <> 'IN'` and any `vendor_documents` of the vendor with
+  `reviewed_at is null` → `documents_unreviewed`.
+- **Queue (L01).** `dropFromQueue(qc, key, id)` filters the row out of every loaded page; `invalidateQueries({ refetchType:
+  'none' })` marks the other tabs stale.
+- **Incidents (L12).** Keyset (created_at, id) desc, limit ≤ 200; the panel reads 50 a page.
+- **Blog links (L18).** `blog_href_ok(href)`: `^(https?://…|/path|/|mailto:…|tel:+digits|#anchor)$`; `//host` is refused.
+- **Blog pictures (L19).** `admin_blog_unused_images(paths)` returns the `blog/…` paths no post (hero, thumbnail, share
+  image, image blocks) and not the blog hero uses; the editor removes the ones it held but no longer keeps, after a save
+  or a cancel.
+- **Routes (L20).** `COSORA_ROUTES` from textile-spark-net's App.tsx; `isKnownCosoraRoute()` matches `:param` as one
+  segment and ignores query, hash and a trailing slash. A warning, not a refusal.

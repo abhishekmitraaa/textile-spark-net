@@ -6975,6 +6975,8 @@
  "Your campaign needs changes before it can run": "आपके अभियान को चलाने से पहले बदलाव ज़रूरी हैं",
  "Your campaign was approved and is now live": "आपका अभियान मंज़ूर हुआ और अब लाइव है",
  "Your campaign was approved and is scheduled": "आपका अभियान मंज़ूर हुआ और निर्धारित है",
+ "Your campaign is running again": "आपका अभियान फिर से चल रहा है",
+ "Cosora has resumed your campaign. The time it was paused has been added to its end date.": "Cosora ने आपका अभियान फिर से शुरू कर दिया है। जितने समय यह रुका रहा, वह समय इसकी समाप्ति तिथि में जोड़ दिया गया है।",
  "Your campaign was not approved": "आपका अभियान मंज़ूर नहीं हुआ",
  "Your campaign was paused by Cosora": "कोसोरा ने आपका अभियान रोक दिया",
  "Your campaign was suspended pending review": "आपका अभियान समीक्षा तक निलंबित किया गया",
