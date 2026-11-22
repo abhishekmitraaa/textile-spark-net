@@ -5153,3 +5153,16 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
   crash in this batch, fixed before commit).
 - **Production, read-only:** each anchored patch's anchor once; no saved blog link would be refused; no pending overseas
   registration is affected.
+
+## 2026-11-23 — Cosora-Admin review, Low batch 2 (local stack)
+- **Database harness** (rolled back): L24 a buyer is refused and a limit of 100,000 reads 500; L39 today's jobs counted by
+  India day, a 40-day-old job outside 14 days and inside the 90-day cap, retries counted, other roles refused, the view
+  gone; L40 newest report first, a buyer refused, anon can't call either reader. **3/3.**
+- **Browser** (production build against the local stack with vercel.json's headers, New York time zone): L31, L30 (one
+  call), L39/L40 panels, L23 (failed read is an error), L26, L27 (Cancel sends nothing), L21, L36 (arrow key moves selection
+  and focus), L37, L32, L22 (04:30 UTC shows 10:00), L25 (`scope=local`), L29 (moderator sees "Review queue"), L34 (limit 15
+  on a phone), L33 (no target under 24 px on six phone pages), no page errors. **16/16.**
+- Earlier suites on the same build: Medium 15/15 and 13/13, Low batch 1 9/9; database harnesses 10/10, 5/5, 3/3, 7/7.
+  All 49 routes: 0 crashes, 0 blank pages, 0 page errors, 0 CSP violations.
+- **Production, read-only:** both anchors once; nothing depends on `embedding_usage_daily`; the archive index exists;
+  1,243 CSP report rows (the panel shows the newest 100).

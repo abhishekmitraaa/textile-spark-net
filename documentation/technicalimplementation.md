@@ -4858,3 +4858,16 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
   or a cancel.
 - **Routes (L20).** `COSORA_ROUTES` from textile-spark-net's App.tsx; `isKnownCosoraRoute()` matches `:param` as one
   segment and ignores query, hash and a trailing slash. A warning, not a refusal.
+
+## Cosora-Admin review 2026-11-23: Low batch 2 (branch `fix/admin-review-low2-2026-11-23`, not released)
+
+- **Embedding usage (L39).** `admin_embedding_usage(p_days)` reads `pgmq.a_embedding_jobs` where `archived_at` is within the
+  last 1–90 India days (its `archived_at` index), grouped by India day and `message->>'table'`; cost estimated as
+  characters / 4 / 1e6 × $0.02. The old view grouped the whole archive and had no reader; it is dropped.
+- **CSP reports (L40).** `admin_csp_violations(p_limit)` reads `csp_violations` (written by `csp_report_ingest` from
+  `/api/csp-report`; the buyer site's policy is report-only) by `last_seen` desc, at most 500.
+- **Tabs (L36).** One tab stop; arrows, Home and End select and focus the neighbour. Six pages remount the strip while a
+  tab loads, so the "focus the new tab" intent is a module variable that a remount reads within 5 s.
+- **Queue page (L34).** `QUEUE_PAGE` is 15 when `(max-width: 640px)` matches at load, 50 otherwise; keyset paging takes any size.
+- **Tap targets (L33).** `@media (pointer: coarse)`: min 24 px on buttons, tabs, selects, summaries, checkboxes, radios, and
+  `a:not(p a, li a)` as inline-flex.

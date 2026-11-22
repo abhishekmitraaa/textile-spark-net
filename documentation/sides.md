@@ -870,6 +870,11 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
+### Changed 2026-11-23 (Cosora-Admin review, Low batch 2; branch `fix/admin-review-low2-2026-11-23`, not live)
+- Cosora-Admin only: confirmations before replacing a category picture, deleting a blog category or changing a role;
+  India-time carousel; error states; System Health shows embedding usage and CSP reports; phone layout and tab fixes.
+  Nothing a buyer or seller sees changes.
+
 ### Changed 2026-11-23 (Cosora-Admin review, Low batch 1; branch `fix/admin-review-low1-2026-11-22`, not live)
 - Overseas registrations wait for their documents; vendor_ops reviews documents; a resumed campaign tells the seller.
 - View on site links; a support request's subject opens; times in India time; plan names, not ids; blog button links

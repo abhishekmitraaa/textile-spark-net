@@ -22,6 +22,7 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-11-22 admin review session (SESSION-CONTEXT.md).
 - Status: Open. The 18 High and 46 Medium items are LIVE (2026-11-22) and removed from this list. Low batch 1
   (AR-L01–L20) built and tested on branch `fix/admin-review-low1-2026-11-22`, not released; L11 was already live (AR-H06).
+  Low batch 2 (AR-L21–L40) built and tested on branch `fix/admin-review-low2-2026-11-23` (on top of batch 1), not released.
 
 **Low**
 - AR-L01 Approving in a deep Products queue refetches every loaded page.

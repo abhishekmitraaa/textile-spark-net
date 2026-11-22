@@ -1,3 +1,12 @@
+- 2026-11-23 (branch `fix/admin-review-low2-2026-11-23` in both repos, on top of Low batch 1; migration
+  `20261123100000_admin_review_low2.sql`; plan `documentation/admin-review-low2-plan-2026-11-23.md`; **built and tested on the
+  local stack, NOT released**)
+  **Cosora-Admin review: Low batch 2 (AR-L21–L40).**
+  - Database: `admin_embedding_pipeline_health`'s guard coalesced and its page capped at 500 (L24);
+    `admin_embedding_usage(days)` replaces the `embedding_usage_daily` view nothing read (L39); `admin_csp_violations(limit)`
+    shows the buyer site's CSP reports (L40). All three super_admin / vendor_ops.
+  - Cosora-Admin only otherwise: confirmations, paise, India-time carousel, error states, local sign-out, not-found pages,
+    picture fallback, phone tap targets and shorter queues, tab roles, overdue cues.
 - 2026-11-23 (branch `fix/admin-review-low1-2026-11-22` in both repos; migration `20261122140000_admin_review_low1.sql`; plan
   `documentation/admin-review-low1-plan-2026-11-23.md`; **built and tested on the local stack, NOT released**)
   **Cosora-Admin review: Low batch 1 (AR-L01–L20).**

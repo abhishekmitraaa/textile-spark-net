@@ -2199,6 +2199,16 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **Cosora-Admin shows times in India time** (`lib/ist.ts`); a new time on a page uses it, never `format(new Date…)`.
   - **A banner destination is checked against the app's routes** (`lib/cosoraRoutes.ts`, a copy of App.tsx's paths): refresh
     it when the app adds a page a banner may point at.
+- **Cosora-Admin review: the rules Low batch 2 settled** (branch `fix/admin-review-low2-2026-11-23`, not released):
+  - **Cosora-Admin's tabs are a tab list** (`Tabs` in `ui.tsx`: role tab, aria-selected, arrow keys). A new tab strip uses
+    `Tabs`, never a row of buttons with `aria-current`.
+  - **A picture that fails to load shows "Picture unavailable"** (`lib/brokenImages.ts`, installed in `main.tsx`); an `<img>`
+    with its own fallback sets `data-own-fallback`.
+  - **An id from the address is checked before it is read** (`isUuid()`, `lib/uuid.ts`): a malformed one is "not found".
+  - **Sign-out in Cosora-Admin is this browser only** (`scope: "local"`).
+  - **System Health shows the embedding cost and the buyer site's CSP reports** through `admin_embedding_usage()` and
+    `admin_csp_violations()`; a new System Health reader is a definer function gated on super_admin / vendor_ops with a
+    capped page.
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 
 `engagement_events` + `log_engagement_event` are **live on the project** (migration
