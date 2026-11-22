@@ -20,54 +20,9 @@ with no need to dictate format, context, or reference each time.
 - Priority rule: High = money, security, lost work, or a primary job broken or wrong at scale (10,000 users);
   Medium = materially degraded with a workaround; Low = polish.
 - Reference: 2026-11-22 admin review session (SESSION-CONTEXT.md).
-- Status: Open. All 18 High items built and tested on the local stack on branch `fix/admin-review-high-2026-11-22`
-  (both repos), not committed or released; Medium and Low not started.
-
-**High**
-- AR-H01 Admin cancel, plan change and 7-day-guarantee close leave the seller's Razorpay autopay running: the next
-  charge re-activates a cancelled plan, undoes a plan change, or charges a refunded seller again. `admin_subscription_cancel`,
-  `admin_subscription_change_plan`, `admin_refund_guarantee_close` never touch `subscription_mandates` (grant refuses). DB
-- AR-H02 Raising a plan price makes paid checkouts already open, and every autopay renewal at the mandate's price, fail
-  `price_changed`: money taken, plan not activated, incident opened; autopay sellers fall to Free. `subscription_fulfil`
-  re-prices at today's `subscription_plans` price. Plan prices panel promises the opposite. DB
-- AR-H03 A seller can swap the file, type or details of a KYC document after it is verified, and it stays verified:
-  `vendor_documents_update` (own rows, any column; the guard checks only the review columns) and storage policy
-  `business_docs_owner_update`. verified (rehearsed as the seller, rolled back)
-- AR-H04 Every save of a blog article moves its publish time 5 h 30 min earlier; scheduled posts go public early.
-  `Blogs.tsx:374` shows the UTC time as local, `:721` saves it back as local.
-- AR-H05 Support: "Take this request" silently takes a ticket a colleague holds (`admin_support_claim` overwrites the
-  assignee), and the reply box gives no "assigned to X" warning, so two staff answer the same requester. DB
-- AR-H06 Staff still on a temporary password, even an expired one, can reset other staff's passwords through
-  `admin-staff` / `admin-invite` (`admin_status_of` ignores `must_change_password`; with Resend unset the new password
-  comes back on screen).
-- AR-H07 An invoice whose value was already used as upgrade credit can still be refunded in full (credit + cash):
-  `canRefund` (`lib/refunds.ts`) and `admin-refund-payment` ignore `superseded_at`.
-- AR-H08 The keyword blocklist takes any term with no breadth check or minimum length and matches substrings, so one
-  short term ("hi", "as") refuses ordinary messages platform-wide. `admin_keyword_add`, `check_message_blocklist`. DB
-- AR-H09 Vendors loads every vendor in the browser (82 requests for 6,779 vendors: 7 sequential pages + 68 parallel
-  status calls; a 272,708 px page), has no search, filter or paging, and reloads it all on every Back; the burst
-  exhausted the browser's connections. `Vendors.tsx:52-75`. measured
-- AR-H10 Approve can publish a seller's edit made after the moderator looked: `moderateFrom` (`lib/moderation.ts:33`)
-  matches status only, and `products` has no version or `updated_at`.
-- AR-H11 Approve on the Rejected tab (Products, Videos, Catalogues) moves rejected → live with no notice to the seller
-  (`notify_moderation_outcome` notifies only under_review → live).
-- AR-H12 The support inbox refetches every loaded page plus five RPCs in every open staff tab on any support row
-  change, and `admin_support_counts` aggregates every ticket ever filed through a view with per-ticket message
-  aggregates. `lib/support.ts:362-378`, `admin.support_ticket_rows`. DB
-- AR-H13 Payments and Reports count Razorpay test-mode money as paid, verified revenue (local: 147 invoices,
-  ₹9,68,097), with no filter. `admin.payment_entries`, `admin_payments_summary`, `admin_report_summary`. DB
-- AR-H14 Credit notes are issued when a refund is processed, but nobody can see them: no admin or seller view, no PDF.
-  `public.subscription_credit_notes` has no reader anywhere. DB
-- AR-H15 Paid ads have no refund or close-out path: `ad_orders` in `refund_review` stay there forever, and rejecting or
-  suspending a campaign the seller paid for creates no refund task. `admin-refund-payment` handles plan invoices only.
-- AR-H16 Typed work is thrown away: the shared Modal closes on any backdrop click (every form dialog), and the blog
-  article editor loses the whole article on Esc, a click outside or Back, with no warning; images already uploaded
-  stay in storage. `components/ui.tsx:637`, `Blogs.tsx`.
-- AR-H17 Search boxes lose focus after the first letter: Chats (verified: typing "an" keeps "a") and Subscriptions
-  (the whole page turns into a skeleton on each search). `Chats.tsx:57-123`, `Subscriptions.tsx:310`.
-- AR-H18 On a phone the support ticket and the New Arrivals carousel are wider than the screen and cut off with no way to
-  scroll (reply box cropped). Grids with no base column (`SupportTicket.tsx:126`, `HeroSlides.tsx:138`) inside
-  `main.overflow-x-hidden` (`Shell.tsx:393`). verified
+- Status: Open. The 18 High items are LIVE (2026-11-22; buyer 4bf0ea3, admin c974fdb) and removed from this list.
+  Medium batch 1 (AR-M01–M21; M06 shipped with High) built and tested on the local stack on branch
+  `fix/admin-review-medium1-2026-11-22` (both repos), not released.
 
 **Medium**
 - AR-M01 The suspension card and the `account_suspended` notice say suspension doesn't stop requirements, quotes,
@@ -81,8 +36,6 @@ with no need to dictate format, context, or reference each time.
   Blogs, Category pictures, Live Activity, Reports): reload, Back and shared links drop them. verified
 - AR-M05 Back links go to fixed routes (Vendor › "All vendors" → /vendors even from Registrations; a ticket → its board;
   a chat → /chats even from Review queue), and Back with a dialog open leaves the page. verified
-- AR-M06 The shared Modal has no accessible name, doesn't move, trap or return focus, and leaves the page scrolling
-  behind it. `ui.tsx:611`. measured (9 dialogs)
 - AR-M07 `text-ink-ghost` (sub-AA; `index.css:31` says never for text carrying meaning) is used 40 times in 20 files for
   "not set", "no messages", "unknown", "not yet", "—" and staff names: 2.72:1 light, 3.09:1 dark. Dark `ink-muted` small
   text is 4.01:1. measured

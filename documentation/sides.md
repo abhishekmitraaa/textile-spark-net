@@ -870,7 +870,15 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
-### Changed 2026-11-22 (Cosora-Admin review, High batch; branch `fix/admin-review-high-2026-11-22`, not live)
+### Changed 2026-11-22 (Cosora-Admin review, Medium batch 1; branch `fix/admin-review-medium1-2026-11-22`, not live)
+- Tabs, filters and searches stay in the address on every list page; Back on a detail page returns where you came from;
+  sign-in returns to the page asked for; signing out clears what the last person loaded.
+- Products, Video Closeups and Catalogues read 50 at a time, oldest first on the review tab with an order switch.
+- Geography counts every vendor; System Health watches all 26 jobs; trending hides are instant.
+- Two moderators can't contradict each other on premises photos, KYC documents or reported reviews.
+- A failed plan refund becomes a billing incident; suspension's notice says everything it stops.
+
+### Changed 2026-11-22 (Cosora-Admin review, High batch; LIVE 2026-11-22)
 - Full review of the admin side: 116 items in `ToDo.md` (18 High, 46 Medium, 52 Low).
 - Subscriptions: cancel / plan change / 7-day close turn the seller's autopay off first; a credited invoice can't be
   refunded on its own; refunded invoices list their credit notes (PDF), which sellers also see on My Payments.

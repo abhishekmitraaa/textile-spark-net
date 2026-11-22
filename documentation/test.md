@@ -5085,3 +5085,23 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
   `check` of subscription-autopay, invoice-render, razorpay-create-order, admin-refund-payment, admin-staff, admin-invite.
 - **Not run:** the Razorpay paths (admin_cancel, ad refund, credit note PDF) against a real or stubbed Razorpay; the local
   edge runtime serves the older functions.
+
+## 2026-11-22 — Cosora-Admin review, Medium batch 1 (local stack; branch `fix/admin-review-medium1-2026-11-22`)
+- **Database harness** (rolled back): M01 notice wording, a suspended seller refused a catalogue and an active one
+  allowed; M09 6,779 vendors counted, product moderator refused; M11 the hidden term leaves the published run with no new
+  run; M15 a photo decision on a status not shown refused, the current one applies, a second refused, the old form works;
+  KYC the same; M16 a dismiss closes the report on screen and leaves a later one open, a stale dismissal refused, the list
+  pages; M17 answers; M19 five decided reviews sharing one time read 2 at a time with none skipped or repeated; M20 a reason
+  edit is in the Admin Log; M21 a failed refund marks the invoice and opens a `refund_failed` incident flagged as a closed
+  guarantee. **10/10 pass.**
+- **Browser checks** (Playwright, fix-branch admin on :5198, local stack, feature switches on for the run): sign-in
+  returns to /products?tab=live; the Products tab survives reload; the Payments money filter comes back on Back; Back on a
+  vendor opened from Registrations returns there, a vendor opened alone offers All vendors; no ghost text on five pages;
+  Geography "of 6,779 total"; every job on System Health described; the review queue asks for created_at.asc with limit 50
+  and Newest first writes sort=newest and desc; Video Closeups' Live tab reads 50 newest first; all 28 approved premises
+  photos reach the screen; Reported reviews and the Review queue load; the account card lists what suspension stops;
+  support signing in after admin sees none of the admin's roster; 36 phone KPI figures, none cut. **15/15 pass.**
+  The released admin (c974fdb) on the same database fails M03, M04 (both) and M05, and its pages still load.
+- **Static:** Cosora-Admin `tsc` 0 and `npm run build`; buyer `npm run i18n:check` 0 missing (8,301).
+- **Not run:** M21 through a real Razorpay `refund.failed` webhook; M02 beyond the roster (other caches follow the same
+  clear).

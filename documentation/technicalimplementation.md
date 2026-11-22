@@ -4696,7 +4696,7 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
   server, `import("/src/lib/supabase.ts")`, and count websocket `phx_join` frames); `tests/local/registrationForm.ts`
   (the form walker, moved out of `registration-fixes.spec.ts`).
 
-## Cosora-Admin review 2026-11-22: the High batch (branch `fix/admin-review-high-2026-11-22`, not released)
+## Cosora-Admin review 2026-11-22: the High batch (LIVE 2026-11-22)
 
 - **Plan autopay and admin actions (AR-H01).** `admin.vendor_has_live_mandate(vendor)` (statuses authenticated / active /
   pending / halted, `ended_at` null) is checked by `admin_subscription_cancel`, `admin_subscription_change_plan` and
@@ -4752,3 +4752,44 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **Smaller fixes.** Blog publish time `istInputFromIso` / `isoFromIstInput` (AR-H04); `useDebounced` and
   `keepPreviousData` on Chats and the Subscriptions worklist (AR-H17); `grid-cols-1` base on the ticket and carousel
   grids (AR-H18); `admin-staff` / `admin-invite` / `admin-refund-payment` confirm the caller with `/auth/v1/user` (AR-H06).
+
+## Cosora-Admin review 2026-11-22: Medium batch 1 (branch `fix/admin-review-medium1-2026-11-22`, not released)
+
+- **Address state (M04).** `useUrlState(key, fallback, allowed?)` and `useUrlFilters(defaults, prefix?)` in Cosora-Admin
+  write with `setSearchParams(…, { replace: true, state: history.state.usr })`. Filter fields are read back by their
+  default's type (text, number or null, boolean "1"/"0"). Pages with a debounced search keep the APPLIED filters in the
+  address and seed the box's draft from it. Key names per page: `tab`, `q`, `filter`, `view`, `sort`, `range`, `status`;
+  the ad review queue `queue` and manual work `manual`, Admin Log activity `viewer` / `kind`.
+- **Back (M05).** `BackLink` reads `history.state.idx` once per render; in-app it calls `navigate(-1)` (modifier clicks
+  open the fallback), otherwise it is a plain link to the list. Sign-in: `Guard` passes path + query + hash in
+  `state.from`, `Login` sends a signed-in session to `safeReturnPath(from)` (same-site paths only, never the sign-in pages).
+- **Sign-out (M02).** `AdminSessionProvider` calls `queryClient.clear()` on sign-out and whenever the signed-in user id
+  changes from one account to another (not on the first load).
+- **Contrast (M07).** `text-ink-ghost` is decoration only; meaningful empty values use `ink-faint`. Dark `ink-muted`
+  180 180 190, dark `ink-faint` 146 146 158 (at least 4.5:1 on every dark surface up to rgb(40 40 46)).
+- **Geography (M09).** `admin_vendor_location_counts()` (super_admin, vendor_ops, support) returns `jsonb` of
+  `{city, state, n}` groups; `aggregate()` takes `count` per row.
+- **Trending hide (M11).** `admin_search_trend_hide` deletes the term's rows (`admin.search_term_norm(label)`) from the
+  latest run; `trg_search_trend_items_snapshot` (AFTER DELETE, per statement) calls `site_config_queue_snapshot()`.
+  Unhide still runs `admin.search_trends_refresh('unhide')`.
+- **Queues (M12, M13).** `afterCursor(cursor, sort)` builds the `or` filter (`gt`/`lt` on created_at, then id);
+  `nextCursor` and `mergeQueuePages` in `lib/queuePaging.ts`. Indexes `products_status_created_idx`,
+  `product_videos_status_created_idx`, `catalogues_status_created_idx` on (status, created_at, id).
+- **Approved photos (M14).** Cursor `at` is `reviewed_at`, or "" past the stamped rows; the "" phase pages
+  `reviewed_at is null` by id.
+- **Stale decisions (M15, M16).** `admin.premises_photo_decide(photo, approve, reason, check, from)` and
+  `admin.vendor_document_decide(doc, verified, reason, check, seen_reviewed_at)` lock the row and compare; the public
+  three-argument forms pass `check = false`, the new four-argument forms `true`. `admin.review_report_decide(…, ids)`
+  takes an advisory lock per review, dismisses only `ids`, and a removal closes all; the five-argument public form passes
+  the ids (empty means none seen, so refused). `admin_review_reports_list(status, before_at, before_id, limit ≤ 200)`.
+- **My vendors (M17).** `admin_am_vendors` computes unread per vendor inside `picked`, filters `am_serves` there, orders
+  unread desc, last message desc, brand, then `limit 500`.
+- **Chat thread (M18, M19).** File links: one `useQueries` entry per 100 paths, keyed by (conversation, first path,
+  length, last path). Thread: `staleTime` 60 s with focus refetch. Participants: profiles, emails and vendor names 100 ids
+  per request. `admin_conversation_review_page(status, before_at, before_id, limit)` orders by `sort_at`
+  (`coalesce(reviewed_at, created_at)` on closed tabs, `created_at` on pending) and id.
+- **Failed refunds (M21).** `billing_incidents_kind_check` adds `refund_failed`; `billing_incident_open` titles it "A
+  refund failed"; `subscription_refund_event`'s failed branch opens it with `invoice_id`, `refund_id`, `amount_paise`,
+  `guarantee_request_id`, `guarantee_closed`.
+- **System Health (M10).** `expectedGapMinutes(schedule)`: every minute → 10; `*/N` → 2N (min 10); hourly → 120; listed
+  hours → 2 × 1440 / count; daily → 2880; day-of-week → 2 weeks; day-of-month → 2 months. Only active jobs are late.

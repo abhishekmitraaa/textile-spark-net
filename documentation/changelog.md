@@ -1,6 +1,21 @@
+- 2026-11-22 (branch `fix/admin-review-medium1-2026-11-22` in both repos; migration `20261122110000_admin_review_medium1.sql`;
+  plan `documentation/admin-review-medium1-plan-2026-11-22.md`; **built and tested on the local stack, NOT released**)
+  **Cosora-Admin review: Medium batch 1 (AR-M01–M05, M07–M21).**
+  - Mitra's calls: the chat review page keeps the whole chat, without the reloads (AR-M18); review queues oldest first
+    with a toggle kept in the address (AR-M13).
+  - Database: suspension's notice says all it stops, and a suspended seller can't add a catalogue (M01); Geography counts
+    every vendor (`admin_vendor_location_counts`, M09); hiding a trending term no longer recomputes (M11); queue indexes
+    (M12–M13); premises photo and KYC decisions refuse a stale view (M15); reported-review dismissals close only the reports
+    seen, and the list pages (M16); My vendors sorts before its cut (M17); chat review tabs page
+    (`admin_conversation_review_page`, M19); requirement reasons audited (M20); a failed plan refund opens a
+    `refund_failed` billing incident (M21). Every old RPC signature still works.
+  - Buyer app: the suspension notice's Hindi and Gujarati, and the new incident title (`src/i18n`).
+  - Cosora-Admin: see its CHANGELOG (address-kept tabs and filters, Back links, sign-in return, contrast, phone figures,
+    System Health jobs, paged queues).
 - 2026-11-22 (branch `fix/admin-review-high-2026-11-22` in both repos; migrations `20261122100000_admin_review_high.sql`,
   `20261122100100_admin_review_high_money.sql` and, after the buyer app is live, `20261122100200_business_docs_no_overwrite.sql`;
-  plan `documentation/admin-review-high-fixes-plan-2026-11-22.md`; **built and tested on the local stack, NOT released**)
+  plan `documentation/admin-review-high-fixes-plan-2026-11-22.md`; **RELEASED 2026-11-22**: migrations applied, six
+  functions deployed, main buyer 4bf0ea3 / admin c974fdb, then `100200`)
   **Cosora-Admin review 2026-11-22: the full bug list in ToDo.md (18 High, 46 Medium, 52 Low), and the 18 High fixed.**
   - Mitra's calls: an admin cancel / plan change / 7-day close turns the seller's autopay off first (AR-H01); a refund
     of an invoice already credited into an upgrade is refused (AR-H07: "the difference between the plan should only be

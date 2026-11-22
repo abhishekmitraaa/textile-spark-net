@@ -2118,8 +2118,7 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   returned 20 and 10 with **overlap 0**. This is what makes the adaptive dispatcher (several
   concurrent worker invocations per tick) safe. It holds across ticks only because
   `VT_SECONDS` (90) exceeds the tick interval (60).
-- **Cosora-Admin review 2026-11-22: the rules the High batch settled** (branch `fix/admin-review-high-2026-11-22`, built
-  on the local stack, not released; plan `documentation/admin-review-high-fixes-plan-2026-11-22.md`):
+- **Cosora-Admin review 2026-11-22: the rules the High batch settled** (LIVE 2026-11-22, buyer 4bf0ea3, admin c974fdb; plan `documentation/admin-review-high-fixes-plan-2026-11-22.md`):
   - **No admin action on a seller's plan leaves their autopay running** (Mitra, "Cancel autopay too"). Cancel, plan
     change and the 7-day close refuse while a mandate is live (`admin.vendor_has_live_mandate`, hint `autopay_active`);
     Cosora-Admin turns it off first through `subscription-autopay` `admin_cancel` and retries (`withAutopayOff`). A new
@@ -2149,6 +2148,26 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **A dialog never throws away typed work without asking**, and Back closes a dialog rather than leaving the page
     (Cosora-Admin `Modal`). Admin lists that can grow read pages from the database (Vendors: `admin_vendor_list`).
 
+- **Cosora-Admin review 2026-11-22: the rules Medium batch 1 settled** (branch `fix/admin-review-medium1-2026-11-22`, not
+  released; plan `documentation/admin-review-medium1-plan-2026-11-22.md`):
+  - **An admin page's tabs, filters and searches live in its address** (`useUrlState` / `useUrlFilters` in Cosora-Admin's
+    `src/hooks/useUrlState.ts`: replace, never push; a default is left out). A new list page does the same.
+  - **Back on a detail page is `<BackLink fallback label>`** (Cosora-Admin): back in the app's history when there is some
+    (React Router's `idx`), else the list. Sign-in returns to the page asked for (`safeReturnPath`).
+  - **A moderation queue reads 50 at a time by (created_at, id)**, oldest first on its review tab by default, with the order
+    in the address (Mitra, "Toggle on the page"; `lib/queuePaging.ts`, `QueueSortToggle`). A new queue uses them.
+  - **A decision on something another moderator may decide carries what was seen**: listings their revision (AR-H10),
+    premises photos their status, KYC documents their `reviewed_at`, reported reviews the report ids on screen. The
+    database refuses a stale one with hint `changed_since_loaded`, and the page refreshes. A new decision RPC does too; the
+    old signature stays until both apps have shipped.
+  - **Suspension's own words list what it stops** (`set_account_status`'s notice, Cosora-Admin's account card): messages,
+    calls, requirements, quotes, products, videos, catalogues, ads, reviews. Change the list with the policies.
+  - **A list a staff page shows whole comes from the database grouped or paged, never as raw rows** (Geography's
+    `admin_vendor_location_counts` returns one JSON value: an RPC returning rows is capped at 1,000 like a table read).
+  - **Every failed plan refund is a `refund_failed` billing incident**, marked when its 7-day guarantee is already closed.
+  - **System Health watches every scheduled job**: its overdue gap is twice the job's own schedule
+    (`expectedGapMinutes`); a new job needs only a purpose line in `JOBS`.
+  - Kept as decided: the chat review page reads the whole chat (Mitra, AR-M18), now without a reload on every focus.
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 
 `engagement_events` + `log_engagement_event` are **live on the project** (migration
