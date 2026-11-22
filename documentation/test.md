@@ -5179,3 +5179,13 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
   database harnesses 10, 5, 3, 7, 3 all pass. All 49 routes: 0 crashes, 0 blank pages, 0 page errors, 0 CSP violations.
 - **Production, read-only:** the three tables have the columns the readers use; neither reader nor the index exists yet;
   4 seller reveals, 1 buyer reveal, 0 bulk imports.
+
+## 2026-11-23 — Cosora-Admin review Low batches 1–3, release
+- Production, read-only, just before applying: every anchor once (L03, L04, L14, L18 ×2, L24 ×2), no saved blog link
+  refused, no pending overseas registration affected, nothing depending on `embedding_usage_daily`.
+- Applied `20261122140000`, `20261123100000`, `20261123110000` with the CLI; afterwards every patched function carries its
+  change, the five new readers and `blog_href_ok` exist, the view is gone, the index exists, anon can execute none of the
+  new readers, and `blog_href_ok` refuses `javascript:` and accepts https and a path.
+- Both mains fast-forwarded and pushed; Vercel production deployments Ready. The live admin bundle carries the new
+  readers, the confirmation and the rail cue; the live buyer bundle carries the `ad_resumed` notice text (Hindi chunk);
+  the admin sign-in page loads with 0 CSP violations.

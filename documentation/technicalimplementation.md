@@ -4842,7 +4842,7 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
   frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';
   upgrade-insecure-requests`, plus X-Robots-Tag, HSTS, COOP same-origin-allow-popups (signed links open in new tabs).
 
-## Cosora-Admin review 2026-11-23: Low batch 1 (branch `fix/admin-review-low1-2026-11-22`, not released)
+## Cosora-Admin review 2026-11-23: Low batch 1 (LIVE 2026-11-23)
 
 - **Patches.** The migration patches `admin_vendor_registration_decide`, `admin.vendor_document_decide`,
   `resume_ad_campaign`, `blog_blocks_valid` and `admin_blog_settings_save` by anchored text (`pg_temp.patch_fn`, CRLF
@@ -4859,7 +4859,7 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **Routes (L20).** `COSORA_ROUTES` from textile-spark-net's App.tsx; `isKnownCosoraRoute()` matches `:param` as one
   segment and ignores query, hash and a trailing slash. A warning, not a refusal.
 
-## Cosora-Admin review 2026-11-23: Low batch 2 (branch `fix/admin-review-low2-2026-11-23`, not released)
+## Cosora-Admin review 2026-11-23: Low batch 2 (LIVE 2026-11-23)
 
 - **Embedding usage (L39).** `admin_embedding_usage(p_days)` reads `pgmq.a_embedding_jobs` where `archived_at` is within the
   last 1–90 India days (its `archived_at` index), grouped by India day and `message->>'table'`; cost estimated as
@@ -4872,7 +4872,7 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **Tap targets (L33).** `@media (pointer: coarse)`: min 24 px on buttons, tabs, selects, summaries, checkboxes, radios, and
   `a:not(p a, li a)` as inline-flex.
 
-## Cosora-Admin review 2026-11-23: Low batch 3 (branch `fix/admin-review-low3-2026-11-23`, not released)
+## Cosora-Admin review 2026-11-23: Low batch 3 (LIVE 2026-11-23)
 
 - **Bulk imports (L41).** `admin_vendor_import_batches(vendor, limit ≤ 100)`: `product_import_batches` newest first, the
   first 20 row errors of each (`errors` is `[{row, error}]`). super_admin, vendor_ops, support.

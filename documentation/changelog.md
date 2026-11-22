@@ -1,6 +1,5 @@
 - 2026-11-23 (branch `fix/admin-review-low3-2026-11-23` in both repos, on top of Low batch 2; migration
-  `20261123110000_admin_review_low3.sql`; plan `documentation/admin-review-low3-plan-2026-11-23.md`; **built and tested on the
-  local stack, NOT released**)
+  `20261123110000_admin_review_low3.sql`; plan `documentation/admin-review-low3-plan-2026-11-23.md`; **LIVE 2026-11-23 (buyer main `344ddb3`, Cosora-Admin main `fd35854`; migrations `20261122140000`, `20261123100000`, `20261123110000` applied with the CLI, not in the ledger)**)
   **Cosora-Admin review: Low batch 3 (AR-L41–L48, L50–L52).** Mitra kept the demo restore tables (L49 open) and confirmed
   AR-H07's reading.
   - Database: `admin_vendor_import_batches()` and `admin_contact_reveals()` show staff a seller's bulk imports and the
@@ -9,8 +8,7 @@
     links now open the request), table scroll cues and phone-width tables, Products tab counts, larger back links, the
     rail's "More below", clearer review notes, the search length.
 - 2026-11-23 (branch `fix/admin-review-low2-2026-11-23` in both repos, on top of Low batch 1; migration
-  `20261123100000_admin_review_low2.sql`; plan `documentation/admin-review-low2-plan-2026-11-23.md`; **built and tested on the
-  local stack, NOT released**)
+  `20261123100000_admin_review_low2.sql`; plan `documentation/admin-review-low2-plan-2026-11-23.md`; **LIVE 2026-11-23 (buyer main `344ddb3`, Cosora-Admin main `fd35854`; migrations `20261122140000`, `20261123100000`, `20261123110000` applied with the CLI, not in the ledger)**)
   **Cosora-Admin review: Low batch 2 (AR-L21–L40).**
   - Database: `admin_embedding_pipeline_health`'s guard coalesced and its page capped at 500 (L24);
     `admin_embedding_usage(days)` replaces the `embedding_usage_daily` view nothing read (L39); `admin_csp_violations(limit)`
@@ -18,7 +16,7 @@
   - Cosora-Admin only otherwise: confirmations, paise, India-time carousel, error states, local sign-out, not-found pages,
     picture fallback, phone tap targets and shorter queues, tab roles, overdue cues.
 - 2026-11-23 (branch `fix/admin-review-low1-2026-11-22` in both repos; migration `20261122140000_admin_review_low1.sql`; plan
-  `documentation/admin-review-low1-plan-2026-11-23.md`; **built and tested on the local stack, NOT released**)
+  `documentation/admin-review-low1-plan-2026-11-23.md`; **LIVE 2026-11-23 (buyer main `344ddb3`, Cosora-Admin main `fd35854`; migrations `20261122140000`, `20261123100000`, `20261123110000` applied with the CLI, not in the ledger)**)
   **Cosora-Admin review: Low batch 1 (AR-L01–L20).**
   - Mitra's calls: overseas registrations wait for their documents to be reviewed (L03); vendor_ops reviews KYC
     documents (L04).
@@ -649,7 +647,7 @@
   - Migration `20261018130000_search_trends_filters.sql` (md5 `6489e58b953b74b6fa7c46d72fb881ce`; guard: the 120000 body, md5 `54ac3672…`): `admin.search_trend_terms()` publishes a term only with at most 4 digits in all (those scripts translated first) and nothing shaped like a host name; recomputes the list. Production body md5 `fa6c0265…` equals local.
   - Harness: new cases I1–I3 (`trends.sql`, now 36): before the fix I1 failed listing all five dodges; after, only "saree 2024" (4 digits) is listed.
   - The review's other finding (three made-up guest sessions can publish any term that passes the filters) is open: the switch stays on for listed accounts until it is decided.
-- 2026-10-18 (branch `search/trending-searches` in both repos; **built and tested on the local stack, NOT released**: nothing applied, deployed, pushed or merged) Trending searches on /search, measured from Cosora's own searches.
+- 2026-10-18 (branch `search/trending-searches` in both repos; **LIVE 2026-11-23 (buyer main `344ddb3`, Cosora-Admin main `fd35854`; migrations `20261122140000`, `20261123100000`, `20261123110000` applied with the CLI, not in the ledger)**: nothing applied, deployed, pushed or merged) Trending searches on /search, measured from Cosora's own searches.
   - Why: the search page should list what people are searching for, refreshed daily. Google Trends was the first ask; its official API is an invite-only alpha and there are no keys, so the source is the searches buyers make here (decided 2026-10-18). The window ladder, the 3-visitor floor and an admin take-down were chosen through questions.
   - Migration `20261018120000_search_trends.sql` (md5 `379a7463d2601bf6046ed45d21d71994`): switch `search_trending` (off) and visitor-callable `search_trending_on()`; `admin.search_trend_runs` / `_items` / `_hidden` (RLS on, no client grants; the hidden table in the Admin Log); partial index `engagement_events_search_time_idx`; `admin.search_trend_terms()` / `_categories()` (written for volume); `admin.search_trends_refresh()`; public `trending_searches()` (words only); `admin_search_trends()`, `admin_search_trend_hide()`, `admin_search_trend_unhide()`; a new run or a switch change queues the site-config rebuild; a first list; self-checks (refused if the floor is missing).
   - Migration `20261018120100_search_trends_job.sql` (md5 `12ff2614dd56bd326d13e6e100ca5aad`): job `search-trends-refresh` at 18:40 UTC (00:10 India time); prunes runs older than 90 days. Separate because a new job is Mitra's call.

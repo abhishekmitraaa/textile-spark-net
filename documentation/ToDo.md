@@ -20,66 +20,13 @@ with no need to dictate format, context, or reference each time.
 - Priority rule: High = money, security, lost work, or a primary job broken or wrong at scale (10,000 users);
   Medium = materially degraded with a workaround; Low = polish.
 - Reference: 2026-11-22 admin review session (SESSION-CONTEXT.md).
-- Status: Open. The 18 High and 46 Medium items are LIVE (2026-11-22) and removed from this list. Low batch 1
-  (AR-L01–L20) built and tested on branch `fix/admin-review-low1-2026-11-22`, not released; L11 was already live (AR-H06).
-  Low batch 2 (AR-L21–L40) built and tested on branch `fix/admin-review-low2-2026-11-23` (on top of batch 1), not released.
-  Low batch 3 (AR-L41–L48, L50–L52) built and tested on branch `fix/admin-review-low3-2026-11-23` (on top of batch 2), not
-  released. AR-L49 stays open: Mitra keeps the demo restore tables for now (2026-11-23).
+- Status: Open for AR-L49 only. The 18 High and 46 Medium items went LIVE 2026-11-22, and the Low items in three batches
+  LIVE 2026-11-23 (buyer main `344ddb3`, Cosora-Admin main `fd35854`; migrations `20261122140000`, `20261123100000`, `20261123110000` applied with the CLI, not in the ledger); all removed from this list. AR-L49 stays open: Mitra keeps the demo restore tables
+  for now (2026-11-23).
 
 **Low**
-- AR-L01 Approving in a deep Products queue refetches every loaded page.
-- AR-L02 The Paused tab offers Reject and Remove, though it is meant to be for looking only.
-- AR-L03 Overseas registrations can be approved while documents are unreviewed (product decision).
-- AR-L04 vendor_ops can approve a registration but can't review its documents.
-- AR-L05 Reordering moderation reasons is two separate saves.
-- AR-L06 No "view on site" link for a listing or a seller anywhere in moderation.
-- AR-L07 Form questions show raw Postgres errors; the key hint omits "_".
-- AR-L08 A support ticket about a requirement, quote or product gives no link to it.
-- AR-L09 Support and blog times use the browser's time zone, not IST.
-- AR-L10 A confirmed fraud record's ticket number isn't a link.
-- AR-L12 Billing incidents' resolved view stops at 200.
-- AR-L13 `budget_exhausted` and `archived` campaigns appear in no Ads tab.
-- AR-L14 Resuming a paused campaign sends the seller no notice.
-- AR-L15 The Invoices table shows raw plan ids; the plan prices panel disappears on a load error.
-- AR-L16 The refund confirmation doesn't say the plan stays active.
-- AR-L17 "Publish" on a scheduled article says Published but it stays hidden; the scheduler never flips the badge.
-- AR-L18 Blog button links accept any URL scheme (`javascript:`).
-- AR-L19 Replaced or removed blog images stay in storage.
-- AR-L20 A banner's destination isn't checked against real seller routes (a typo leads to Not Found).
-- AR-L21 "Use default", Replace (category pictures) and deleting a blog category have no confirmation.
-- AR-L22 Reports rounds away paise; the carousel schedules in the browser's time zone.
-- AR-L23 System Health and Reports show an empty state when a read failed.
-- AR-L24 `admin_embedding_pipeline_health`'s guard isn't coalesced; its limit is unbounded.
-- AR-L25 Signing out signs the admin out on every device.
-- AR-L26 Admins shows a failed load as an empty table.
-- AR-L27 Changing an admin's role applies the moment the dropdown changes, with no confirmation.
-- AR-L28 The staff directory offers managers a reset button that is always refused on deactivated super-admin rows.
-- AR-L29 "Section not available" shows internal keys ("rfq-review").
-- AR-L30 An unknown ticket number answers with a server 500 (sent twice) instead of "not found".
-- AR-L31 `/vendors/not-a-uuid` shows a raw Postgres error. verified
-- AR-L32 Broken images have no fallback (Products queue, Premises photos).
-- AR-L33 Phone tap targets under 24 px (text links, checkboxes, remove chips).
-- AR-L34 Very long pages on a phone (Products 26,457 px).
-- AR-L35 Content width varies between pages on desktop; the Geography map fills a third of its panel.
-- AR-L36 Tabs have no tab role for screen readers.
-- AR-L37 Requirements waiting about a month and registrations 14 days show no "overdue" cue against what buyers and
-  sellers are promised.
-- AR-L38 Keyword rows with no recorded author say "unknown".
-- AR-L39 The `public.embedding_usage_daily` view has no reader anywhere (drop it or show it in System Health).
-- AR-L40 `public.csp_violations` is written but never shown.
-- AR-L41 `product_import_batches` and the contact-reveal logs are written but never shown to staff.
-- AR-L42 Requirement review cards without a picture have a different layout.
-- AR-L43 Leads: the requirement lookup has no deep link (`?lead=`).
-- AR-L44 The Leads table on a phone is a narrow horizontal scroll with no cue.
-- AR-L45 The Products tabs show no counts (Requirements' do).
-- AR-L46 Chat thread "All chats" and the vendor page "All vendors" are small tap targets on a phone.
-- AR-L47 Review queue cards say "message is not available" without saying why.
-- AR-L48 The Subscriptions search accepts more than 100 characters, which the RPC refuses with a raw error.
 - AR-L49 `admin.demo_ads_offline` / `demo_catalogue_offline` are restore copies of the removed demo data: drop them once
   Mitra decides the demo data is gone for good. Asked 2026-11-23: "Keep for now".
-- AR-L50 The phone navigation drawer has no visible scroll cue for its lower sections.
-- AR-L51 The refund confirm is a browser `confirm()`, unlike every other confirmation.
-- AR-L52 Moderation-reason, keyword and block-reason tables are cut at phone width (columns hidden behind a scroll).
 
 ### Test M-58 on production: a Google sign-up, then Back from Home — added 2026-11-21
 - Task: Mitra signs up once on www.cosora.in with a Google account that has never used Cosora, finishes the sign-up

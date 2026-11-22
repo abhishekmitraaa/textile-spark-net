@@ -1,5 +1,7 @@
 # Cosora-Admin review — Low batch 2 (AR-L21 to AR-L40), 2026-11-23
 
+**LIVE 2026-11-23 (buyer main `344ddb3`, Cosora-Admin main `fd35854`; migrations `20261122140000`, `20261123100000`, `20261123110000` applied with the CLI, not in the ledger).**
+
 Branch `fix/admin-review-low2-2026-11-23` in both repos, on top of Low batch 1's branch (`79fd831` / `a32bf23`). Migration
 `supabase/migrations/20261123100000_admin_review_low2.sql`: anchored patches (both anchors found once on production,
 read-only check 2026-11-23), two new readers, and the drop of a view nothing read (nothing depends on it on production).

@@ -2190,7 +2190,7 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **A staff-wide live figure is computed once and shared** (Live Activity: 30 s per window, `admin.live_activity_cache`),
     never once per open tab.
   - **A feature switch saves only over the version loaded** (`p_expected_updated_at`).
-- **Cosora-Admin review: the rules Low batch 1 settled** (branch `fix/admin-review-low1-2026-11-22`, not released):
+- **Cosora-Admin review: the rules Low batch 1 settled** (LIVE 2026-11-23):
   - **An overseas registration is approved only after its documents are reviewed** (Mitra, 2026-11-23, "Overseas only";
     `documents_unreviewed`). Indian registrations can still be approved first.
   - **vendor_ops reviews KYC documents** (Mitra, 2026-11-23), with support and super admins (`admin.vendor_document_decide`).
@@ -2199,7 +2199,7 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **Cosora-Admin shows times in India time** (`lib/ist.ts`); a new time on a page uses it, never `format(new Date…)`.
   - **A banner destination is checked against the app's routes** (`lib/cosoraRoutes.ts`, a copy of App.tsx's paths): refresh
     it when the app adds a page a banner may point at.
-- **Cosora-Admin review: the rules Low batch 2 settled** (branch `fix/admin-review-low2-2026-11-23`, not released):
+- **Cosora-Admin review: the rules Low batch 2 settled** (LIVE 2026-11-23):
   - **Cosora-Admin's tabs are a tab list** (`Tabs` in `ui.tsx`: role tab, aria-selected, arrow keys). A new tab strip uses
     `Tabs`, never a row of buttons with `aria-current`.
   - **A picture that fails to load shows "Picture unavailable"** (`lib/brokenImages.ts`, installed in `main.tsx`); an `<img>`
@@ -2209,7 +2209,7 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **System Health shows the embedding cost and the buyer site's CSP reports** through `admin_embedding_usage()` and
     `admin_csp_violations()`; a new System Health reader is a definer function gated on super_admin / vendor_ops with a
     capped page.
-- **Cosora-Admin review: the rules Low batch 3 settled** (branch `fix/admin-review-low3-2026-11-23`, not released):
+- **Cosora-Admin review: the rules Low batch 3 settled** (LIVE 2026-11-23):
   - **Every confirmation in Cosora-Admin is `useConfirm()`** (`components/Confirm.tsx`), never the browser's `confirm()`;
     `danger: true` for anything that removes, refunds or can't be undone (focus starts on Cancel).
   - **A link to one record opens it from the address and then cleans it** (`/leads?lead=`): read once, removed with
