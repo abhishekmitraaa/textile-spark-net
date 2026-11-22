@@ -16,6 +16,9 @@ import {
   CERTIFICATE_STEPS, certificateStepIndex, useVendorCertificates, useVendorPayments,
   type VendorCertificate, type VendorPayment,
 } from "@/lib/queries/vendorPayments";
+import { creditNotePdfLink, useInvoiceCreditNotes } from "@/lib/queries/subscriptions";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/errorMessage";
 
 // ─────────────────────────────────────────────────────────────
 // /my-payments — every payment the vendor has made to Cosora, the printable
@@ -259,6 +262,8 @@ function PaymentsTable({ payments, loading, error, reduced }: {
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
+                    {/* AR-H14: a refunded plan payment's credit notes, as PDFs. */}
+                    {p.kind === "subscription" && p.status === "refunded" && <CreditNoteLinks invoiceId={p.id} />}
                   </td>
                 </motion.tr>
               ))}
@@ -267,6 +272,38 @@ function PaymentsTable({ payments, loading, error, reduced }: {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** The credit notes Cosora issued for a refunded invoice, each a downloadable PDF (AR-H14). */
+function CreditNoteLinks({ invoiceId }: { invoiceId: string }) {
+  const notes = useInvoiceCreditNotes(invoiceId);
+  const [busy, setBusy] = useState<string | null>(null);
+  if (!notes.data?.length) return null;
+  return (
+    <span className="mt-1 flex flex-col items-end gap-1">
+      {notes.data.map((n) => (
+        <Button
+          key={n.id}
+          variant="ghost"
+          size="sm"
+          disabled={busy === n.id}
+          onClick={async () => {
+            setBusy(n.id);
+            try {
+              const { url } = await creditNotePdfLink(n.id);
+              window.location.assign(url);
+            } catch (e) {
+              toast.error(errorMessage(e));
+            } finally {
+              setBusy(null);
+            }
+          }}
+        >
+          <Download className="mr-1 h-4 w-4" /> Credit note
+        </Button>
+      ))}
+    </span>
   );
 }
 

@@ -2118,6 +2118,36 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   returned 20 and 10 with **overlap 0**. This is what makes the adaptive dispatcher (several
   concurrent worker invocations per tick) safe. It holds across ticks only because
   `VT_SECONDS` (90) exceeds the tick interval (60).
+- **Cosora-Admin review 2026-11-22: the rules the High batch settled** (branch `fix/admin-review-high-2026-11-22`, built
+  on the local stack, not released; plan `documentation/admin-review-high-fixes-plan-2026-11-22.md`):
+  - **No admin action on a seller's plan leaves their autopay running** (Mitra, "Cancel autopay too"). Cancel, plan
+    change and the 7-day close refuse while a mandate is live (`admin.vendor_has_live_mandate`, hint `autopay_active`);
+    Cosora-Admin turns it off first through `subscription-autopay` `admin_cancel` and retries (`withAutopayOff`). A new
+    admin action that changes a seller's plan does the same.
+  - **A paid order is stale only when its credit is gone, never because a price changed** (`subscription_fulfil`). A price
+    is frozen on every order and mandate, as the plan prices rule says; the F07 check stays for credit counted twice.
+  - **An invoice credited into a later plan isn't refunded on its own** (Mitra: "the difference between the plan should
+    only be taken at the transaction"): `superseded_at` refuses it in `admin-refund-payment` and in `canRefund`.
+  - **Totals are live money** (Mitra, "Exclude, show separately"): Payments and Reports count `payment_mode` live (and a
+    free ₹0 order); test-key and demo payments are shown on their own line. Every money row says its mode: ad orders
+    since `20261122100100` (all earlier ones are test money; `razorpay-create-order` records it).
+  - **A paid ad order is refunded from Cosora-Admin through Razorpay** (Mitra): `admin-refund-payment` `{ adOrderId }`,
+    `ad_order_refund_claim` / `_record`, the refund webhook matched by the refund id in `subscription_refund_event`. A
+    paid campaign Cosora rejects or suspends flags its order (`refund_review`); finance refunds it or says why no refund
+    is needed (`admin_ad_order_resolve`, in the Admin Log).
+  - **A credit note is shown and downloadable wherever its invoice is** (Mitra): Cosora-Admin Invoices and the seller's My
+    Payments; `invoice-render` `{ creditNoteId }` draws it once into the invoices bucket (`pdf_path`).
+  - **A moderation decision applies only to the content the moderator saw.** A listing's revision (`admin.listing_revs`)
+    moves with its content, photos and PDFs, never its status or counters; decisions go through `admin_listing_decide`
+    (SECURITY INVOKER, so every moderation guard still decides as the admin). Overturning a rejection is confirmed and
+    tells the seller. A new moderated table gets the revision triggers.
+  - **A submitted KYC document is never changed in place**: no update path for the seller, uploads never overwrite.
+  - **A staff account on a temporary password may change it and nothing else**, in the edge functions too: they confirm
+    the caller with Supabase Auth (`verifiedUser`) and refuse `must_change_password`.
+  - **A blocked keyword is 3+ characters and absent from ordinary business messages** (`admin.keyword_breadth_problem`),
+    as a flag pattern already had to be.
+  - **A dialog never throws away typed work without asking**, and Back closes a dialog rather than leaving the page
+    (Cosora-Admin `Modal`). Admin lists that can grow read pages from the database (Vendors: `admin_vendor_list`).
 
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 

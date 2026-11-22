@@ -1,3 +1,32 @@
+- 2026-11-22 (branch `fix/admin-review-high-2026-11-22` in both repos; migrations `20261122100000_admin_review_high.sql`,
+  `20261122100100_admin_review_high_money.sql` and, after the buyer app is live, `20261122100200_business_docs_no_overwrite.sql`;
+  plan `documentation/admin-review-high-fixes-plan-2026-11-22.md`; **built and tested on the local stack, NOT released**)
+  **Cosora-Admin review 2026-11-22: the full bug list in ToDo.md (18 High, 46 Medium, 52 Low), and the 18 High fixed.**
+  - Mitra's calls: an admin cancel / plan change / 7-day close turns the seller's autopay off first (AR-H01); a refund
+    of an invoice already credited into an upgrade is refused (AR-H07: "the difference between the plan should only be
+    taken at the transaction"); Approve on a rejected listing stays, confirmed, and tells the seller (AR-H11); test and
+    demo money left out of the totals and shown apart (AR-H13); credit notes for finance and the seller, with a PDF
+    (AR-H14); paid ads refunded through Razorpay from Cosora-Admin (AR-H15).
+  - Money: a plan price change no longer refuses paid orders and autopay renewals priced before it (`subscription_fulfil`
+    now checks only that the order's credit is still there, AR-H02). Ad orders record their money mode (every existing
+    one is test money) and can be refunded (claim, Razorpay, webhook through `subscription_refund_event`); a rejected or
+    suspended paid campaign flags its order. `admin.payment_entries`, `admin_payments_summary`, `admin_payments_ledger`
+    (money filter) and `admin_report_summary` count live money; the ledger shows ad refunds as rows.
+  - Safety: a seller can't change a submitted KYC document's row or overwrite its file (AR-H03); staff on a temporary
+    password can't reset others' passwords or invite (AR-H06); a blocked keyword needs 3+ characters and can't appear in
+    ordinary messages (AR-H08); a support request a colleague holds moves only on an explicit take-over (AR-H05).
+  - Moderation: a decision applies only to the content the moderator saw (`admin.listing_revs`, `admin_listing_decide`,
+    AR-H10); overturning a rejection notifies the seller (AR-H11).
+  - Scale: Vendors reads pages of 50 with search (`admin_vendor_list`, AR-H09); the support counts read open requests only
+    and staff tabs refresh at most every 2 s (AR-H12).
+  - Edge functions: `subscription-autopay` (admin_cancel), `invoice-render` (credit notes), `razorpay-create-order`
+    (payment_mode), `_shared/auth.ts` (`verifiedUser`). Seller app: My Payments lists credit notes; KYC uploads never
+    overwrite. Files: the three migrations, those functions, `src/pages/MyPayments.tsx`, `src/lib/queries/subscriptions.ts`,
+    `src/lib/queries/vendorOnboarding.ts`, `src/i18n/hi.json`, `gu.json`, documentation (ToDo, plan, securityflags,
+    claude.md, technicalimplementation, test, sides).
+  - Tests: SQL harnesses for every database item (12 checks, rolled back; the H02 check proven to fail on the old
+    function), 18 browser checks on the admin (all pass; the old admin fails them), Deno check of six functions, buyer
+    typecheck and i18n check.
 - 2026-11-21 (branch `fix/local-spec-failures-2026-11-21`; migration `20261121100000_views_fold_deleted_listing.sql`;
   **LIVE 2026-11-21**: migration applied with the CLI,
   rehearsed first; main `ed00e9d`)

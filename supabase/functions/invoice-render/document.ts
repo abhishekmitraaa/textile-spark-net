@@ -212,6 +212,71 @@ export function invoiceModel(inv: InvoiceRow, planName: string, legacyRecipientN
   };
 }
 
+export interface CreditNoteRow {
+  id: string;
+  invoice_id: string;
+  credit_note_number: string;
+  taxable_paise: number;
+  cgst_paise: number;
+  sgst_paise: number;
+  igst_paise: number;
+  total_paise: number;
+  razorpay_refund_id: string | null;
+  reason: string | null;
+  created_at: string;
+}
+
+const CREDIT_TITLES: Record<string, { title: string; notice: string | null }> = {
+  tax_invoice: { title: "CREDIT NOTE", notice: null },
+  receipt: { title: "REFUND NOTE", notice: "Refund of a payment receipt. This is not a GST credit note." },
+  test: { title: "TEST CREDIT NOTE", notice: "Issued in Razorpay test mode: no money was moved. Not a credit note." },
+  demo: { title: "DEMO CREDIT NOTE", notice: "Demo checkout: no payment was taken or returned. Not a credit note." },
+};
+
+/**
+ * A credit note: the refund of (part of) an invoice, in the invoice's own parties and tax split (Cosora-Admin review
+ * 2026-11-22, AR-H14). Issued by admin.subscription_invoice_credit_note when the refund is processed; drawn from what
+ * was frozen on the invoice and the note, never from today's profiles.
+ */
+export function creditNoteModel(cn: CreditNoteRow, inv: InvoiceRow, planName: string, legacyRecipientName: string | null): DocModel {
+  const base = invoiceModel(inv, planName, legacyRecipientName);
+  const kind = CREDIT_TITLES[inv.document_type] ?? CREDIT_TITLES.receipt;
+  const meta: Array<[string, string]> = [
+    ["Against invoice", `${inv.invoice_number ?? inv.id.slice(0, 8).toUpperCase()} of ${formatDate(inv.created_at)}`],
+    ...base.meta.filter(([k]) => k === "Place of supply" || k === "Supply" || k === "SAC" || k === "Tax payable on reverse charge"),
+  ];
+  if (cn.razorpay_refund_id) meta.push(["Refund reference", cn.razorpay_refund_id]);
+
+  const taxes: Array<[string, string]> = cn.igst_paise > 0 || inv.supply_type === "inter"
+    ? [[`IGST @ ${pct(GST_RATE)}`, rupees(cn.igst_paise)]]
+    : [[`CGST @ ${pct(GST_RATE / 2)}`, rupees(cn.cgst_paise)], [`SGST @ ${pct(GST_RATE / 2)}`, rupees(cn.sgst_paise)]];
+
+  const footer: string[] = [];
+  if (inv.document_type === "tax_invoice") {
+    footer.push("This is a computer-generated credit note.");
+    if (inv.supplier?.legal_name) footer.push(`For ${inv.supplier.legal_name}: authorised signatory`);
+  } else if (kind.notice) {
+    footer.push(kind.notice);
+  }
+
+  return {
+    title: kind.title,
+    notice: kind.notice,
+    number: cn.credit_note_number,
+    issuedOn: formatDate(cn.created_at),
+    supplier: base.supplier,
+    recipient: base.recipient,
+    meta,
+    lines: [[cn.reason ?? `Refund of ${inv.invoice_number ?? "an invoice"}`, rupees(cn.taxable_paise)]],
+    taxable: rupees(cn.taxable_paise),
+    taxes,
+    total: rupees(cn.total_paise),
+    totalInWords: amountInWords(cn.total_paise),
+    footer,
+    fileName: `${cn.credit_note_number.replace(/[^A-Za-z0-9-]+/g, "-")}.pdf`,
+  };
+}
+
 /** The standard PDF fonts encode WinAnsi only: anything else is replaced, never dropped silently. */
 export function winAnsi(text: string): string {
   return text

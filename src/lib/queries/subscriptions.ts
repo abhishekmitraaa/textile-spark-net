@@ -181,6 +181,45 @@ export async function invoicePdfLink(invoiceId: string): Promise<{ url: string; 
   return { url: signed.data.signedUrl, fileName };
 }
 
+/**
+ * The credit notes a refunded invoice issued (Cosora-Admin review 2026-11-22, AR-H14): one per processed refund,
+ * numbered CN- (tax invoices) or RCN-/TCN-/DCN-. The seller reads their own through the table's policy.
+ */
+export interface CreditNote {
+  id: string;
+  creditNoteNumber: string;
+  totalPaise: number;
+  createdAt: string;
+}
+
+export function useInvoiceCreditNotes(invoiceId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["subscription_credit_notes", invoiceId],
+    enabled: Boolean(invoiceId) && enabled,
+    queryFn: async (): Promise<CreditNote[]> => {
+      const { data, error } = await supabase
+        .from("subscription_credit_notes" as never)
+        .select("id, credit_note_number, total_paise, created_at")
+        .eq("invoice_id", invoiceId as string)
+        .order("created_at");
+      if (error) throw error;
+      return ((data ?? []) as unknown as { id: string; credit_note_number: string; total_paise: number; created_at: string }[])
+        .map((n) => ({ id: n.id, creditNoteNumber: n.credit_note_number, totalPaise: Number(n.total_paise), createdAt: n.created_at }));
+    },
+  });
+}
+
+/** A 5-minute download link for a credit note's PDF, drawn once by invoice-render like an invoice's. */
+export async function creditNotePdfLink(creditNoteId: string): Promise<{ url: string; fileName: string }> {
+  const { data, error } = await supabase.functions.invoke("invoice-render", { body: { creditNoteId } });
+  const path = (data as { path?: string } | null)?.path;
+  if (error || !path) throw new Error("The PDF couldn't be prepared. Try again in a moment.");
+  const fileName = (data as { fileName?: string }).fileName ?? "credit-note.pdf";
+  const signed = await supabase.storage.from("invoices").createSignedUrl(path, 300, { download: fileName });
+  if (signed.error || !signed.data?.signedUrl) throw new Error("The PDF couldn't be prepared. Try again in a moment.");
+  return { url: signed.data.signedUrl, fileName };
+}
+
 async function fetchInvoices(vendorId: string): Promise<SubscriptionInvoice[]> {
   const data = await selectInvoices((columns) =>
     supabase.from("subscription_invoices").select(columns).eq("vendor_id", vendorId).order("created_at", { ascending: false }),

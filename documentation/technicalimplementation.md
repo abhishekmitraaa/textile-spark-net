@@ -4695,3 +4695,60 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
 - **Tests**: `tests/local/seller-home-fixes.spec.ts` (36; the hub tests read the app's own client through the dev
   server, `import("/src/lib/supabase.ts")`, and count websocket `phx_join` frames); `tests/local/registrationForm.ts`
   (the form walker, moved out of `registration-fixes.spec.ts`).
+
+## Cosora-Admin review 2026-11-22: the High batch (branch `fix/admin-review-high-2026-11-22`, not released)
+
+- **Plan autopay and admin actions (AR-H01).** `admin.vendor_has_live_mandate(vendor)` (statuses authenticated / active /
+  pending / halted, `ended_at` null) is checked by `admin_subscription_cancel`, `admin_subscription_change_plan` and
+  `admin_refund_guarantee_close`, which raise P0001 with hint `autopay_active`. `subscription-autopay` action
+  `admin_cancel { vendorId }`: `verifiedUser` (Auth, refuses `must_change_password`), `admin_status_of` super_admin /
+  finance_admin, `openMandate` + `retireMandates` (Razorpay cancel, `mandateEvent`), Admin Log `autopay_cancel`
+  (`audit_log_action_check` and `admin_audit_record` widened). Cosora-Admin `withAutopayOff(vendor, action)` runs the
+  action, on `autopay_active` cancels and runs it once more.
+- **Fulfil and price changes (AR-H02).** `subscription_fulfil`'s stale line now reads
+  `coalesce(q.credit_rupees, 0) < coalesce(o.credit_rupees, 0)` (patched by anchored text, CRLF-normalised).
+- **KYC rows (AR-H03).** `vendor_documents_update` dropped; `vendor_documents_guard_review_columns` refuses a non-admin
+  change of `file_url`, `doc_type`, `detail`. `20261122100200` drops `business_docs_owner_update` after the app ships
+  `upsert: false` (Storage's upsert needs the update permission).
+- **Support take-over (AR-H05).** `admin_support_claim(ticket, take_over boolean)`; the one-argument form calls it with
+  false. Event `claimed` carries `took_over_from`.
+- **Keywords (AR-H08).** `admin.keyword_breadth_problem(term)`: trimmed lower-case length 3–100, refused when it is a
+  substring of any of the 12 ordinary sample messages (the flag-pattern list); `admin_keyword_add` raises 22023,
+  hint `too_broad`.
+- **Vendors (AR-H09).** `admin_vendor_list(search, onboarding, after_brand, after_id, limit ≤ 100)` (super_admin,
+  vendor_ops, support), keyset on `(lower(coalesce(brand_name,'')), id)` with index `vendor_profiles_brand_sort_idx`,
+  literal ILIKE on brand / city / GSTIN, account status joined from `profiles`.
+- **Listing revisions (AR-H10).** `admin.listing_revs (listing_kind, listing_id, rev, changed_at)`; AFTER triggers
+  `trg_*_listing_rev` on products / product_videos / catalogues (content = the row's jsonb minus status, the moderator's
+  notes, counters, embeddings and derived text) and on product_images / product_documents (any change). Read with
+  `admin_listing_revs(kind, ids ≤ 500)`; decided with `admin_listing_decide(kind, id, from, to, reason, rev)`, SECURITY
+  INVOKER, which locks the listing, compares the status (returns `{ok:false,status}`) and the revision (hint
+  `changed_since_loaded`), then updates as the caller.
+- **Overturned rejections (AR-H11).** `admin.notify_moderation_outcome` sends `<kind>_approved` for under_review or
+  rejected → live.
+- **Support counts (AR-H12).** `admin_support_counts` filters `status in ('new','open')` (every figure already required
+  it), so `support_tickets_queue_idx` applies; Cosora-Admin coalesces realtime refreshes to one per 2 s over
+  `["support","list"|"counts"|"ticket"|"priorities"]`.
+- **Money modes (AR-H13).** `ad_orders.payment_mode` (live / test / demo / free; existing rows test), set by
+  `razorpay-create-order` through `paymentModeForKey`. `admin.payment_entries` gains `payment_mode` (invoices: their own,
+  else demo without a payment id, else test) and an `adrefund:` branch. `admin_payments_summary` totals `live`/`free`
+  only and returns `test_paise`, `test`, `demo_paise`, `demo` (unverified_* kept as "not live"); `admin_payments_ledger`
+  was dropped and re-created with `p_modes text[]`; `admin_report_summary` likewise (Payments = Reports still holds).
+- **Credit notes (AR-H14).** `subscription_credit_notes.pdf_path`; `invoice-render` `{ creditNoteId }` →
+  `creditNoteModel()` (document.ts: the invoice's frozen parties, the note's own tax split, "Against invoice"),
+  `<vendor>/<CN number>.v1.pdf`. Cosora-Admin `CreditNotes`; seller `useInvoiceCreditNotes` / `creditNotePdfLink`.
+- **Ad refunds (AR-H15).** `ad_orders` gains `razorpay_payment_id`, `refund_status`, `razorpay_refund_id`,
+  `refunded_paise`, `refund_requested_at`, `refunded_at`, `refund_note`; status `refunded`; browsers lose
+  insert/update/delete grants; `trg_admin_audit` added. `ad_order_refund_claim(order, amount, note)` (service role,
+  lock, paid or refund_review, one refund, amount ≤ order) and `ad_order_refund_record(order, payment, refund, status,
+  amount)` (processed → refunded + seller notice). `admin-refund-payment` `{ adOrderId, amountPaise?, note? }` finds the
+  captured payment with `GET /v1/orders/{id}/payments`. `subscription_refund_event` falls back to ad orders by refund id.
+  `trg_advertisements_paid_stopped` sets a paid order to `refund_review` when an admin rejects or suspends its campaign;
+  `admin_ad_order_resolve(order, note)` puts it back to paid.
+- **Cosora-Admin dialogs (AR-H16, AR-M06).** `Modal` tracks typed changes (`onInput`/`onChange`), asks before a
+  backdrop click, Esc, its close button or Back closes it; pushes its own history entry (the router's state kept) so
+  Back closes it, popped on close on the next tick (StrictMode-safe); `beforeunload` while dirty; `aria-labelledby`,
+  focus moved in and returned, body scroll locked.
+- **Smaller fixes.** Blog publish time `istInputFromIso` / `isoFromIstInput` (AR-H04); `useDebounced` and
+  `keepPreviousData` on Chats and the Subscriptions worklist (AR-H17); `grid-cols-1` base on the ticket and carousel
+  grids (AR-H18); `admin-staff` / `admin-invite` / `admin-refund-payment` confirm the caller with `/auth/v1/user` (AR-H06).

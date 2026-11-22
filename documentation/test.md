@@ -5061,3 +5061,27 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
 - **Result:** artifacts present in
   `test-results/tests-new-arrivals-New-Arr-833e6--tabs-and-correct-selection/error-context.md`.
   **Last recorded run failed / errored** — not re-run since. Re-run before trusting it.
+
+## 2026-11-22 — Cosora-Admin review, High batch (local stack; branch `fix/admin-review-high-2026-11-22`)
+- **Database harnesses** (rolled back; local accounts local-admin / local-support / local-vendor, test rows created inside
+  the transaction): H01 cancel and plan change refused with a live mandate, allowed once it ends; H02 an order priced
+  before a ₹500 Silver rise is fulfilled, an upgrade counting ₹5,000 of vanished credit is refused (`price_changed`) —
+  the same H02 check FAILS against the old `subscription_fulfil`; H03 the seller's update of a document row changes
+  0 rows and the guard refuses a file swap; H05 one-argument and no-take-over claims refused, take-over moves it;
+  H08 "hi" and "rate" refused, "pay me on gpay" accepted; H09 50 per page, no overlap across pages, search, literal %,
+  product moderator refused; H10 an edit or a photo after loading refuses the decision, a view doesn't, the current
+  revision decides; H11 rejected → live sends one approved notice; H12 counts' active = open requests;
+  H13 paid in = Reports (live only), test money on its own line, money filter; H15 refund above the order refused,
+  one claim only, webhook completes it, seller notified, ledger shows purchase + refund; a rejected paid campaign flags
+  its order, "no refund needed" needs a reason. **All pass.**
+- **Browser checks** (Playwright, admin dev server on the fix branch, local stack, 18 feature switches on for the run):
+  Chats search keeps "an" and focus; Vendors 8 requests / 50 rows, search in the address survives Back from a vendor;
+  a dirty dialog asks on Esc and on Back (stays on /discounts), Discard closes, a clean one closes on Back; dialogs named
+  with focus inside; blog time round-trips in Asia/Kolkata, UTC and America/New_York browsers; Approve on Rejected asks;
+  a seller edit after loading refuses the approval; Payments shows the test-money line and the Money filter; a
+  colleague's ticket shows "Take over" and asks before a reply; ticket and carousel fit a 390 px phone. **18/18 pass.**
+  Against current main the same script fails (Chats keeps "a", Vendors 82 requests / 6,779 rows).
+- **Static:** Cosora-Admin `tsc` 0; buyer `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 0 missing; Deno 2.1.4
+  `check` of subscription-autopay, invoice-render, razorpay-create-order, admin-refund-payment, admin-staff, admin-invite.
+- **Not run:** the Razorpay paths (admin_cancel, ad refund, credit note PDF) against a real or stubbed Razorpay; the local
+  edge runtime serves the older functions.

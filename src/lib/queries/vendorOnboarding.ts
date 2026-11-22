@@ -153,7 +153,8 @@ export async function uploadKycDocument(vendorId: string, file: File): Promise<s
   const ext = fileExt(file.name, file.type === "application/pdf" ? "pdf" : "jpg");
   const suffix = Math.random().toString(36).slice(2, 8);
   const path = `${vendorId}/kyc/${Date.now()}-${suffix}.${ext}`;
-  const { error } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { upsert: true });
+  // A new path every time: a reviewed scan is never overwritten, so the bucket allows no overwrite (AR-H03).
+  const { error } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { upsert: false });
   if (error) throw error;
   return path;
 }
@@ -271,7 +272,7 @@ export async function uploadSignature(vendorId: string, dataUrl: string): Promis
   const path = `${vendorId}/contract/${Date.now()}.png`;
   const { error } = await supabase.storage
     .from(KYC_BUCKET)
-    .upload(path, blob, { upsert: true, contentType: "image/png" });
+    .upload(path, blob, { upsert: false, contentType: "image/png" });
   if (error) throw error;
   return path;
 }

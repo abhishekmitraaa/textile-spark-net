@@ -6,6 +6,202 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Cosora-Admin review 2026-11-22: the full bug list (18 High, 46 Medium, 52 Low) — added 2026-11-22
+- Task: fix every item below; remove each line here once its fix is live. High first, in batches of 20 (Mitra,
+  2026-11-22). Plan for the High batch: `documentation/admin-review-high-fixes-plan-2026-11-22.md`.
+- Context: senior QA + UX + code + database review of the whole of Cosora-Admin (admin main `2cfd65f`, buyer main
+  `244f7dc`): five code reviewers, a browser sweep of all 49 routes as super admin, manager, product moderator and
+  support (desktop, tablet, phone; light and dark; 27 Back checks; 18 dialogs), and features used by hand. All on the
+  LOCAL stack: auto mode refused even a read-only production query, so database findings are from the local copy of
+  production's schema and need a production read before release. Evidence tags: verified = reproduced in the browser
+  or rehearsed in a rolled-back transaction; measured = counted in the browser; DB = read in the function/policy body;
+  no tag = confirmed in code; likely = needs a runtime check. Screenshots and scripts: the session scratchpad
+  (`vqa/`, `e2e/`), not kept.
+- Priority rule: High = money, security, lost work, or a primary job broken or wrong at scale (10,000 users);
+  Medium = materially degraded with a workaround; Low = polish.
+- Reference: 2026-11-22 admin review session (SESSION-CONTEXT.md).
+- Status: Open. All 18 High items built and tested on the local stack on branch `fix/admin-review-high-2026-11-22`
+  (both repos), not committed or released; Medium and Low not started.
+
+**High**
+- AR-H01 Admin cancel, plan change and 7-day-guarantee close leave the seller's Razorpay autopay running: the next
+  charge re-activates a cancelled plan, undoes a plan change, or charges a refunded seller again. `admin_subscription_cancel`,
+  `admin_subscription_change_plan`, `admin_refund_guarantee_close` never touch `subscription_mandates` (grant refuses). DB
+- AR-H02 Raising a plan price makes paid checkouts already open, and every autopay renewal at the mandate's price, fail
+  `price_changed`: money taken, plan not activated, incident opened; autopay sellers fall to Free. `subscription_fulfil`
+  re-prices at today's `subscription_plans` price. Plan prices panel promises the opposite. DB
+- AR-H03 A seller can swap the file, type or details of a KYC document after it is verified, and it stays verified:
+  `vendor_documents_update` (own rows, any column; the guard checks only the review columns) and storage policy
+  `business_docs_owner_update`. verified (rehearsed as the seller, rolled back)
+- AR-H04 Every save of a blog article moves its publish time 5 h 30 min earlier; scheduled posts go public early.
+  `Blogs.tsx:374` shows the UTC time as local, `:721` saves it back as local.
+- AR-H05 Support: "Take this request" silently takes a ticket a colleague holds (`admin_support_claim` overwrites the
+  assignee), and the reply box gives no "assigned to X" warning, so two staff answer the same requester. DB
+- AR-H06 Staff still on a temporary password, even an expired one, can reset other staff's passwords through
+  `admin-staff` / `admin-invite` (`admin_status_of` ignores `must_change_password`; with Resend unset the new password
+  comes back on screen).
+- AR-H07 An invoice whose value was already used as upgrade credit can still be refunded in full (credit + cash):
+  `canRefund` (`lib/refunds.ts`) and `admin-refund-payment` ignore `superseded_at`.
+- AR-H08 The keyword blocklist takes any term with no breadth check or minimum length and matches substrings, so one
+  short term ("hi", "as") refuses ordinary messages platform-wide. `admin_keyword_add`, `check_message_blocklist`. DB
+- AR-H09 Vendors loads every vendor in the browser (82 requests for 6,779 vendors: 7 sequential pages + 68 parallel
+  status calls; a 272,708 px page), has no search, filter or paging, and reloads it all on every Back; the burst
+  exhausted the browser's connections. `Vendors.tsx:52-75`. measured
+- AR-H10 Approve can publish a seller's edit made after the moderator looked: `moderateFrom` (`lib/moderation.ts:33`)
+  matches status only, and `products` has no version or `updated_at`.
+- AR-H11 Approve on the Rejected tab (Products, Videos, Catalogues) moves rejected → live with no notice to the seller
+  (`notify_moderation_outcome` notifies only under_review → live).
+- AR-H12 The support inbox refetches every loaded page plus five RPCs in every open staff tab on any support row
+  change, and `admin_support_counts` aggregates every ticket ever filed through a view with per-ticket message
+  aggregates. `lib/support.ts:362-378`, `admin.support_ticket_rows`. DB
+- AR-H13 Payments and Reports count Razorpay test-mode money as paid, verified revenue (local: 147 invoices,
+  ₹9,68,097), with no filter. `admin.payment_entries`, `admin_payments_summary`, `admin_report_summary`. DB
+- AR-H14 Credit notes are issued when a refund is processed, but nobody can see them: no admin or seller view, no PDF.
+  `public.subscription_credit_notes` has no reader anywhere. DB
+- AR-H15 Paid ads have no refund or close-out path: `ad_orders` in `refund_review` stay there forever, and rejecting or
+  suspending a campaign the seller paid for creates no refund task. `admin-refund-payment` handles plan invoices only.
+- AR-H16 Typed work is thrown away: the shared Modal closes on any backdrop click (every form dialog), and the blog
+  article editor loses the whole article on Esc, a click outside or Back, with no warning; images already uploaded
+  stay in storage. `components/ui.tsx:637`, `Blogs.tsx`.
+- AR-H17 Search boxes lose focus after the first letter: Chats (verified: typing "an" keeps "a") and Subscriptions
+  (the whole page turns into a skeleton on each search). `Chats.tsx:57-123`, `Subscriptions.tsx:310`.
+- AR-H18 On a phone the support ticket and the New Arrivals carousel are wider than the screen and cut off with no way to
+  scroll (reply box cropped). Grids with no base column (`SupportTicket.tsx:126`, `HeroSlides.tsx:138`) inside
+  `main.overflow-x-hidden` (`Shell.tsx:393`). verified
+
+**Medium**
+- AR-M01 The suspension card and the `account_suspended` notice say suspension doesn't stop requirements, quotes,
+  products or ads; the database blocks all of them. `AccountStatus.tsx:183-192`, `set_account_status`.
+- AR-M02 Cached data survives sign-out: the next admin on the same tab first sees the previous admin's lists (my
+  vendors, admins, staff directory, customers). `App.tsx:68`, `useAdminSession.tsx:132`. likely
+- AR-M03 A link opened while signed out is lost: after sign-in the admin lands on the first section, not the page asked
+  for (`Guard.tsx:22` saves `state.from`, `Login.tsx:16` never reads it). verified
+- AR-M04 Tabs, filters and searches aren't in the address on any list page (18 tabbed pages verified, plus Accounts,
+  Admin Log, Customers, Admins, Support views, Leads, Payments, Subscriptions, Ads, Discounts, Certificates, Content,
+  Blogs, Category pictures, Live Activity, Reports): reload, Back and shared links drop them. verified
+- AR-M05 Back links go to fixed routes (Vendor › "All vendors" → /vendors even from Registrations; a ticket → its board;
+  a chat → /chats even from Review queue), and Back with a dialog open leaves the page. verified
+- AR-M06 The shared Modal has no accessible name, doesn't move, trap or return focus, and leaves the page scrolling
+  behind it. `ui.tsx:611`. measured (9 dialogs)
+- AR-M07 `text-ink-ghost` (sub-AA; `index.css:31` says never for text carrying meaning) is used 40 times in 20 files for
+  "not set", "no messages", "unknown", "not yet", "—" and staff names: 2.72:1 light, 3.09:1 dark. Dark `ink-muted` small
+  text is 4.01:1. measured
+- AR-M08 Phone KPI tiles cut off the figure ("118…", "₹25,57,5…", "₹26,84,9…", "₹22,…") and captions: Customers,
+  Payments, Reports, Leads, Live Activity. verified
+- AR-M09 Geography plots only the first 1,000 vendors ("972 of 1,000"; 6,779 exist): `Geography.tsx:83` has no paging.
+  verified
+- AR-M10 System Health's overdue check misses 9 scheduled jobs (blog sweep, feed rank, view and impression folds,
+  standing refresh, deadline close, dedupe prune, activity prune, notification dispatch). `SystemHealth.tsx:89-101`.
+- AR-M11 Hiding or unhiding a trending term recomputes the trends from raw events inside the admin's request, so a hide
+  can time out at scale and leave the term listed. `admin_search_trend_hide`. likely
+- AR-M12 Videos and Catalogues tabs have no limit: past 1,000 rows they silently stop, and each row triggers lookups.
+  `Videos.tsx:110`, `Catalogues.tsx:97`.
+- AR-M13 Product, video and catalogue queues show the newest first, so the oldest submissions starve and resubmissions
+  sink; no `(status, created_at, id)` index.
+- AR-M14 Premises photos › Approved "Load more" stops early (keyset on `reviewed_at`, NULL for most rows: 26 of 28
+  locally). `lib/registrations.ts:96`.
+- AR-M15 Two moderators can contradict each other: `admin_premises_photo_review` and `set_vendor_document_verified`
+  have no expected-state check (the seller gets both notices); a KYC decision doesn't refresh the queue or the badge.
+- AR-M16 Reported reviews: deciding closes reports that arrived after the moderator loaded the card; the open list stops
+  at 500 newest-first with no paging. `admin_review_report_decide`, `admin_review_reports_list`.
+- AR-M17 My vendors keeps 500 vendors before sorting, so "unread first" is wrong at scale. `admin_am_vendors`.
+- AR-M18 A chat thread loads its whole history, reloads it on every tab focus, loads every photo at once and re-signs
+  every file link when one arrives. `ChatThread.tsx`.
+- AR-M19 Chat participant lookups put every id in one URL (breaks past a few hundred); the review queue's closed tabs
+  return every review ever. `lib/chat.ts:41`, `admin_conversation_review_list`.
+- AR-M20 Requirement-reason edits aren't in the Admin Log (`admin.rfq_review_reasons` has no `trg_admin_audit`).
+- AR-M21 A 7-day guarantee can be closed while its refund is pending; a later `refund.failed` shows nowhere.
+- AR-M22 The billing incident help tells admins to "refund from Invoices" (an activation failure has no invoice) and to
+  "issue the tax invoice" (no function does). `BillingIncidentsPanel.tsx:18-28`.
+- AR-M23 Ads, the review queue and Ads Monitoring load whole tables (silent 1,000 cap); "today" and "this month" use the
+  browser's time zone, not IST. `AdsMonitoring.tsx:58`, `Ads.tsx:111`, `AdReviewQueue.tsx:129`.
+- AR-M24 Unsaved edits are lost without warning on Theme, the carousel, Billing details and the discount form.
+- AR-M25 Accounts sends four requests per keystroke (no debounce; `admin_profile_search` uses unindexed ilike).
+- AR-M26 A suspended or reinstated account keeps its old status in the Accounts results until the search changes.
+- AR-M27 A revoked or changed role takes effect only at the next token refresh (≤ 1 h); badges keep polling refused RPCs.
+- AR-M28 Customers rebuilds its summary inside the page request (8 s timeout; will fail as messages grow) and never
+  shows the failure. `admin_customer_refresh`.
+- AR-M29 Admin Log scans the whole audit log for its list of admins on every open. `admin_audit_log_actors`.
+- AR-M30 Admin sign-ins through invite and recovery links, and after choosing a password, aren't logged, though the
+  notice says sign-ins are. `ResetPassword.tsx`, `lib/staff.ts:114`.
+- AR-M31 The requirement review queue stops at 200 without saying so; Approve has no confirmation and fires lead alerts.
+- AR-M32 The chats list sorts by `last_message_at` with no index on it. `Chats.tsx:83`.
+- AR-M33 Saving one Support settings panel wipes unsaved edits in the others. `SupportSettings.tsx:127-130`.
+- AR-M34 The plan-change and cancel dialogs don't say listings over the new limit get paused.
+- AR-M35 Lists stay stale after money actions (a closed guarantee still shows Cancel; refunds don't refresh the
+  ledger or KPIs).
+- AR-M36 Certificates loads every order of every status on each visit.
+- AR-M37 Phone tab strips run off the edge with no cue that more tabs exist (Products, Ads, Registrations, Review
+  queue, My vendors). verified
+- AR-M38 Explanation boxes full of database names (`profiles.account_status`, `set_account_status()`,
+  `pending_review`) fill the first screen on a phone and push the search or form below the fold (Accounts, Flag
+  patterns, Ads, Review queue, Vendors, Chats). verified
+- AR-M39 Premises photos has 50 image buttons with no accessible name. measured
+- AR-M40 Buyer-written image links load straight into admin browsers from any host (tracking pixel). `lib/rfqReview.ts`,
+  `lib/leads.ts`.
+- AR-M41 Leads and Premises photos link roles to pages they can't open (`/accounts`, `/vendors/:id`).
+- AR-M42 Video Approve and the per-seller bulk approve accept videos with no file or over the 60-second cap.
+- AR-M43 Paging by `created_at` alone skips rows with the same timestamp (Subscriptions fallback list, Invoices).
+- AR-M44 Live Activity scans raw events on every 30-second poll (already in this file: "Pre-aggregate Live Activity").
+- AR-M45 No Content-Security-Policy or `noindex` on the admin site; the session sits in localStorage. `vercel.json`
+- AR-M46 Two super admins saving a feature switch at once overwrite each other's account lists.
+
+**Low**
+- AR-L01 Approving in a deep Products queue refetches every loaded page.
+- AR-L02 The Paused tab offers Reject and Remove, though it is meant to be for looking only.
+- AR-L03 Overseas registrations can be approved while documents are unreviewed (product decision).
+- AR-L04 vendor_ops can approve a registration but can't review its documents.
+- AR-L05 Reordering moderation reasons is two separate saves.
+- AR-L06 No "view on site" link for a listing or a seller anywhere in moderation.
+- AR-L07 Form questions show raw Postgres errors; the key hint omits "_".
+- AR-L08 A support ticket about a requirement, quote or product gives no link to it.
+- AR-L09 Support and blog times use the browser's time zone, not IST.
+- AR-L10 A confirmed fraud record's ticket number isn't a link.
+- AR-L11 `admin-refund-payment` reads the token without asking Supabase Auth and doesn't check the invoice id is a UUID.
+- AR-L12 Billing incidents' resolved view stops at 200.
+- AR-L13 `budget_exhausted` and `archived` campaigns appear in no Ads tab.
+- AR-L14 Resuming a paused campaign sends the seller no notice.
+- AR-L15 The Invoices table shows raw plan ids; the plan prices panel disappears on a load error.
+- AR-L16 The refund confirmation doesn't say the plan stays active.
+- AR-L17 "Publish" on a scheduled article says Published but it stays hidden; the scheduler never flips the badge.
+- AR-L18 Blog button links accept any URL scheme (`javascript:`).
+- AR-L19 Replaced or removed blog images stay in storage.
+- AR-L20 A banner's destination isn't checked against real seller routes (a typo leads to Not Found).
+- AR-L21 "Use default", Replace (category pictures) and deleting a blog category have no confirmation.
+- AR-L22 Reports rounds away paise; the carousel schedules in the browser's time zone.
+- AR-L23 System Health and Reports show an empty state when a read failed.
+- AR-L24 `admin_embedding_pipeline_health`'s guard isn't coalesced; its limit is unbounded.
+- AR-L25 Signing out signs the admin out on every device.
+- AR-L26 Admins shows a failed load as an empty table.
+- AR-L27 Changing an admin's role applies the moment the dropdown changes, with no confirmation.
+- AR-L28 The staff directory offers managers a reset button that is always refused on deactivated super-admin rows.
+- AR-L29 "Section not available" shows internal keys ("rfq-review").
+- AR-L30 An unknown ticket number answers with a server 500 (sent twice) instead of "not found".
+- AR-L31 `/vendors/not-a-uuid` shows a raw Postgres error. verified
+- AR-L32 Broken images have no fallback (Products queue, Premises photos).
+- AR-L33 Phone tap targets under 24 px (text links, checkboxes, remove chips).
+- AR-L34 Very long pages on a phone (Products 26,457 px).
+- AR-L35 Content width varies between pages on desktop; the Geography map fills a third of its panel.
+- AR-L36 Tabs have no tab role for screen readers.
+- AR-L37 Requirements waiting about a month and registrations 14 days show no "overdue" cue against what buyers and
+  sellers are promised.
+- AR-L38 Keyword rows with no recorded author say "unknown".
+- AR-L39 The `public.embedding_usage_daily` view has no reader anywhere (drop it or show it in System Health).
+- AR-L40 `public.csp_violations` is written but never shown.
+- AR-L41 `product_import_batches` and the contact-reveal logs are written but never shown to staff.
+- AR-L42 Requirement review cards without a picture have a different layout.
+- AR-L43 Leads: the requirement lookup has no deep link (`?lead=`).
+- AR-L44 The Leads table on a phone is a narrow horizontal scroll with no cue.
+- AR-L45 The Products tabs show no counts (Requirements' do).
+- AR-L46 Chat thread "All chats" and the vendor page "All vendors" are small tap targets on a phone.
+- AR-L47 Review queue cards say "message is not available" without saying why.
+- AR-L48 The Subscriptions search accepts more than 100 characters, which the RPC refuses with a raw error.
+- AR-L49 `admin.demo_ads_offline` / `demo_catalogue_offline` are restore copies of the removed demo data: drop them once
+  Mitra decides the demo data is gone for good.
+- AR-L50 The phone navigation drawer has no visible scroll cue for its lower sections.
+- AR-L51 The refund confirm is a browser `confirm()`, unlike every other confirmation.
+- AR-L52 Moderation-reason, keyword and block-reason tables are cut at phone width (columns hidden behind a scroll).
+
 ### Test M-58 on production: a Google sign-up, then Back from Home — added 2026-11-21
 - Task: Mitra signs up once on www.cosora.in with a Google account that has never used Cosora, finishes the sign-up
   steps (role, sub-role, account information, interests, Terms, the "what next" screen), lands on Home, and presses

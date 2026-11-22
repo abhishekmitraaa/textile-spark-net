@@ -47,6 +47,7 @@ import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscou
 import { adReach } from "../_shared/adReach.ts";
 import { razorpayApiBase } from "../_shared/razorpay.ts";
 import { verifiedUserId } from "../_shared/auth.ts";
+import { paymentModeForKey } from "../_shared/fulfil.ts";
 
 // Asks Supabase Auth who the caller is (_shared/auth.ts verifiedUserId): the token's signature and its session are
 // checked on every call, so a signed-out or banned account's token stops working at once, and a config slip that
@@ -161,6 +162,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     body: JSON.stringify({
       order_id: orderId, vendor_id: vendorId, spec, amount, status: "created",
       discount_paise: money.discount * 100, discount_code: heldCode, discount_redemption_id: redemptionId,
+      // Which money this is, so Cosora-Admin's totals count live payments only (AR-H13, 2026-11-22).
+      payment_mode: free ? "free" : paymentModeForKey(keyId),
     }),
   });
   if (!ins.ok) {

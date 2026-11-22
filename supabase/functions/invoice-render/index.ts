@@ -16,7 +16,7 @@
 
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "npm:pdf-lib@1.17.1";
 import { verifiedUserId } from "../_shared/auth.ts";
-import { invoiceModel, winAnsi, type DocModel, type InvoiceRow } from "./document.ts";
+import { creditNoteModel, invoiceModel, winAnsi, type CreditNoteRow, type DocModel, type InvoiceRow } from "./document.ts";
 
 const RENDER_VERSION = 1;
 const BUCKET = "invoices";
@@ -36,6 +36,10 @@ const INVOICE_COLUMNS = [
   "discount_code", "credit_rupees", "change_kind", "billing_period_start", "billing_period_end", "razorpay_payment_id",
   "razorpay_order_id", "payment_mode", "document_type", "supplier", "recipient", "place_of_supply", "supply_type", "sac_code",
   "cgst_paise", "sgst_paise", "igst_paise", "total_paise", "pdf_url", "status",
+].join(",");
+const CREDIT_NOTE_COLUMNS = [
+  "id", "invoice_id", "vendor_id", "credit_note_number", "taxable_paise", "cgst_paise", "sgst_paise", "igst_paise",
+  "total_paise", "razorpay_refund_id", "reason", "created_at", "pdf_path",
 ].join(",");
 
 // ── Layout ─────────────────────────────────────────────────────────────────────────
@@ -166,10 +170,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!caller) return json({ error: "unauthenticated" }, 401);
 
   let invoiceId: string | undefined;
+  let creditNoteId: string | undefined;
   try {
-    invoiceId = (await req.json())?.invoiceId;
+    const body = await req.json();
+    invoiceId = body?.invoiceId;
+    creditNoteId = body?.creditNoteId;
   } catch {
     return json({ error: "bad_json" }, 400);
+  }
+
+  // ── A credit note (AR-H14, 2026-11-22): drawn once, in the invoice's parties and its own tax split ──
+  let cn: CreditNoteRow & { vendor_id: string; pdf_path: string | null } | undefined;
+  if (creditNoteId !== undefined) {
+    if (typeof creditNoteId !== "string" || !/^[0-9a-f-]{36}$/i.test(creditNoteId)) return json({ error: "bad_credit_note" }, 400);
+    const c = await fetch(`${url}/rest/v1/subscription_credit_notes?id=eq.${creditNoteId}&select=${CREDIT_NOTE_COLUMNS}`, { headers: db });
+    if (!c.ok) return json({ error: "unavailable" }, 500);
+    cn = ((await c.json()) as Array<CreditNoteRow & { vendor_id: string; pdf_path: string | null }>)[0];
+    if (!cn) return json({ error: "not_found" }, 404);
+    invoiceId = cn.invoice_id;
   }
   if (!invoiceId || !/^[0-9a-f-]{36}$/i.test(invoiceId)) return json({ error: "bad_invoice" }, 400);
 
@@ -186,9 +204,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!status?.is_admin || !ADMIN_ROLES.has(status.admin_role ?? "")) return json({ error: "not_found" }, 404);
   }
 
-  const number = inv.invoice_number ?? inv.id;
+  const number = cn ? cn.credit_note_number : inv.invoice_number ?? inv.id;
   const path = `${inv.vendor_id}/${number.replace(/[^A-Za-z0-9-]+/g, "-")}.v${RENDER_VERSION}.pdf`;
-  if (inv.pdf_url === path) {
+  if ((cn ? cn.pdf_path : inv.pdf_url) === path) {
     return json({ path, fileName: `${number.replace(/[^A-Za-z0-9-]+/g, "-")}.pdf` });
   }
 
@@ -204,7 +222,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   ]);
   const planName = (plan as Array<{ name: string }>)[0]?.name ?? inv.plan_id ?? "Cosora";
   const v = (vendor as Array<{ brand_name: string | null; owner_name: string | null }>)[0];
-  const model = invoiceModel(inv, planName, v?.brand_name || v?.owner_name || null);
+  const model = cn
+    ? creditNoteModel(cn, inv, planName, v?.brand_name || v?.owner_name || null)
+    : invoiceModel(inv, planName, v?.brand_name || v?.owner_name || null);
 
   let bytes: Uint8Array;
   try {
@@ -224,10 +244,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "store_failed" }, 500);
   }
   // Recording the path is a service-role write, which the invoice-immutability trigger allows.
-  await fetch(`${url}/rest/v1/subscription_invoices?id=eq.${inv.id}`, {
+  await fetch(cn ? `${url}/rest/v1/subscription_credit_notes?id=eq.${cn.id}` : `${url}/rest/v1/subscription_invoices?id=eq.${inv.id}`, {
     method: "PATCH",
     headers: { ...db, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ pdf_url: path }),
+    body: JSON.stringify(cn ? { pdf_path: path } : { pdf_url: path }),
   });
   return json({ path, fileName: model.fileName });
 });

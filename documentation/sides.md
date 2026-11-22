@@ -870,6 +870,17 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
+### Changed 2026-11-22 (Cosora-Admin review, High batch; branch `fix/admin-review-high-2026-11-22`, not live)
+- Full review of the admin side: 116 items in `ToDo.md` (18 High, 46 Medium, 52 Low).
+- Subscriptions: cancel / plan change / 7-day close turn the seller's autopay off first; a credited invoice can't be
+  refunded on its own; refunded invoices list their credit notes (PDF), which sellers also see on My Payments.
+- Payments and Reports count live money; test and demo money is shown apart; paid ad orders can be refunded through
+  Razorpay or marked "no refund needed"; a rejected or suspended paid campaign flags its order.
+- Moderation: a decision applies only to what the moderator saw (a seller's edit since refuses it); overturning a
+  rejection is confirmed and tells the seller.
+- Vendors pages from the database with search; support requests held by a colleague are taken over explicitly; blocked
+  keywords must be specific; dialogs keep typed work; staff on a temporary password can do nothing else.
+
 ### Changed 2026-10-18 (live 2026-10-18)
 - Chats (`/chats/:id`): the whole conversation (it stopped at 500 messages), photos, PDFs and voice notes inline, contact cards with "Show number" (an Admin Log row), who blocked whom, each person's star / archive, and a divider where someone deleted the chat for themselves (staff still see everything).
 

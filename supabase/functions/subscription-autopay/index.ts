@@ -21,6 +21,11 @@
 //   cancel  {}
 //           Turns autopay off: cancels the Razorpay subscription now. The plan runs to the
 //           end of the period already paid for.
+//   admin_cancel { vendorId }
+//           Cosora-Admin turns a seller's autopay off before it cancels or changes their plan or
+//           closes a 7-day refund (AR-H01, 2026-11-22): the database refuses those while autopay
+//           runs. For an active super admin or finance admin not on a temporary password; in the
+//           Admin Log as autopay_cancel.
 //
 // The webhook (subscription-webhook) does the same work from Razorpay's side, so a closed
 // browser loses nothing; billing-reconcile catches what both miss.
@@ -31,7 +36,7 @@
 
 import { checkDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
 import { quotePlanChange } from "../_shared/planChange.ts";
-import { verifiedUserId } from "../_shared/auth.ts";
+import { verifiedUser, verifiedUserId } from "../_shared/auth.ts";
 import { checkoutGate } from "../_shared/checkoutGate.ts";
 import { fulfilOrder, paymentModeForKey } from "../_shared/fulfil.ts";
 import { cancelSubscription, createPlan, createSubscription, razorpayKeys, type RazorpayKeys } from "../_shared/razorpay.ts";
@@ -116,7 +121,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   let body: {
     action?: string; planId?: string; billingCycle?: string; discountCode?: string; gstNumber?: string; existing?: boolean;
-    subscriptionId?: string; paymentId?: string; signature?: string;
+    subscriptionId?: string; paymentId?: string; signature?: string; vendorId?: string;
   };
   try {
     body = await req.json();
@@ -127,6 +132,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const keys = razorpayKeys();
   if (!keys) return json({ error: "not_configured" });
   const mode = paymentModeForKey(keys.keyId);
+
+  // ── admin_cancel: Cosora-Admin turns a seller's autopay off (AR-H01) ──
+  if (body.action === "admin_cancel") {
+    const target = typeof body.vendorId === "string" && /^[0-9a-f-]{36}$/i.test(body.vendorId) ? body.vendorId : null;
+    if (!target) return json({ error: "missing_fields" }, 400);
+    const caller = await verifiedUser(req, url, serviceKey);
+    if (!caller || caller.mustChangePassword) return json({ error: "forbidden" }, 403);
+    const status = await rpc<{ is_admin: boolean; admin_role: string | null }[]>(c, "admin_status_of", { p_user_id: caller.id });
+    const role = status?.[0]?.is_admin ? status[0].admin_role : null;
+    if (role !== "super_admin" && role !== "finance_admin") return json({ error: "forbidden" }, 403);
+    const open = await openMandate(url, serviceKey, target);
+    if (!open) return json({ ok: true, already: true });
+    const r = await retireMandates(url, serviceKey, keys, [open.sub_id]);
+    await rpc(c, "admin_audit_record", {
+      p_actor: caller.id, p_action: "autopay_cancel", p_target_table: "public.subscription_mandates",
+      p_target_id: open.sub_id, p_changes: { vendor_id: target, cancelled: r.cancelled > 0 }, p_source: "subscription-autopay",
+    });
+    return r.failed ? json({ ok: false, error: "cancel_failed" }) : json({ ok: true });
+  }
 
   // ── cancel: autopay off ──
   if (body.action === "cancel") {
