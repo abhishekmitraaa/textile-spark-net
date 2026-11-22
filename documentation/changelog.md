@@ -1,3 +1,12 @@
+- 2026-11-22 (branch `fix/admin-review-medium2-2026-11-22` in both repos, on top of Medium batch 1; migration
+  `20261122120000_admin_review_medium2.sql`; plan `documentation/admin-review-medium2-plan-2026-11-22.md`; **built and tested
+  on the local stack, NOT released**, held by Mitra)
+  **Cosora-Admin review: Medium batch 2 (AR-M22–M41).**
+  - Mitra's call: Customers is rebuilt by a 10-minute job, never in a page request (AR-M28).
+  - Database: trigram indexes for account search (M25); `customer-summary-refresh` job with `admin.customer_summary_rebuild`
+    and a read-only `admin_customer_refresh` (M28); Admin Log's admin list by index (M29); `admin_rfq_submissions_page`
+    (M31); indexes for the chats list (M32), the requirement queue and Certificates (M36).
+  - Cosora-Admin: see its CHANGELOG.
 - 2026-11-22 (branch `fix/admin-review-medium1-2026-11-22` in both repos; migration `20261122110000_admin_review_medium1.sql`;
   plan `documentation/admin-review-medium1-plan-2026-11-22.md`; **built and tested on the local stack, NOT released**)
   **Cosora-Admin review: Medium batch 1 (AR-M01–M05, M07–M21).**

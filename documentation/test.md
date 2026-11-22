@@ -5105,3 +5105,22 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
 - **Static:** Cosora-Admin `tsc` 0 and `npm run build`; buyer `npm run i18n:check` 0 missing (8,301).
 - **Not run:** M21 through a real Razorpay `refund.failed` webhook; M02 beyond the roster (other caches follow the same
   clear).
+
+## 2026-11-22 — Cosora-Admin review, Medium batch 2 (local stack; branch `fix/admin-review-medium2-2026-11-22`)
+- **Database harness** (rolled back): M28 the page call only reads and shows the last error, the job's function
+  rebuilds and clears it, the job runs every 10 minutes; M29 198 actors from the index, the same as a full scan, newest
+  names, support refused; M31 pending (12, ten sharing one time) and approved read 3 at a time with none skipped or
+  repeated; the five new indexes exist. **5/5 pass.**
+- **Browser checks** (fix-branch admin on :5198, local stack): Accounts sends one search after typing and keeps
+  `?q=`; Customers shows "updated every 10 minutes" and has no Refresh; Admin Log lists 199 options for 198 admins; Ads
+  reads `limit=50` and monitoring says India time; Certificates reads processing 50 at a time and never every order;
+  requirement Approve opens a confirmation and Keep in the queue leaves it pending; Billing details asks on a sidebar
+  link and on Back with an unsaved edit; a product moderator sees no links to Vendors or Accounts on Leads and
+  Premises photos; every link and button on Premises photos is named; requirement pictures load only from the local
+  Storage; support's role changed to product moderator in the database shows in the open tab within 2.5 s; a phone tab
+  strip shows More tabs; Accounts' explanation is closed on a phone with the search at 289 px. **13/13 pass.** Batch 1's
+  15 checks rerun on this branch: **15/15.**
+- **Static:** Cosora-Admin `tsc` 0, `npm run build`.
+- **Production, read-only:** `admin_customer_refresh` and `admin_audit_log_actors` are the versions this migration
+  replaces; `pg_trgm` in `extensions`; no `customer-summary-refresh` job yet.
+- **Not run:** M33 by browser (code: reset keyed on saved JSON); M26 by browser (invalidation of `["accounts"]`).

@@ -23,6 +23,8 @@ with no need to dictate format, context, or reference each time.
 - Status: Open. The 18 High items are LIVE (2026-11-22; buyer 4bf0ea3, admin c974fdb) and removed from this list.
   Medium batch 1 (AR-M01–M21; M06 shipped with High) built and tested on the local stack on branch
   `fix/admin-review-medium1-2026-11-22` (both repos), not released.
+  Medium batch 2 (AR-M22–M41) built and tested on the local stack on branch `fix/admin-review-medium2-2026-11-22`
+  (on top of batch 1), not released: Mitra held the release.
 
 **Medium**
 - AR-M01 The suspension card and the `account_suspended` notice say suspension doesn't stop requirements, quotes,

@@ -4793,3 +4793,34 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
   `guarantee_request_id`, `guarantee_closed`.
 - **System Health (M10).** `expectedGapMinutes(schedule)`: every minute → 10; `*/N` → 2N (min 10); hourly → 120; listed
   hours → 2 × 1440 / count; daily → 2880; day-of-week → 2 weeks; day-of-month → 2 months. Only active jobs are late.
+
+## Cosora-Admin review 2026-11-22: Medium batch 2 (branch `fix/admin-review-medium2-2026-11-22`, not released)
+
+- **Customers (M28).** `admin.customer_summary_meta` gains `last_attempt_at`, `last_error`. `admin.customer_summary_rebuild()`
+  takes `pg_try_advisory_xact_lock(hashtext('admin_customer_refresh'))`, refreshes concurrently and records success or the
+  error; job `customer-summary-refresh` `*/10 * * * *`. `admin_customer_refresh()` is STABLE and returns
+  `{refreshed:false, refreshed_at, reason:'scheduled', last_attempt_at, last_error, every_minutes:10}`. The page warns when
+  the last rebuild failed or the data is more than 30 minutes old.
+- **Admin Log actors (M29).** Recursive CTE over `audit_log_actor_idx` (one probe per actor), newest row per actor for
+  name and role; `entries` is null (unused).
+- **Account search (M25).** `profiles_full_name_trgm_idx`, `profiles_email_trgm_idx` (`extensions.gin_trgm_ops`); the page
+  debounces 300 ms and keeps the term in `?q=`.
+- **Requirement queue (M31).** `admin_rfq_submissions_page(state, after_at, after_id, limit ≤ 200)`: `sort_at` is
+  `created_at` while pending (ascending), else `coalesce(reviewed_at, created_at)` (descending); index
+  `rfq_submissions_state_created_idx`.
+- **Certificates (M36).** `fetchCertificatePage(status, cursor)` (open statuses oldest first, finished newest first, by
+  purchased_at, id), `fetchCertificateCounts()` (head counts per status), `fetchOpenCertificateVendors()` (vendor ids of
+  processing + printed). Index `certificate_orders_status_purchased_idx`.
+- **Ads (M23).** Ads and the review queue use `lib/queuePaging.ts` (newest / oldest first). Ads Monitoring reads every
+  row through `readAllPages`; `todayWindow` / `monthWindow` are India-time; `bookedBetween` counts live and free orders.
+- **Unsaved edits (M24).** `useUnsavedChanges(dirty)`: `beforeunload`; a capture-phase click listener asks before an
+  in-app link; a guard history entry (`cosoraUnsaved` marker) makes Back ask; removed (deferred `history.back()`) when
+  the edit is saved or reset.
+- **Identity (M27).** `ADMIN_REFUSED_EVENT` from the QueryCache's `onError` on a refusal; the provider re-reads
+  `admin_whoami` quietly on it, on focus and every 60 s (at most every 5 s), keeping the same object when nothing changed.
+- **Sign-in log (M30).** `admin_audit_session('sign_in')` after `updateUser` on /reset-password and after
+  `setOwnPassword`'s re-sign-in.
+- **Support settings (M33).** The Rollout and Hours panels reset from saved values only when their JSON changes.
+- **UI (M34–M41).** `refreshMoney(qc)`; plan dialogs read `limits.product_cap`; `Tabs` measures its scroll edges
+  (ResizeObserver) and scrolls the open tab into view; `Explainer` (`<details>`, open at ≥ 640 px); `RoleLink`;
+  `ownStorageUrl` (origin of `VITE_SUPABASE_URL`, `/storage/v1/object/public/` or `/storage/v1/render/image/public/`).

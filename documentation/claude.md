@@ -1237,9 +1237,8 @@ undocumented. Deep technical rationale for each lives in
     - The summary's paid totals must keep matching `admin_report_summary()`; harness `09`
       checks it.
   - **Customers is `admin.customer_summary`** (admin completion Phase 6, `20260928070410`), a
-    materialized view that `admin_customer_refresh()` rebuilds at most once every 10 minutes,
-    when an admin opens the page.
-    - Don't schedule it: that would be a new job, and new jobs are Mitra's call.
+    materialized view; `admin_customer_refresh()` says when it was built (it no longer rebuilds).
+    - Rebuilt by the job `customer-summary-refresh` every 10 minutes since Medium batch 2 (Mitra, 2026-11-22).
     - Segments live in `admin.customer_rows` and are computed at read time. Change a rule
       there and in Cosora-Admin's `lib/customers.ts` together.
     - Active Cosora staff (`admin.admin_users`) aren't customers.
@@ -2168,6 +2167,21 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   - **System Health watches every scheduled job**: its overdue gap is twice the job's own schedule
     (`expectedGapMinutes`); a new job needs only a purpose line in `JOBS`.
   - Kept as decided: the chat review page reads the whole chat (Mitra, AR-M18), now without a reload on every focus.
+- **Cosora-Admin review 2026-11-22: the rules Medium batch 2 settled** (branch `fix/admin-review-medium2-2026-11-22`, not
+  released; plan `documentation/admin-review-medium2-plan-2026-11-22.md`):
+  - **Customers is rebuilt by a job every 10 minutes** (Mitra, 2026-11-22, "Add a 10-minute job";
+    `customer-summary-refresh` → `admin.customer_summary_rebuild()`, which records its last error). The page reads
+    `admin_customer_refresh()` for the time and never rebuilds. This replaces "Don't schedule it" under Customers above.
+  - **A page with an edit form asks before its edit is lost**: `useUnsavedChanges(dirty)` (Cosora-Admin) for a page,
+    `Modal`'s own guard for a dialog.
+  - **After any money action, every money list refreshes** (`refreshMoney()`, `lib/moneyRefresh.ts`); a new money list
+    adds its query key there.
+  - **The panel re-reads who the admin is** every minute, on focus and after any refused read, so a changed role reaches
+    an open tab; the database already checks the role on every call.
+  - **A link to another section shows only to roles that can open it** (`<RoleLink section to>`).
+  - **A picture someone else wrote is shown in Cosora-Admin only from this project's Storage** (`ownStorageUrl()`).
+  - **A page's explanation is an `<Explainer>`**: closed on phones, plain words, no table or function names.
+  - **Ad money counted on Ads Monitoring is live money in India-time days**, as on Payments and Reports.
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 
 `engagement_events` + `log_engagement_event` are **live on the project** (migration
