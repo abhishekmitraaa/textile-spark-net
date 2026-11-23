@@ -30,7 +30,9 @@ import {
 import { faqText, useFaqs } from "@/lib/queries/faqs";
 import { useLang } from "@/lib/i18n";
 import { PRIMARY_TYPES } from "@/data/vendorTypes";
-import { SUPPORT_INSTAGRAM } from "@/lib/supportContact";
+import { SUPPORT_EMAIL, SUPPORT_INSTAGRAM } from "@/lib/supportContact";
+import { COMPANY_COPYRIGHT, COMPANY_REGISTRATION_LINE } from "@/lib/company";
+import { LEGAL_LINKS } from "@/lib/legalLinks";
 import { useOverlayState } from "@/hooks/useBackCloses";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomePath } from "@/hooks/useHomePath";
@@ -81,10 +83,13 @@ const menuLinks = [
   { label: "Cosora FAQ", href: "/help" },
   { label: "Blogs", href: "/seller/blogs" },
   { label: "About Us", href: "/blogs/about" },
-  { label: "Contact Us", href: "mailto:hello@cosora.in", external: true },
+  // The Contact page (Mitra, 2026-11-24): it used to be a mailto link.
+  { label: "Contact Us", href: "/contact" },
   // The careers page, shown only while its switch is on (Mitra, 2026-11-20, review L-68; it pointed at a 404).
   { label: "Work with us!", href: "/careers", careers: true },
   { label: "Terms and conditions", href: "/terms" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Refund Policy", href: "/refund-policy" },
   { label: "Report Fraud", href: "/report-fraud" },
   { label: "How it works", href: "#how-it-works" },
 ];
@@ -144,7 +149,7 @@ const VendorLanding = () => {
                 </SheetHeader>
                 <nav className="mt-4 space-y-2">
                   {menuLinks.filter((item) => !("careers" in item) || careersOn).map((item) => {
-                    const isExternal = Boolean(item.external);
+                    const isExternal = /^(mailto:|tel:|https?:)/.test(item.href);
                     const isHash = item.href.startsWith("#");
                     // /blogs is the Journal app, reverse-proxied onto this
                     // origin. Same origin, but outside this router, so it needs
@@ -178,7 +183,7 @@ const VendorLanding = () => {
                   })}
                 </nav>
                 <div className="mt-5 rounded-2xl border border-brand-border bg-[#f5f5f5] p-3 text-xs text-brand-ink/70">
-                  For support, write to <span className="font-semibold text-brand-ink">hello@cosora.in</span>
+                  For support, write to <span className="font-semibold text-brand-ink" data-no-translate>{SUPPORT_EMAIL}</span>
                 </div>
                 <Link to={startTo} className="mt-4 block">
                   <Button className="w-full rounded-full bg-brand-vendor text-[#ffffff] hover:bg-brand-vendor/90">
@@ -387,8 +392,8 @@ const VendorLanding = () => {
             )}
             <div className="mt-4 rounded-xl border border-brand-border bg-[#f5f5f5] p-3 text-sm text-brand-ink/70">
               Still have questions? Write to{" "}
-              <a href="mailto:hello@cosora.in" className="font-semibold text-brand-vendor">
-                hello@cosora.in
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold text-brand-vendor" data-no-translate>
+                {SUPPORT_EMAIL}
               </a>
             </div>
           </div>
@@ -489,10 +494,10 @@ const VendorLanding = () => {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 text-sm text-brand-ink/70 sm:flex-row">
           <div className="flex items-center gap-4">
             <a
-              href="mailto:hello@cosora.in"
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="flex items-center gap-1.5 font-medium text-brand-ink"
             >
-              <Mail className="h-4 w-4 text-brand-vendor" /> hello@cosora.in
+              <Mail className="h-4 w-4 text-brand-vendor" /> <span data-no-translate>{SUPPORT_EMAIL}</span>
             </a>
             <a
               href={SUPPORT_INSTAGRAM}
@@ -503,7 +508,22 @@ const VendorLanding = () => {
               <Instagram className="h-4 w-4 text-brand-buyer" /> Instagram
             </a>
           </div>
-          <p className="text-xs text-brand-ink/60">© 2024 Cosora</p>
+        </div>
+        {/* Who runs Cosora (Mitra, 2026-11-24): the same line, links, address and CIN as every public page. */}
+        <div className="mx-auto mt-5 max-w-6xl border-t border-brand-border pt-4 text-xs text-brand-ink/60">
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-2">
+            {LEGAL_LINKS.map((l) =>
+              "external" in l ? (
+                <a key={l.href} href={l.href} className="font-medium text-brand-ink/80 hover:text-brand-ink">{l.label}</a>
+              ) : (
+                <Link key={l.href} to={l.href} className="font-medium text-brand-ink/80 hover:text-brand-ink">{l.label}</Link>
+              ),
+            )}
+          </nav>
+          <p className="mt-3" data-no-translate>{COMPANY_COPYRIGHT}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-brand-ink/50" data-no-translate>
+            {COMPANY_REGISTRATION_LINE}
+          </p>
         </div>
       </footer>
     </div>

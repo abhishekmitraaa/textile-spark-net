@@ -4,6 +4,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { CLARITY_ENABLED } from "@/lib/analytics/clarity";
 import { TERMS_ANALYTICS_NOTICE as ANALYTICS_NOTICE, TERMS_EFFECTIVE_DATE as EFFECTIVE_DATE, TERMS_INTRO as INTRO } from "@/data/terms";
 import TermsClauses from "@/components/TermsClauses";
+import { LegalFooter } from "@/components/LegalFooter";
 import { useStepBack } from "@/hooks/useStepBack";
 import { useHomePath } from "@/hooks/useHomePath";
 
@@ -27,7 +28,7 @@ const TermsConditions = () => {
 
       <div className="max-w-2xl mx-auto px-4 pt-5 pb-28">
         <p className="text-xs text-gray-400">Effective Date: {EFFECTIVE_DATE}</p>
-        <p className="mt-3 text-sm leading-relaxed text-gray-700">{INTRO}</p>
+        <p className="mt-3 text-sm leading-relaxed text-gray-700" data-no-translate>{INTRO}</p>
 
         <TermsClauses className="mt-6" />
 
@@ -43,6 +44,8 @@ const TermsConditions = () => {
         <p className="mt-8 text-sm leading-relaxed text-gray-600 border-t border-gray-100 pt-5">
           By using Cosora, you acknowledge that you have read, understood, and agree to be bound by these Terms &amp; Conditions.
         </p>
+
+        <LegalFooter className="mt-10" />
       </div>
 
       <MobileBottomNav />

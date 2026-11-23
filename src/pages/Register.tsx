@@ -383,7 +383,8 @@ const Register = () => {
                         className="h-10"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">We'll verify this number with a one-time code.</p>
+                    {/* How Cosora uses this number (Mitra, 2026-11-24). The code goes by SMS today (lib/auth/otp.ts). */}
+                    <p className="text-xs text-muted-foreground">We'll send your one-time code by SMS or WhatsApp, and updates about your account on WhatsApp.</p>
                   </div>
 
                   <p className="text-xs text-muted-foreground">

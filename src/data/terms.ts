@@ -3,6 +3,9 @@
 // business. Changing what a buyer agrees to is a new BUYER_TERMS_VERSION (src/lib/buyerTerms.ts) and a new
 // buyer_terms_version() in a migration, so the record names the wording that was shown.
 
+import { COMPANY } from "@/lib/company";
+import { GRIEVANCE_OFFICER } from "@/lib/grievance";
+
 export interface TermsClause {
   heading: string;
   paragraphs?: string[];
@@ -12,10 +15,14 @@ export interface TermsClause {
 
 // Version 2026-11-v2 (Mitra, 2026-11-20, review L-59): the date the text took effect, and no "India's premier" (a
 // claim nothing measures). Buyers who accepted v1 aren't asked again ("New text, don't re-ask").
-export const TERMS_EFFECTIVE_DATE = "20th November 2026";
+//
+// Version 2026-11-v3 (Mitra, 2026-11-24; documentation/company-disclosure-plan-2026-11-24.md): the Platform is provided
+// by Fearce Textiles Private Limited under the brand Cosora; a Communications clause matching the Privacy Policy; the
+// contact clause names the company, support and the Grievance Officer. Not re-asked, as with v2.
+export const TERMS_EFFECTIVE_DATE = "24th November 2026";
 
 export const TERMS_INTRO =
-  "Welcome to Cosora, a B2B fashion and textile sourcing platform. By accessing or using our website, mobile application, or any associated services (collectively, the \"Platform\"), you agree to be bound by the following terms and conditions (\"Terms\"). Please read them carefully.";
+  `Welcome to Cosora, a B2B fashion and textile sourcing platform. Cosora is a brand of ${COMPANY.legalName} (CIN ${COMPANY.cin}), whose registered office is at ${COMPANY.registeredAddress}. The Platform is provided by ${COMPANY.legalName} under the brand Cosora, and in these Terms "Cosora", "we" and "us" mean ${COMPANY.legalName}. By accessing or using our website, mobile application, or any associated services (collectively, the "Platform"), you agree to be bound by the following terms and conditions ("Terms"). Please read them carefully.`;
 
 export const TERMS_CLAUSES: TermsClause[] = [
   {
@@ -64,7 +71,7 @@ export const TERMS_CLAUSES: TermsClause[] = [
     bullets: [
       "Cosora operates on a pay-per-lead model and offers premium listing services.",
       "All payments are to be made through authorized channels.",
-      "Fees are non-refundable unless stated otherwise.",
+      "Fees are non-refundable unless stated otherwise, including in our Refund & Cancellation Policy.",
       "Cosora reserves the right to modify its fee structure with prior notice.",
     ],
   },
@@ -133,11 +140,24 @@ export const TERMS_CLAUSES: TermsClause[] = [
     ],
   },
   {
-    heading: "15. Contact Information",
+    heading: "15. Communications",
+    bullets: [
+      "Service and transactional messages are part of the Platform: one-time codes to sign in and to confirm important actions, updates on your requirements, quotes and leads, payment receipts and invoices, and account and security alerts. We send them by WhatsApp and/or email, and sign-in codes by SMS or WhatsApp. Opting out of marketing doesn't stop them.",
+      "Marketing messages (offers, promotions and news about new products) are sent by WhatsApp and/or email only if you opt in. The boxes are never ticked for you.",
+      "You can opt out of marketing at any time: on WhatsApp, reply STOP or tap “Stop promotions”; by email, click the unsubscribe link in any marketing email; or switch offers off in your settings, or contact support.",
+      "WhatsApp messages are sent through the WhatsApp Business Platform provided by Meta. Our Privacy Policy explains how we handle your data.",
+    ],
+  },
+  {
+    heading: "16. Contact Information",
     paragraphs: [
       "For any queries or concerns regarding these Terms, please contact:",
-      "Cosora Legal Department",
-      "Email: ananditawork1@gmail.com",
+      COMPANY.legalName,
+      `Registered office: ${COMPANY.registeredAddress}`,
+      `Email: ${COMPANY.email} · Phone and WhatsApp: ${COMPANY.phoneLabel}`,
+      ...(GRIEVANCE_OFFICER
+        ? [`Grievance Officer: ${GRIEVANCE_OFFICER.name}, ${GRIEVANCE_OFFICER.email}, ${GRIEVANCE_OFFICER.phoneLabel}. We acknowledge every complaint within ${GRIEVANCE_OFFICER.acknowledgeWithin} and resolve it within ${GRIEVANCE_OFFICER.resolveWithin}.`]
+        : []),
     ],
   },
 ];

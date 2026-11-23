@@ -1041,6 +1041,44 @@ export type Database = {
           },
         ]
       }
+      marketing_consent: {
+        Row: {
+          address: string | null
+          changed_at: string
+          channel: string
+          opted_in: boolean
+          profile_id: string
+          source: string
+          wording: string
+        }
+        Insert: {
+          address?: string | null
+          changed_at?: string
+          channel: string
+          opted_in: boolean
+          profile_id: string
+          source: string
+          wording: string
+        }
+        Update: {
+          address?: string | null
+          changed_at?: string
+          channel?: string
+          opted_in?: boolean
+          profile_id?: string
+          source?: string
+          wording?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_consent_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_consent: {
         Row: {
           changed_at: string
@@ -6562,6 +6600,7 @@ export type Database = {
       my_account_manager: { Args: never; Returns: Json }
       my_autopay: { Args: never; Returns: Json }
       my_contact_channels: { Args: never; Returns: Json }
+      my_marketing_consent: { Args: never; Returns: Json }
       my_contact_info: {
         Args: never
         Returns: {
@@ -6861,6 +6900,10 @@ export type Database = {
       }
       set_contact_consent: {
         Args: { p_channel: string; p_opted_in: boolean; p_source?: string }
+        Returns: undefined
+      }
+      set_marketing_consent: {
+        Args: { p_channel: string; p_opted_in: boolean; p_source: string }
         Returns: undefined
       }
       set_lead_alert_settings: {

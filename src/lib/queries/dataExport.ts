@@ -364,6 +364,12 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     supabase.from("chat_blocks").select("blocked_id, created_at, unblocked_at").eq("blocker_id", userId)
       .order("created_at", { ascending: true }).order("blocked_id").range(from, to));
   const support = await supportRequests();
+  // Your answers about offers by WhatsApp and email (2026-11-24): the current one per channel, with the address, the
+  // words shown, where and when. Before that migration the table doesn't exist, which is no answers, not a failure.
+  const { data: consentRows, error: consentErr } = await supabase.from("marketing_consent")
+    .select("channel, opted_in, address, source, wording, changed_at").eq("profile_id", userId).order("channel");
+  if (consentErr && consentErr.code !== "PGRST205" && consentErr.code !== "42P01") throw consentErr;
+  const marketingConsent = consentRows ?? [];
 
   // A conversation counterpart is a vendor only if it has a vendor_profiles row,
   // which is exactly what brandNames() returned for them.
@@ -448,6 +454,7 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     saved_videos: savedVideos.length,
     support_requests: support.length,
     blocks: blocks.length,
+    marketing_consent: marketingConsent.length,
     recently_viewed: recentlyViewed.length,
     following: following.length,
     ...(seller ? {
@@ -460,12 +467,13 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     export: {
       generated_at: new Date().toISOString(),
       account_id: userId,
-      format_version: 3,
+      format_version: 4,
       contents:
         "Your profile, business details, RFQs and the requirements waiting for Cosora's review, the quotes you received, " +
         "your conversations and their messages, the reviews you wrote (stores, products and services), the vendors you " +
         "contacted (by chat, call or quote) and those you messaged, your saved items, folders and video close-ups, the " +
-        "products you viewed recently, the vendors you follow, the accounts you blocked, and your newest " +
+        "products you viewed recently, the vendors you follow, the accounts you blocked, your answers about offers by " +
+        "WhatsApp and email, and your newest " +
         `${SUPPORT_EXPORT_LIMIT} support requests with their messages (files are listed, not included). ` +
         "For a seller, also your store, listings, the quotes you sent, catalogues, videos, business documents, " +
         "invoices, ad orders and CRM.",
@@ -492,6 +500,7 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     recently_viewed: recentlyViewedOut,
     following,
     blocks: blocksOut,
+    marketing_consent: marketingConsent,
     support_requests: support,
     seller,
   };

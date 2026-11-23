@@ -96,6 +96,9 @@ const PrivacyPolicy = lazyPage(() => import("./pages/PrivacyPolicy"));
 const Careers = lazyPage(() => import("./pages/Careers"));
 // Help & Support P6c (D-15): hidden until the Grievance Officer is named (src/lib/grievance.ts).
 const Grievance = lazyPage(() => import("./pages/Grievance"));
+// Company disclosure (Mitra, 2026-11-24): who runs Cosora, and its refund rules.
+const Contact = lazyPage(() => import("./pages/Contact"));
+const RefundPolicy = lazyPage(() => import("./pages/RefundPolicy"));
 const SavedCollections = lazyPage(() => import("./pages/SavedCollections"), { warm: true });
 const SavedCollectionDetail = lazyPage(() => import("./pages/SavedCollectionDetail"));
 const Search = lazyPage(() => import("./pages/Search"), { warm: true });
@@ -246,6 +249,8 @@ const App = () => (
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />
             <Route path="/terms" element={<TermsConditions />} />
             <Route path="/grievance" element={<Grievance />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/subscription" element={<ClarityMask><Subscription /></ClarityMask>} />
             <Route path="/subscription/invoice/:id" element={<ClarityMask><InvoiceDetail /></ClarityMask>} />
             {/* Vendor billing: every payment, its bill, and certificate tracking. */}

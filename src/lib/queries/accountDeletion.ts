@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { SUPPORT_EMAIL } from "@/lib/supportContact";
 
 // ─────────────────────────────────────────────────────────────
 // "Delete my account" (Phase 2 of the My Profile brief, 2026-09-23).
@@ -127,7 +128,7 @@ export function expectedDeletionChannel(user: User | null | undefined): Deletion
 
 export interface DeletionCopy { title: string; description?: string }
 
-const SUPPORT = "hello@cosora.in";
+const SUPPORT = SUPPORT_EMAIL;
 
 /**
  * The sentence for any non-success answer from sendDeletionCode() or

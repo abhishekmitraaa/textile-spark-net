@@ -4,6 +4,7 @@ import { Camera, Mail } from "lucide-react";
 import heroImage from "@/assets/cosora-studio-hero.jpg";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import BuyerShell from "@/components/buyer/BuyerShell";
+import { SUPPORT_EMAIL } from "@/lib/supportContact";
 
 // Cosora Studio (2026-11-05; ToDo "Remove invented claims and real brand names still on live pages").
 // Until then this page listed invented studios with real brands as clients ("Featured in Vogue India"),
@@ -23,7 +24,7 @@ const section = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
 };
 
-const mail = (subject: string) => `mailto:hello@cosora.in?subject=${encodeURIComponent(subject)}`;
+const mail = (subject: string) => `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}`;
 
 const ACTIONS = [
   {

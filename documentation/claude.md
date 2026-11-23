@@ -509,7 +509,9 @@ undocumented. Deep technical rationale for each lives in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with
   rollout Off; fraud reports and feedback are open to every signed-in account since 2026-10-16
   (rule above). The technical side is "Support" in `technicalimplementation.md`.
-  - The support phone is **+91 88155 78226**.
+  - The support phone and WhatsApp number is **+91 7904840367** and the email **teamcosora@gmail.com**: the company's
+    (Mitra, 2026-11-24; `src/lib/company.ts`, and `support_settings` in the database). It was +91 88155 78226, which is
+    now the Grievance Officer's number.
   - Hours are **Mon–Fri 10:00–19:00 IST**, closed weekends and holidays. They are data
     (`support_hours`, `support_holidays`, edited in Cosora-Admin's Support settings), so never
     hardcode them.
@@ -1297,6 +1299,28 @@ undocumented. Deep technical rationale for each lives in
   never handed to a client (a fraud finding halves it); Fit reads a seller's location as it was when the lead was
   posted (a buyer's state is private); seeded `rating_avg` and `sold_count` never rank a seller; a test that changes a
   ranking input calls `admin.refresh_vendor_standing()` (Standing is kept by an hourly job).
+- **Cosora is a brand of Fearce Textiles Private Limited, and every page says so the same way** (Mitra, 2026-11-24;
+  `documentation/company-disclosure-plan-2026-11-24.md`; migration `20261124100000`). Meta checks the brand against
+  the company, so the name, registered address, CIN and phone are one copy: `src/lib/company.ts` (the Journal keeps the
+  same values in `cosora-blogs/src/lib/site.ts`; `support_settings` holds the email and phone). Never retype one.
+  - `<LegalFooter>` (the copyright line, About / Contact / Privacy / Terms / Refund, the registered office and CIN) is on
+    every public page: Landing, the seller landing page, Contact, Privacy, Terms, Refund, Grievance and Help. A new
+    public page adds it. `/contact`, `/refund-policy` and `/grievance` (Ishani Banerjee, named 2026-11-24) are public.
+  - **The legal texts are English in every language**: the Privacy Policy (`src/data/privacyPolicy.ts`), the Refund
+    Policy (`src/data/refundPolicy.ts`), the buyer Terms (`src/data/terms.ts`, accepted by version) and the company
+    facts, as the Supplier Agreement is. They render with `data-no-translate` and the i18n check skips those files.
+    `[PLACEHOLDER: …]` in them is highlighted on the page until Mitra gives the value.
+  - **Marketing consent is its own record, apart from `contact_consent`** (consent to service messages). Offers by
+    WhatsApp and email need a yes in `marketing_consent`, given through `set_marketing_consent()` (sources signup,
+    checkout, settings; the server takes the address and the words shown); `admin.marketing_consent_log` keeps every
+    change as proof. The boxes (`<MarketingOptIn>`) are never ticked for you, an unticked box never withdraws a yes,
+    and withdrawing is a switch in settings (`<MarketingConsentSwitches>`), saved at once. A deleted account's consent
+    goes and its log keeps no address. Anything that sends marketing reads `marketing_consent` first, and honours
+    WhatsApp's "Stop promotions" / STOP and an unsubscribe link in email: none of that is built yet, and nothing sends
+    marketing today.
+  - The pages say what Cosora really sends (Mitra, 2026-11-24): codes, updates on requirements, quotes and leads,
+    receipts and invoices, account and security alerts. Cosora sells and ships no goods, so never "order confirmations"
+    or "delivery updates". The sign-in code goes by SMS today; Register says "by SMS or WhatsApp". Email is Resend.
 - **Every notice kind the database writes has somewhere to go** (2026-11-17, SH-034). `notificationKindMeta()` in
   `src/lib/notificationsStore.ts` (the `ad_` and `certificate_` families by prefix); a kind with nowhere in this app
   (`billing_incident`, admin-only) has `href: null` and no action. A new `notify(…, '<kind>'` adds its entry, or

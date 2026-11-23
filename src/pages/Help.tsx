@@ -8,8 +8,9 @@ import {
   Search, Phone, Mail, Flag,
   ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
   Instagram, ArrowLeft, Store, MessageCircle, PhoneCall, Lightbulb, ListChecks, BookOpen,
-  ShieldCheck, Users, Package, Megaphone,
+  ShieldCheck, Users, Package, Megaphone, Building2,
 } from "lucide-react";
+import { LegalFooter } from "@/components/LegalFooter";
 import type { ReactNode } from "react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -242,6 +243,12 @@ const Help = () => {
                   <ListChecks className="w-3.5 h-3.5" /> My requests
                 </Link>
               )}
+              <Link to="/contact" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
+                <Building2 className="w-3.5 h-3.5" /> Contact &amp; company details
+              </Link>
+              <Link to="/grievance" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
+                <ShieldCheck className="w-3.5 h-3.5" /> Grievance Officer
+              </Link>
             </div>
           </motion.div>
 
@@ -436,6 +443,9 @@ const Help = () => {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Who runs Cosora (Mitra, 2026-11-24). */}
+          <LegalFooter />
 
       </motion.div>,
   );

@@ -49,7 +49,10 @@ const ts = require("typescript");
 // data/countries.ts likewise (CountrySelect and the overseas badge, subscriptions P7).
 // components/vendor/InvoiceSheet.tsx is the invoice document: English only (Mitra,
 // 2026-10-08), marked data-no-translate; the invoice page around it is translated.
-const SKIP_FILES = [/data[\\/]indiaStates\.ts$/, /data[\\/]countries\.ts$/,/lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\/]supplierAgreement\.ts$/, /vendor[\\/]InvoiceSheet\.tsx$/, /database\.types\.ts$/, /\.test\.tsx?$/];
+// lib/company.ts, data/privacyPolicy.ts, data/refundPolicy.ts and data/terms.ts are legal records: the company's
+// name, address and registration numbers, the Privacy Policy, the Refund Policy and the buyer Terms, which buyers
+// accept by version. English in every language (data-no-translate), as the Supplier Agreement is (Mitra, 2026-11-24).
+const SKIP_FILES = [/lib[\\/]company\.ts$/, /data[\\/]privacyPolicy\.ts$/, /data[\\/]refundPolicy\.ts$/, /data[\\/]terms\.ts$/, /data[\\/]indiaStates\.ts$/, /data[\\/]countries\.ts$/,/lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\/]supplierAgreement\.ts$/, /vendor[\\/]InvoiceSheet\.tsx$/, /database\.types\.ts$/, /\.test\.tsx?$/];
 
 // Found by the extractor but never shown as text. "s" and "es" are English
 // plural endings rendered as their own text node ({n === 1 ? "" : "es"}); both

@@ -50,8 +50,10 @@ import { RegistrationPending } from "@/components/vendor/RegistrationPending";
 import { pictureProblem } from "@/lib/queries/premisesPhotos";
 import { useQueryClient } from "@tanstack/react-query";
 import { finishAuthFlow, hasAuthStart } from "@/lib/authHistory";
+import { MarketingOptIn } from "@/components/MarketingOptIn";
+import { NO_CHOICE, saveMarketingOptIns, type MarketingChoice } from "@/lib/marketingConsent";
 
-// The help button reaches Cosora Support's number (Mitra, 2026-11-13: +91 88155 78226); it used to open
+// The help button reaches Cosora Support's number, SUPPORT_PHONE (the company's since 2026-11-24); it used to open
 // wa.me/918821826465, which isn't Cosora's support line.
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE.replace(/\D/g, "")}`;
 
@@ -194,6 +196,9 @@ export default function Onboarding() {
   const [whatsappOptIn, setWhatsappOptIn] = useState(true);
   // Cosora's own WhatsApp updates need a recorded opt-in, never a pre-ticked one (set_contact_consent).
   const [whatsappUpdates, setWhatsappUpdates] = useState(false);
+  // Offers by WhatsApp and email (Mitra, 2026-11-24): marketing, apart from the updates above; never ticked for you,
+  // saved with "signup" once the registration is.
+  const [offers, setOffers] = useState<MarketingChoice>(NO_CHOICE);
   const [sameContact, setSameContact] = useState(true);
   const [primaryContact, setPrimaryContact] = useState("");
   const [hasWebsite, setHasWebsite] = useState(false);
@@ -905,6 +910,12 @@ export default function Onboarding() {
         sent = true;
         const result = await submitVendorRegistration(submissionId.current, buildPayload(up, categoryId));
         lastUploads.current = null;
+        // The registration is saved by now; a refused opt-in mustn't look like a failed registration.
+        try {
+          await saveMarketingOptIns(offers, "signup");
+        } catch {
+          toast.error("Couldn't save your choice about offers", { description: "You can switch offers on in Settings." });
+        }
         finishSubmit(result.status);
       } catch (err) {
         // Remove the uploads only when nothing can have been saved with them: the submit never left, or the
@@ -1907,6 +1918,7 @@ export default function Onboarding() {
                     <Checkbox id="wa-updates" checked={whatsappUpdates} onCheckedChange={(v) => setWhatsappUpdates(!!v)} className="mt-0.5" />
                     <Label htmlFor="wa-updates" className="cursor-pointer text-sm text-brand-ink">Send me Cosora updates on WhatsApp</Label>
                   </div>
+                  <MarketingOptIn value={offers} onChange={setOffers} idPrefix="seller-offers" className="border-t border-brand-border pt-3" />
                 </div>
 
                 <div className="space-y-2">

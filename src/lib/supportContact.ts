@@ -7,9 +7,12 @@
  * fails, and whenever rollout is off. Change them together with the database, from
  * Cosora-Admin's Support settings.
  */
-export const SUPPORT_PHONE = "+918815578226";
-export const SUPPORT_PHONE_LABEL = "+91 88155 78226";
-export const SUPPORT_EMAIL = "hello@cosora.in";
+import { COMPANY } from "@/lib/company";
+
+// The company's own email and phone (Mitra, 2026-11-24): the same on every page, so they come from lib/company.ts.
+export const SUPPORT_PHONE = COMPANY.phone;
+export const SUPPORT_PHONE_LABEL = COMPANY.phoneLabel;
+export const SUPPORT_EMAIL = COMPANY.email;
 export const SUPPORT_HOURS_LABEL = "Mon–Fri, 10:00–19:00 IST. Closed on weekends and holidays.";
 /** Cosora's Instagram (Mitra, 2026-10-14). The one place the app names it: the Help page and the
  *  vendor landing page's footer link here, so a new handle is a change to this line only. */

@@ -9,7 +9,8 @@ export default function TermsClauses({ className, compact = false }: { className
   const body = compact ? "text-xs leading-relaxed text-gray-600" : "text-sm leading-relaxed text-gray-700";
   const Heading = compact ? "h3" : "h2";
   return (
-    <div className={cn(compact ? "space-y-4" : "space-y-6", className)}>
+    // A legal record buyers accept by version: English in every language (2026-11-24), as the Supplier Agreement is.
+    <div className={cn(compact ? "space-y-4" : "space-y-6", className)} data-no-translate>
       {TERMS_CLAUSES.map((clause) => (
         <section key={clause.heading}>
           <Heading data-terms-heading className={cn("font-bold text-gray-900", compact ? "text-xs" : "text-sm")}>

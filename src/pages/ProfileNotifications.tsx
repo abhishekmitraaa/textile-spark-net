@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting } from "@/lib/queries/profile";
 import { NOTIFICATION_DELIVERY_LIVE as DELIVERY_LIVE } from "@/lib/notificationDelivery";
 import { useStepBack } from "@/hooks/useStepBack";
+import { MarketingConsentSwitches } from "@/components/MarketingConsentSwitches";
 
 function SettingsHeader({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -58,7 +59,6 @@ const EMAIL_ROWS: { key: keyof NotificationSettings; label: string; description:
   { key: "emailNewQuote", label: "New Quote Received", description: "When vendors submit quotes on your requests" },
   { key: "emailNewMessages", label: "New Messages", description: "When vendors message you" },
   { key: "emailRfqUpdates", label: "RFQ Updates", description: "When the status of your requests changes" },
-  { key: "emailNewsletter", label: "Newsletter & Tips", description: "Sourcing tips and platform updates" },
 ];
 
 const PUSH_ROWS: { key: keyof NotificationSettings; label: string; description: string }[] = [
@@ -140,6 +140,12 @@ const ProfileNotifications = () => {
               <ToggleRow key={r.key} label={r.label} description={r.description} checked={draft[r.key]} onChange={(v) => set(r.key, v)} />
             ))}
           </div>
+        </section>
+
+        {/* Offers (Mitra, 2026-11-24): marketing consent, recorded the moment a switch changes. It replaced the
+            "Newsletter & Tips" preference, which nothing sent and nothing recorded as consent. */}
+        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+          <MarketingConsentSwitches />
         </section>
 
         {/* Push */}

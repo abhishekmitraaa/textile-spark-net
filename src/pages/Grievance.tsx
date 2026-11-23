@@ -1,16 +1,17 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail, MapPin } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { GRIEVANCE_OFFICER } from "@/lib/grievance";
 import NotFound from "./NotFound";
+import { LegalFooter } from "@/components/LegalFooter";
 import { useStepBack } from "@/hooks/useStepBack";
 import { useHomePath } from "@/hooks/useHomePath";
 
 /**
  * /grievance (Help & Support P6c, D-15): who Cosora's Grievance Officer is and how to reach
- * them. Hidden until the officer is named in src/lib/grievance.ts: until then this is the
- * ordinary not-found page, so nothing half-finished is ever public.
+ * them. Hidden while src/lib/grievance.ts names nobody: then this is the ordinary not-found page.
+ * Named since 2026-11-24.
  */
 export default function Grievance() {
   const homePath = useHomePath();
@@ -37,6 +38,9 @@ export default function Grievance() {
             <a href={mailto} className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline">
               <Mail className="w-4 h-4" /> <span data-no-translate>{officer.email}</span>
             </a>
+            <a href={`tel:${officer.phone}`} className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline">
+              <Phone className="w-4 h-4" /> <span data-no-translate>{officer.phoneLabel}</span>
+            </a>
             {officer.address && (
               <p className="flex items-start gap-2 text-sm text-gray-600">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" /> <span data-no-translate>{officer.address}</span>
@@ -48,12 +52,14 @@ export default function Grievance() {
           <CardContent className="p-5 space-y-3 text-sm text-gray-700">
             <p className="font-semibold text-gray-900">How to raise a grievance</p>
             <p>Write to the Grievance Officer with the mobile number you sign in with, what happened, and any request number you have (it starts with CS-).</p>
+            <p>You can also use this address to ask about the personal data we hold about you: to see it, correct it or delete it, to withdraw your consent, or to name someone who can do this for you.</p>
             <p>{`We acknowledge every grievance within ${officer.acknowledgeWithin} and resolve it within ${officer.resolveWithin}.`}</p>
             <p>
               <Link to="/help" className="font-medium text-blue-600 hover:underline">For anything else, Help &amp; Support is faster.</Link>
             </p>
           </CardContent>
         </Card>
+        <LegalFooter />
       </div>
       <MobileBottomNav />
     </div>

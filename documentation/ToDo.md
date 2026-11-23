@@ -390,6 +390,11 @@ with no need to dictate format, context, or reference each time.
 - **2026-10-11: now urgent.** Plan checkout is on for every seller (Mitra's choice, with Razorpay still on test keys),
   so every purchase until this is done gets a receipt and an `invoice_incomplete` billing incident instead of a GST tax
   invoice. Enter the details, then switch Razorpay to its live keys.
+- 2026-11-24: Mitra gave the company's details for the site (documentation/company-disclosure-plan-2026-11-24.md):
+  legal name Fearce Textiles Private Limited, registered address Innov8 Orchid Center 3rd floor, Orchid Center, Golf
+  Course Road, SEC-53, Gurugram, Haryana 122022, GSTIN 06AAFCF7943P1ZZ, CIN U47912HR2024PTC118434. Billing details are
+  still empty on production (checked 2026-11-24). Still needed: the SAC code (CA), the invoice prefix, and the entry in
+  Cosora-Admin → Billing details.
 - Status: Open
 
 ### Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08

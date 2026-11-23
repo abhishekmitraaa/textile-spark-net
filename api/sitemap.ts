@@ -56,6 +56,9 @@ const STATIC_ROUTES: { path: string; priority: string; changefreq: string }[] = 
   { path: "/terms", priority: "0.3", changefreq: "yearly" },
   // The Privacy Policy is public and linked from every footer (review L-100: it was missing).
   { path: "/privacy", priority: "0.3", changefreq: "yearly" },
+  { path: "/refund-policy", priority: "0.3", changefreq: "yearly" },
+  { path: "/contact", priority: "0.4", changefreq: "yearly" },
+  { path: "/grievance", priority: "0.3", changefreq: "yearly" },
 ];
 
 /**

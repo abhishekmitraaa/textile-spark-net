@@ -10,6 +10,8 @@ import { quotePlanDiscount, type PlanQuote } from "@/lib/queries/discounts";
 import { usePlanChangePreview, type BillingCycle, type ChangeKind, type PlanChangePreview } from "@/lib/queries/subscriptions";
 import { formatINR, type Plan } from "@/lib/plan";
 import { gstOn } from "@/lib/gst";
+import { MarketingOptIn } from "@/components/MarketingOptIn";
+import { useCheckoutOptIn } from "@/lib/marketingConsent";
 
 const DAY = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -85,6 +87,9 @@ export function PlanCheckoutDialog({
     setRenewAuto(true);
   }, [plan?.id, billingCycle]);
 
+  // Offers by WhatsApp and email (Mitra, 2026-11-24): never ticked for you, recorded with "checkout" on Pay.
+  const optIn = useCheckoutOptIn();
+
   if (!plan) return null;
 
   const list = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
@@ -119,6 +124,7 @@ export function PlanCheckoutDialog({
   };
 
   const pay = async () => {
+    optIn.commit();
     setBusy(true);
     setRefusal(null);
     try {
@@ -241,6 +247,8 @@ export function PlanCheckoutDialog({
           </>
         )}
         {refusal && <p role="alert" className="text-sm text-destructive">{refusal}</p>}
+
+        <MarketingOptIn value={optIn.offers} onChange={optIn.setOffers} hide={optIn.hide} idPrefix="plan-offers" />
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>

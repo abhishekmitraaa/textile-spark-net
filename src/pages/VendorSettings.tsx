@@ -26,6 +26,7 @@ import {
   ChevronLeft, ChevronRight, Building2, Mail, Smartphone,
   ShieldCheck, Phone, LogOut, Headphones, FileText, MessageCircle,
 } from "lucide-react";
+import { MarketingConsentSwitches } from "@/components/MarketingConsentSwitches";
 
 // Vendor accent (blue), matching the rest of the vendor app — never the buyer red.
 const ACCENT = brand("vendor");
@@ -56,7 +57,6 @@ const EMAIL_ROWS: { key: keyof VendorNotificationSettings; label: string; descri
   { key: "emailAdStatus",      label: "Ad status changes",       description: "When an ad is approved, rejected, or taken down" },
   { key: "emailPlanExpiry",    label: "Plan expiry reminders",   description: "Ahead of your subscription's renewal date" },
   { key: "emailProductStatus", label: "Product moderation",      description: "When a product goes live or needs changes" },
-  { key: "emailNewsletter",    label: "Selling tips & updates",  description: "Occasional Cosora news and ways to win more orders" },
 ];
 
 const PUSH_ROWS: { key: keyof VendorNotificationSettings; label: string; description: string }[] = [
@@ -278,6 +278,14 @@ const VendorSettings = () => {
                       : r.description}
                     checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} disabled={!settings} />
                 ))}
+              </div>
+
+              <div className="border-t border-gray-100" />
+
+              {/* Offers (Mitra, 2026-11-24): marketing consent, recorded the moment a switch changes. It replaced
+                  "Selling tips & updates", which nothing sent and nothing recorded as consent. */}
+              <div className="px-4 py-4">
+                <MarketingConsentSwitches accent="vendor" />
               </div>
 
               <div className="border-t border-gray-100" />

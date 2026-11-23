@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TERMS_EFFECTIVE_DATE, TERMS_INTRO } from "@/data/terms";
 import { acceptBuyerTerms, isStaleTerms, BUYER_TERMS_VERSION } from "@/lib/buyerTerms";
 import { finishAuthFlow } from "@/lib/authHistory";
+import { MarketingOptIn } from "@/components/MarketingOptIn";
+import { NO_CHOICE, saveMarketingOptIns, type MarketingChoice } from "@/lib/marketingConsent";
 
 // The "I agree" tick, kept in this tab for this version of the Terms (review L-60): reading the full Terms and coming
 // back used to clear it. It is only the box on screen; acceptance is recorded by accept_buyer_terms when Continue is
@@ -33,6 +35,9 @@ const Terms = () => {
   const [agreed, setAgreedState] = useState(() => readTicked(uid));
   const setAgreed = (on: boolean) => { setAgreedState(on); writeTicked(uid, on); };
   const [saving, setSaving] = useState(false);
+  // Offers by WhatsApp and email (Mitra, 2026-11-24): two boxes, never ticked for you, saved with "signup" once the
+  // Terms are accepted.
+  const [offers, setOffers] = useState<MarketingChoice>(NO_CHOICE);
 
   // Accepting is the last sign-up step: the database records which Terms were accepted and when, and only then is the
   // account onboarded (accept_buyer_terms; buyer sign-up audit item 5).
@@ -42,6 +47,12 @@ const Terms = () => {
     try {
       await acceptBuyerTerms();
       writeTicked(uid, false);
+      // The account is finished by now; a refused opt-in mustn't undo that, so it is said and sign-up goes on.
+      try {
+        await saveMarketingOptIns(offers, "signup");
+      } catch {
+        toast.error("Couldn't save your choice about offers", { description: "You can switch offers on in Profile › Notifications." });
+      }
       await refreshProfile("row"); // only onboarded and terms_version changed (review L-64)
     } catch (e) {
       setSaving(false);
@@ -68,7 +79,7 @@ const Terms = () => {
         <div className="flex-1 min-h-0 bg-white rounded-2xl p-5 overflow-y-auto mb-4">
           <p className="font-bold text-gray-900 text-base">Terms &amp; Conditions</p>
           <p className="mt-1 text-xs text-gray-400">Effective Date: {TERMS_EFFECTIVE_DATE}</p>
-          <p className="mt-3 text-xs leading-relaxed text-gray-600">{TERMS_INTRO}</p>
+          <p className="mt-3 text-xs leading-relaxed text-gray-600" data-no-translate>{TERMS_INTRO}</p>
           <TermsClauses compact className="mt-4" />
         </div>
 
@@ -88,6 +99,8 @@ const Terms = () => {
             <Link to="/privacy" className="underline font-semibold">Privacy Policy</Link>
           </span>
         </div>
+
+        <MarketingOptIn value={offers} onChange={setOffers} tone="dark" idPrefix="signup-offers" className="mb-4" />
 
         <button
           onClick={accept}

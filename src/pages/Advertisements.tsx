@@ -37,6 +37,8 @@ import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
 import { useLeadFunnelData, funnelForWindow, formatInrCompact } from "@/lib/queries/vendorAnalytics";
+import { MarketingOptIn } from "@/components/MarketingOptIn";
+import { useCheckoutOptIn } from "@/lib/marketingConsent";
 import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, publishFreeAdOrder, adReachRefusal, type AdSpec } from "@/lib/queries/payments";
 import { quoteAdDiscount, discountRefusal, DISCOUNT_CHECKOUT_TIMEOUT_S, type AdQuote } from "@/lib/queries/discounts";
 import { DiscountCodeField } from "@/components/vendor/DiscountCodeField";
@@ -1061,6 +1063,8 @@ function CostSummary({
   const [quote, setQuote] = useState<AdQuote | null>(null);
   const [quoteNote, setQuoteNote] = useState<string | null>(null);
   const [requoting, setRequoting] = useState(false);
+  // Offers by WhatsApp and email (Mitra, 2026-11-24): never ticked for you, recorded with "checkout" on Pay.
+  const optIn = useCheckoutOptIn();
   const quotedFor = useRef("");
   const specKey = [selectedAdTypes.join(","), selectedDuration, selectedProducts.join(","), messages].join("|");
   useEffect(() => {
@@ -1211,6 +1215,7 @@ function CostSummary({
   // Razorpay collects payment, the server verifies the signature and publishes.
   const startCheckout = async () => {
     if (!vendorId) { toast.error("Sign in as a vendor to advertise"); return; }
+    optIn.commit();
     const spec = buildSpec();
     setBusy(true);
     try {
@@ -1308,6 +1313,8 @@ function CostSummary({
         {requoting && <p className="mt-1.5 text-xs text-gray-500" role="status">Updating the discount for this order…</p>}
         {quoteNote && <p className="mt-1.5 text-xs text-destructive" role="alert">{quoteNote}</p>}
       </div>
+
+      <MarketingOptIn value={optIn.offers} onChange={optIn.setOffers} hide={optIn.hide} idPrefix="ads-offers" className="mb-4" />
 
       <button onClick={startCheckout} disabled={busy || requoting}
         className="w-full bg-[#ff2160] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#ff2160]/80 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 min-[1400px]:text-base">
@@ -1654,6 +1661,8 @@ function GetVerified({ vendorId, planGrantsSeal, planName, registered, onCreated
   const [quote, setQuote] = useState<AdQuote | null>(null);
   const [quoteNote, setQuoteNote] = useState<string | null>(null);
   const [bought, setBought] = useState<string | null>(null);
+  // Offers by WhatsApp and email (Mitra, 2026-11-24), as on the campaign checkout.
+  const optIn = useCheckoutOptIn();
   const spec = (id: string): AdSpec => ({ placementIds: [id], days: VERIFICATION_DAYS[id] ?? 30, items: [], campaignLabel: id });
   const price = chosen ? computeOrderRupees([chosen], VERIFICATION_DAYS[chosen] ?? 30, 0) : 0;
   const payable = quote ? quote.total : price;
@@ -1684,6 +1693,7 @@ function GetVerified({ vendorId, planGrantsSeal, planName, registered, onCreated
   };
   const buy = async () => {
     if (!vendorId || !chosen) { toast.error("Sign in as a seller first"); return; }
+    optIn.commit();
     setBusy(true);
     try {
       const order = await createRazorpayOrder(spec(chosen), quote?.code);
@@ -1764,6 +1774,7 @@ function GetVerified({ vendorId, planGrantsSeal, planName, registered, onCreated
             disabled={busy}
           />
           {quoteNote && <p className="text-xs text-destructive" role="alert">{quoteNote}</p>}
+          <MarketingOptIn value={optIn.offers} onChange={optIn.setOffers} hide={optIn.hide} idPrefix="verify-offers" />
           <button onClick={buy} disabled={busy} data-testid="verify-buy"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ff2160] py-3.5 text-base font-bold text-white transition-all hover:bg-[#ff2160]/80 disabled:opacity-60">
             {busy ? "Processing…" : payable > 0 ? <>{`Pay · ₹${payable.toLocaleString("en-IN")}`}<ChevronRight className="h-5 w-5" /></> : <>Get it for free<ChevronRight className="h-5 w-5" /></>}

@@ -34,6 +34,7 @@ import {
   formatINR, tierStyle, isUnlimited, usagePct, yearlySavingsPct, yearlySavingsAmount,
   type Plan, type PlanId, type PlanDisplay,
 } from "@/lib/plan";
+import { SUPPORT_EMAIL } from "@/lib/supportContact";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const page = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } } };
@@ -650,7 +651,7 @@ export default function Subscription() {
         </motion.div>
 
         {/* FAQ: admin-editable (surface "subscription"), 2026-09-23.
-            "Contact us" writes to hello@cosora.in (Mitra, 2026-09-25, Phase 24). It
+            "Contact us" writes to support's email, SUPPORT_EMAIL (Mitra, 2026-09-25, Phase 24). It
             used to open /help, as Andy's FAQ content asked, but that is the buyer Help
             page, whose chat gives canned replies: vendors have no support page
             (myprofileflags.md, MPF-15). */}
@@ -660,7 +661,7 @@ export default function Subscription() {
             description="Everything you need to know about our plans"
             contact={{
               label: "Contact us",
-              href: "mailto:hello@cosora.in?subject=Subscription%20question",
+              href: `mailto:${SUPPORT_EMAIL}?subject=Subscription%20question`,
               hint: "Still have a question about plans or billing?",
             }}
           />

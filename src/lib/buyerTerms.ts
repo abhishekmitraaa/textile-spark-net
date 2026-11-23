@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
  * buyer_terms_version(): accept_buyer_terms() refuses any other ("stale_terms"), so a tab still showing old wording
  * can't record an acceptance of the new one. A change to what a buyer agrees to is a new version in both places.
  */
-export const BUYER_TERMS_VERSION = "2026-11-v2";
+export const BUYER_TERMS_VERSION = "2026-11-v3";
 
 /**
  * Records the acceptance and finishes sign-up in one database call (accept_buyer_terms, migration 20261114100000):

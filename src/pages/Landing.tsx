@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CosoraLogo from "@/components/CosoraLogo";
+import { COMPANY_COPYRIGHT, COMPANY_REGISTRATION_LINE } from "@/lib/company";
+import { LEGAL_LINKS } from "@/lib/legalLinks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomePath } from "@/hooks/useHomePath";
 import studioHero from "@/assets/cosora-studio-hero.jpg";
@@ -520,6 +522,7 @@ const Landing = () => {
                     is same-origin but outside this router. A plain anchor, not a
                     <Link>: react-router would match nothing and render the 404. */}
                 <li><a href="/blogs/about" className="text-zinc-500 transition-colors hover:text-zinc-900">About</a></li>
+                <li><Link to="/contact" className="text-zinc-500 transition-colors hover:text-zinc-900">Contact</Link></li>
                 <li><a href="#why" className="text-zinc-500 transition-colors hover:text-zinc-900">Why Cosora</a></li>
                 <li><a href="#how" className="text-zinc-500 transition-colors hover:text-zinc-900">How it works</a></li>
               </ul>
@@ -535,9 +538,21 @@ const Landing = () => {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-zinc-200 pt-6 sm:flex-row">
-            <p className="text-xs text-zinc-400">© 2026 Cosora. All rights reserved.</p>
-            <p className="text-xs text-zinc-400">Made in India for India&apos;s fashion trade.</p>
+          {/* Who runs Cosora (Mitra, 2026-11-24): the same line, links, address and CIN as every public page. */}
+          <div className="mt-12 border-t border-zinc-200 pt-6">
+            <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+              {LEGAL_LINKS.map((l) =>
+                "external" in l ? (
+                  <a key={l.href} href={l.href} className="font-medium text-zinc-600 transition-colors hover:text-zinc-900">{l.label}</a>
+                ) : (
+                  <Link key={l.href} to={l.href} className="font-medium text-zinc-600 transition-colors hover:text-zinc-900">{l.label}</Link>
+                ),
+              )}
+            </nav>
+            <p className="mt-4 text-xs text-zinc-500" data-no-translate>{COMPANY_COPYRIGHT}</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400" data-no-translate>
+              {COMPANY_REGISTRATION_LINE}
+            </p>
           </div>
         </div>
       </footer>

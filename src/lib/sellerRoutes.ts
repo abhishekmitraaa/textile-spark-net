@@ -21,6 +21,8 @@ const SHARED_PATHS = [
   "/terms",
   "/privacy",
   "/grievance",
+  "/contact",
+  "/refund-policy",
   "/careers",
 ];
 

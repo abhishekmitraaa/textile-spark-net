@@ -2,7 +2,7 @@
 
 > Cosora is a B2B sourcing marketplace for India's fashion and textile industry. A buyer describes a requirement once; verified manufacturers reply with price, minimum order quantity and lead time in a form that can be compared side by side; the negotiation, order and delivery then stay in one thread.
 
-Cosora serves two audiences as equals: buyers (fashion brands, retailers, boutiques and designers sourcing product at scale) and vendors (manufacturers, mills, suppliers and service providers looking for qualified leads). It is operated by Cosora Technologies Pvt Ltd, founded in 2024.
+Cosora serves two audiences as equals: buyers (fashion brands, retailers, boutiques and designers sourcing product at scale) and vendors (manufacturers, mills, suppliers and service providers looking for qualified leads). Cosora is a brand of Fearce Textiles Private Limited (CIN U47912HR2024PTC118434), which owns and operates it; founded in 2024.
 
 Figures Cosora publishes about itself: ₹500Cr+ sourced through the platform, 50,000+ products listed, 10,000+ verified brands, 5,000+ manufacturers, 28 states covered.
 
@@ -27,4 +27,6 @@ The Journal at /blogs is Cosora's editorial section: practical, public guides on
 ## Optional
 
 - [Sitemap](https://www.cosora.in/sitemap.xml): every public URL, with last-modified timestamps
-- Contact: hello@cosora.in
+- [Contact](https://www.cosora.in/contact): Fearce Textiles Private Limited, the company that owns and operates Cosora, and how to reach it
+- [Privacy Policy](https://www.cosora.in/privacy), [Terms](https://www.cosora.in/terms), [Refund Policy](https://www.cosora.in/refund-policy)
+- Contact: teamcosora@gmail.com, +91 7904840367 (phone and WhatsApp)
