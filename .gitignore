@@ -41,3 +41,6 @@ playwright-report/
 .impeccable/
 # Local-stack Playwright report (playwright.local.config.ts)
 playwright-report-local/
+
+# Python bytecode (scripts/samples, 2026-11-24)
+__pycache__/
