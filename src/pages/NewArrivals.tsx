@@ -68,6 +68,7 @@ import { usePreferences } from "@/lib/preferencesStore";
 import { usePrefCategoryMap } from "@/lib/queries/forYou";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
+import { useIsSampleVendor } from "@/lib/samples";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
 // the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
@@ -109,6 +110,8 @@ const VIDEO_RAIL_MAX = 12;
 function ProductCard({ product }: { product: Product }) {
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
+  // A sample listing (2026-11-24) carries a tag where Call Now would be.
+  const isSample = useIsSampleVendor(product.vendorId);
   const savedState = useSaved();
   const saved = Boolean(savedState.products[product.id]);
   const [hovered, setHovered] = useState(false);
@@ -162,12 +165,18 @@ function ProductCard({ product }: { product: Product }) {
         {/* Spacer absorbs uneven text height so every Call Now aligns at the card's bottom edge */}
         <div className="flex-1" />
 
-        <button
-          onClick={() => callVendor(product.vendorId, product.name)}
-          className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
-        >
-          <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
-        </button>
+        {isSample ? (
+          <p className="mt-2 lg:mt-3 w-full rounded-lg border border-amber-300 bg-amber-50 py-2 lg:py-2.5 text-center text-[10px] lg:text-xs font-bold uppercase tracking-wide text-amber-800">
+            Sample listing · not for sale
+          </p>
+        ) : (
+          <button
+            onClick={() => callVendor(product.vendorId, product.name)}
+            className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
+          >
+            <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
+          </button>
+        )}
       </div>
     </div>
   );
@@ -180,6 +189,7 @@ function ProductCard({ product }: { product: Product }) {
 function LookingForCard({ product, className }: { product: Product; className?: string }) {
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
+  const isSample = useIsSampleVendor(product.vendorId);
   return (
     <div className={cn("relative rounded-lg overflow-hidden border border-gray-100 bg-white flex flex-col", className)}>
       <CardLinkOverlay to={`/product/${product.id}`} />
@@ -195,12 +205,18 @@ function LookingForCard({ product, className }: { product: Product; className?: 
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>
         </p>
         <div className="flex-1" />
-        <button
-          onClick={() => callVendor(product.vendorId, product.name)}
-          className={cn(ABOVE_CARD_LINK, "mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded")}
-        >
-          <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
-        </button>
+        {isSample ? (
+          <p className="mt-1 lg:mt-1.5 w-full rounded border border-amber-300 bg-amber-50 py-1.5 lg:py-2 text-center text-[9px] lg:text-xs font-bold uppercase tracking-wide text-amber-800">
+            Sample listing · not for sale
+          </p>
+        ) : (
+          <button
+            onClick={() => callVendor(product.vendorId, product.name)}
+            className={cn(ABOVE_CARD_LINK, "mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded")}
+          >
+            <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
+          </button>
+        )}
       </div>
     </div>
   );

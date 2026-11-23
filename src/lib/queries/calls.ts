@@ -9,6 +9,7 @@ import { openCallNumber } from "@/lib/callStore";
 import { isOverOverlay } from "@/hooks/useBackCloses";
 import { errorMessage } from "@/lib/errorMessage";
 import type { CallRecord } from "@/lib/chatData";
+import { SAMPLE_CONTACT_COPY, useSampleVendorIds } from "@/lib/samples";
 
 // ─────────────────────────────────────────────────────────────
 // Click-to-call.
@@ -328,9 +329,15 @@ export function useCallVendor() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const reveal = useRevealVendorContact();
+  const samples = useSampleVendorIds();
 
   return useCallback(
     async (vendorId: string, productContext?: string) => {
+      // A sample seller (2026-11-24) has no number and takes no chats: say so, and dial nothing.
+      if (samples.has(vendorId)) {
+        toast.info(SAMPLE_CONTACT_COPY.title, { description: SAMPLE_CONTACT_COPY.description });
+        return;
+      }
       // A vendor's number is shared with signed-in accounts only.
       if (!user) {
         const copy = CALL_REFUSAL_COPY.not_signed_in;
@@ -381,7 +388,7 @@ export function useCallVendor() {
       // Mobile → dial; desktop → show the number on screen.
       placeCall(result.numbers?.brandName ?? "vendor", phone);
     },
-    [user, navigate, qc, reveal],
+    [user, navigate, qc, reveal, samples],
   );
 }
 

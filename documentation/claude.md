@@ -766,6 +766,14 @@ undocumented. Deep technical rationale for each lives in
   global limit in the dashboard silently does nothing.
 - **No mock data in production.** Dev-only helpers return `[]` in a production build; an
   empty catalogue is meant to render empty. Do not seed demo rows to "fix" an empty state.
+  **One labelled exception: the sample sellers** (Mitra, 2026-11-24, "option 1"; `documentation/sample-listings-2026-11-24.md`).
+  28 sample stores (one per main category, 10 listings each) show how Cosora looks. They are labelled everywhere
+  ("(Sample)" store names, "Sample ·" listing names, a notice on product and store pages, a tag on feed cards), and
+  nobody can reach them: `admin.refuse_sample_contact` refuses chats, requirements and reviews, they have no phone,
+  GSTIN or badge, their accounts are banned, and `useCallVendor()` dials nothing. A new way to contact a seller checks
+  `public.is_sample_vendor()` (or the app's `useIsSampleVendor()`); a new card that offers Call shows the sample tag
+  instead. Never add an unlabelled sample, a sample review, or a photo Cosora doesn't own. They all go with
+  `scripts/samples/remove-sample-listings.sql`.
 - **A view is monotonic; a like is a toggle. They are modelled differently on purpose.**
   Views go through a SECURITY DEFINER `increment_video_view(uuid)` scoped to
   `status='live'` (mirroring `increment_product_view`) — a buyer owns no video row, so the

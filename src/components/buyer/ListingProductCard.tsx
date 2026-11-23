@@ -11,6 +11,7 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
+import { useIsSampleVendor } from "@/lib/samples";
 
 // ─────────────────────────────────────────────────────────────
 // Shared compact listing card used across buyer feed pages
@@ -29,6 +30,8 @@ interface ListingProductCardProps {
 const ListingProductCard = ({ product, className }: ListingProductCardProps) => {
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
+  // A sample listing (2026-11-24) carries a tag where Call Now would be: its seller can't be called.
+  const isSample = useIsSampleVendor(product.vendorId);
   const saved = useSaved();
   const isSaved = Boolean(saved.products[product.id]);
   const [hovered, setHovered] = useState(false);
@@ -74,12 +77,18 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
         {/* Spacer absorbs uneven text height so every Call Now aligns at the card's bottom edge */}
         <div className="flex-1" />
 
-        <button
-          onClick={() => callVendor(product.vendorId, product.name)}
-          className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
-        >
-          <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
-        </button>
+        {isSample ? (
+          <p className="mt-2 lg:mt-3 w-full rounded-lg border border-amber-300 bg-amber-50 py-2 lg:py-2.5 text-center text-[10px] lg:text-xs font-bold uppercase tracking-wide text-amber-800">
+            Sample listing · not for sale
+          </p>
+        ) : (
+          <button
+            onClick={() => callVendor(product.vendorId, product.name)}
+            className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
+          >
+            <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
+          </button>
+        )}
       </div>
     </div>
   );

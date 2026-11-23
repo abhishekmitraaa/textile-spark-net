@@ -41,6 +41,8 @@ import { cn } from "@/lib/utils";
 import trustedSeal from "@/assets/Trustedseal.png";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 import { useOverlayState } from "@/hooks/useBackCloses";
+import { SampleListingNotice } from "@/components/buyer/SampleProfile";
+import { useIsSampleVendor } from "@/lib/samples";
 
 // === Animation constants ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -427,7 +429,9 @@ const ProductDetail = () => {
   // reviewed — which, after the guards below, is the only kind rendered.
   // Nor by the seller who listed it: guard_review_write refuses that, so the
   // CTA is hidden rather than offered and refused.
-  const canReview = Boolean(row?.id) && row?.vendorId !== user?.id;
+  // A sample listing (2026-11-24) takes no chats, calls or reviews: the database refuses them, so the buttons go too.
+  const isSample = useIsSampleVendor(row?.vendorId);
+  const canReview = Boolean(row?.id) && row?.vendorId !== user?.id && !isSample;
   const myReview = (productReviews?.reviews ?? []).find((r) => r.buyerId && r.buyerId === user?.id);
   const breakdownPct = (star: number) => productReviews?.breakdown.find((b) => b.stars === star)?.percent ?? 0;
   const reviewCards: Review[] = (productReviews?.reviews ?? []).map((r, i) => ({
@@ -566,6 +570,9 @@ const ProductDetail = () => {
 
         {/* Product info column */}
         <motion.div className="mt-3 space-y-3 lg:mt-0" variants={reduced ? {} : page} initial="hidden" animate="show">
+
+        {/* A sample listing says so before anything else (2026-11-24). */}
+        <SampleListingNotice vendorId={row?.vendorId} kind="listing" />
 
         {/* Breadcrumb + header */}
         <motion.div variants={sect}>
@@ -710,15 +717,15 @@ const ProductDetail = () => {
               <SizeChartSheet chart={product.sizeChart} offered={product.chartOffered} open={sizeChartOpen} onOpenChange={setSizeChartOpen} />
             )}
 
-            {/* Chat + Call Now (inline, per reference) */}
-            <div className="flex items-center gap-2">
+            {/* Chat + Call Now (inline, per reference); none on a sample listing. */}
+            {!isSample && <div className="flex items-center gap-2">
               <button onClick={() => setChatOptionsOpen(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
                 <MessageCircle className="h-4 w-4" /> Chat
               </button>
               <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-brand-buyer text-brand-buyer py-3 text-sm font-bold hover:bg-brand-buyer/5 transition-colors active:scale-[0.98]">
                 <Phone className="h-4 w-4" /> Call Now
               </button>
-            </div>
+            </div>}
 
             {/* Specifications (collapsible) */}
             <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">

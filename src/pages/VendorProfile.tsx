@@ -44,6 +44,8 @@ import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOve
 import { useStepBack } from "@/hooks/useStepBack";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useSavedVendors, useToggleSavedVendor } from "@/lib/queries/savedVendors";
+import { SampleListingNotice } from "@/components/buyer/SampleProfile";
+import { useIsSampleVendor } from "@/lib/samples";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -233,7 +235,9 @@ const VendorProfile = () => {
   // offering an action whose insert can only fail.
   // A seller can't review their own store (guard_review_write refuses it), so
   // the CTA is hidden on it rather than offered and refused.
-  const canReview = Boolean(vendor?.id) && vendor?.id !== user?.id;
+  // A sample store (2026-11-24) takes no chats, calls or reviews: the database refuses them, so the buttons go too.
+  const isSample = useIsSampleVendor(vendorId);
+  const canReview = Boolean(vendor?.id) && vendor?.id !== user?.id && !isSample;
   const myReview = reviewList.find((r) => r.buyerId && r.buyerId === user?.id);
   const fmtReviewDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -477,22 +481,26 @@ const VendorProfile = () => {
               their own (vendor_profiles.whatsapp, collected at onboarding) and
               the same contact gate the Call button obeys allows it. It is a
               click-to-chat link, not the Cloud API — see lib/messaging.ts. */}
-          <div className={cn("bg-white px-3 py-3 grid gap-2", canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
+          <div className={cn("bg-white px-3 py-3 grid gap-2", isSample ? "grid-cols-1" : canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={toggleFollow}
               className={cn("flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors",
                 following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-brand-buyer/10 text-brand-buyer hover:bg-brand-buyer/15")}>
               {following ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
               {following ? "Unfollow" : "Follow"}
             </motion.button>
-            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate(chatHref)}
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
-              <MessageCircle className="h-4 w-4" /> Chat
-            </motion.button>
-            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => callVendor(vendorId, brandName)}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors">
-              <Phone className="h-4 w-4" /> Call Now
-            </motion.button>
-            {canWhatsApp && (
+            {!isSample && (
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate(chatHref)}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
+                <MessageCircle className="h-4 w-4" /> Chat
+              </motion.button>
+            )}
+            {!isSample && (
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => callVendor(vendorId, brandName)}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors">
+                <Phone className="h-4 w-4" /> Call Now
+              </motion.button>
+            )}
+            {canWhatsApp && !isSample && (
               <motion.button whileTap={TAP} transition={TAP_T} onClick={openWhatsApp}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
                 <Send className="h-4 w-4" /> WhatsApp
@@ -500,6 +508,9 @@ const VendorProfile = () => {
             )}
           </div>
         </motion.section>
+
+        {/* A sample store says so (2026-11-24). */}
+        <SampleListingNotice vendorId={vendorId} kind="store" />
 
         {/* ══ ABOUT US ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -1089,10 +1100,10 @@ const VendorProfile = () => {
                       <span className={cn("font-bold text-gray-700 truncate", gridCols === 2 ? "text-[10px]" : "text-[8px]")}>{product.location}</span>
                     </div>
                     <CardSpecs fabric={product.fabric} gsm={product.gsm} fit={product.fit} className="mt-0.5" lineClassName={cn(gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")} />
-                    <button onClick={() => callVendor(vendorId, product.name)}
+                    {!isSample && <button onClick={() => callVendor(vendorId, product.name)}
                       className={cn(ABOVE_CARD_LINK, "mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
                       <Phone className={gridCols === 2 ? "h-3 w-3" : "h-2.5 w-2.5"} /> Call Now
-                    </button>
+                    </button>}
                   </div>
                 </div>
               );

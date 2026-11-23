@@ -1,17 +1,17 @@
-# Graph Report - legal  (2026-11-24)
+# Graph Report - samples  (2026-11-24)
 
 ## Corpus Check
-- 1194 files · ~2,035,228 words
+- 1201 files · ~2,080,066 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 14 file(s) not represented in the graph (top: (none) 6, .css 2, .example 1)
 
 ## Summary
-- 10016 nodes · 24411 edges · 538 communities (333 shown, 205 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 1612 edges (avg confidence: 0.94)
+- 10049 nodes · 24490 edges · 528 communities (318 shown, 210 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 1614 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d2f50faa`
+- Built from commit: `5439049d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,17 +20,17 @@
 - Sale.tsx
 - public.subscription_plans
 - cn
-- DialogContent
+- errorMessage
 - public.profiles
 - 20261118190000_product_moderation.sql
 - public.product_videos
 - @tanstack/react-query
 - Test Run History
-- public.support_tickets
+- ads.ts
 - OtpVerify.tsx
 - useLang
 - Business Rules — Discovered/Decided During Development
-- sql
+- MyQuotes.tsx
 - AccountManager.tsx
 - ref_node_path
 - Onboarding.tsx
@@ -53,40 +53,39 @@
 - ref_node_fs
 - payments.ts
 - _shared/adPricing.ts
-- MobileBottomNav
+- react-router-dom
 - Log
 - profile-save-diff.spec.ts
-- Input
+- MyPayments.tsx
 - Open
-- Help.tsx
+- 20260801095820_chat_moderation_and_account_suspension.sql
 - freshAccount
 - requirementSchemas.ts
 - changelog.md
 - seller-home-low.spec.ts
-- DashboardLayout
+- ChatThread.tsx
 - 20260929114918_blog_cms_rpcs.sql
-- Leads.tsx
+- plan.ts
 - Quotes.tsx
 - vendor-serious.spec.ts
-- preferencesStore.ts
+- ForYou.tsx
 - verifiedUserId
 - _shared/discounts.ts
 - auth.users
 - searchFilters.ts
 - Advertisements.tsx
 - Notifications.tsx
-- savedStore.ts
+- rfqs.ts
 - public.rfqs
 - package.json
 - sellerCategories.ts
-- Terms.tsx
+- notifications.ts
 - notification-dispatch/index.ts
 - devDependencies
-- buyerCategoryImages.ts
 - freelancersData.ts
 - Vendor Side
 - ad-slot-map-check.mjs
-- framer-motion
+- RecentlyViewed.tsx
 - Local-stack E2E — `tests/local/` (Help & Support launch gate, P7)
 - 20261120140000_low_batch5.sql
 - main.tsx
@@ -98,45 +97,45 @@
 - 20261009193707_subscriptions_p8_crm.sql
 - ForYou.tsx
 - ProfileAccountPrefs.tsx
-- SellerHome.tsx
+- supabase.ts
 - Admin Side
 - Technical Implementation
 - registration-fixes.spec.ts
 - reviews
-- 20260930212818_support_schema.sql
+- public.support_tickets
 - discount-flow-check.mjs
 - i18n-coverage-check.mjs
-- admin.ad_reason_codes
+- 20261120100000_medium_batch4.sql
 - surface-sweep.py
-- 20260930213451_support_admin_rpcs.sql
+- Products.tsx
 - serviceVendorsData.ts
 - VideoCloseUpsViewer.tsx
-- BusinessReachSheets.tsx
+- runStateOf
 - Medium bugs, batch 4 of 4: speed and database (2026-11-20)
 - invoice-render/index.ts
 - vendorOptions
 - OldAdvertisements.tsx
-- public.support_events
+- sellerHome.ts
 - Cosora — Project Memory (read this first, every session)
-- VendorSettings.tsx
+- i18n.ts
 - video-closeups-bunny.spec.ts
 - admin.audit_log
 - engagement.ts
 - vendorDashboard.ts
-- public.admin_support_get
-- Analytics.tsx
+- vendorAnalytics.ts
+- Vendor analytics — three modules, one rule (2026-09-07)
 - useAuth
 - public.search_query_embeddings
 - lib.mjs
 - env
 - marketplace.k6.js
-- recentlyViewedStore.ts
-- carousel.tsx
+- savedStore.ts
+- otp.ts
 - siteConfig.ts
 - public.conversations
 - lib/adPricing.ts
 - 20260928070410_customers.sql
-- vendorStore.ts
+- InvoiceDetail.tsx
 - 20261013100100_admin_activity_views.sql
 - f3-seed.mjs
 - 20261031100000_ranking_f3_attribute_definitions.sql
@@ -144,10 +143,10 @@
 - attributeDefinitions.ts
 - Seller Home audit, 2026-11-15
 - F. Products and Upload
-- queries/searchTrends.ts
+- chatData.ts
 - react-router-dom
 - autopay-flow-check.mjs
-- rfqs.ts
+- DirectRequestThread.tsx
 - onboarding-back.spec.ts
 - VendorProfile.tsx
 - Test Log & Test Suites
@@ -159,7 +158,7 @@
 - AutoTranslate.tsx
 - B. Seller Home page
 - Review Focus
-- i18n.ts
+- returnTo.ts
 - steps
 - 20260929080502_discount_codes.sql
 - Search.tsx
@@ -168,26 +167,26 @@
 - faqs-admin-editable.spec.ts
 - ad-pricing-check.mjs
 - Cosora — Product Context
-- MyReviews.tsx
+- ProductDetail.tsx
 - 20261120100000_medium_batch4.sql
 - public.product_videos
 - components.json
-- public.product_photo_in_use
+- public.advertisements
 - 1. Seller Help (new surface `seller_help`, **active**)
 - Product moderation: remove and flag with managed reasons — design
-- Search on Cosora: how it works
-- public.support_attachments
+- 3.1 The text a listing is searched by
+- surface-sweep-analyze.py
 - pg_proc
 - catalogues.ts
 - public.csp_violations
 - image-search-check.mjs
 - notification-dispatch-check.mjs
 - hooks/use-toast.ts
-- support.k6.js
-- notificationsStore.ts
+- adPerformance.ts
+- toast.tsx
 - Review Focus
-- buyerCategories.ts
-- Freelancers.tsx
+- 20261002104116_admin_staff_registry.sql
+- seller-home-low.spec.ts
 - CrmLeadSheet.tsx
 - seller-home-fixes.spec.ts
 - compilerOptions
@@ -220,22 +219,22 @@
 - faq-cdn-propagation.mjs
 - stateCodeFor
 - 4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)
-- assertWrote
+- Admin-schema separation: rolling context
 - Help & Support: build plan
 - Appendix B. Browser test output
 - CompetitorAds.tsx
 - faqs-snapshot.spec.ts
 - Migrations — read this before applying any
 - suspension-gate-check.mjs
-- seller-home-medium-b.spec.ts
+- build.py
 - Personalised ranking, Part 3: Fit — design
 - Personalised ranking, Part 1: Foundations — design
 - I. Leads, quotes and Analytics
 - faq-snapshot-check.mjs
 - rls-policy-check.mjs
 - countries.ts
-- Business Rules — Discovered/Decided During Development
-- Record of the build (2026-11-16)
+- PostRequirement.tsx
+- File structure
 - compilerOptions
 - 10. REFERENCE VOCABULARY (Pattern Names the Agent Should Know)
 - Review Focus
@@ -243,8 +242,8 @@
 - RFQ / Leads Pipeline (R1–R3) Implementation Plan
 - engagement-event-failures-check.mjs
 - public.buyer_taste_embedding
-- 2. Phase-by-phase build narrative
-- first-fixes.spec.ts
+- Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10
+- @playwright/test
 - fx-rates-refresh/index.ts
 - 20261118160000_feed_rank.sql
 - Razorpay setup — subscriptions + ads
@@ -256,31 +255,31 @@
 - Review Focus
 - Review Focus
 - buyerGeography.ts
-- vendorPayments.ts
-- BusinessProfileScorePage.tsx
+- queries/discounts.ts
+- Ad types done by hand: plan and record (2026-11-17)
 - 20261122110000_admin_review_medium1.sql
 - snapshot-check.mjs
 - Review Focus
 - account-deletion-sweep/index.ts
-- 2026-09-05 — Chat + Chat-Moderation Full Pipeline (T1–T13, both layers)
+- seller-home-low-b.spec.ts
 - admin-chat-moderation.spec.ts
 - mp7-admin-vendor-panels.spec.ts
 - mp7-product-detail-real-data.spec.ts
 - @supabase/supabase-js
-- FreelancerProfile.tsx
+- K. Messages
 - 9. AI TELLS (Forbidden Patterns)
-- Performance Rules
+- useVendorData.ts
 - quote-rfq-open-check.mjs
-- pg_temp.act
+- Gesture and Drag Interactions
 - optionalCredential
 - The work left from the Seller Home review: plan and record (2026-11-18)
 - public.admin_report_summary
 - 20260916090000_move_admin_flags_and_review_log_to_admin.sql
-- writeOwnVendorRow
+- Sample listings — plan and record (2026-11-24)
 - public.chat_unread_counts
 - Subscriptions P6: lead alerts and lead channels (2026-10-09)
 - Claude Code Documentation Hooks
-- ad-attacks.mjs
+- vite
 - Local stack: a copy of Cosora's database on this machine
 - lead_ranking_equivalence.sql
 - buyer-signup.spec.ts
@@ -291,7 +290,7 @@
 - 11. REDESIGN PROTOCOL
 - 3. DEFAULT ARCHITECTURE & CONVENTIONS
 - 6. PERFORMANCE & ACCESSIBILITY GUARDRAILS
-- Architecture
+- registration-documents.spec.ts
 - 20261122130000_admin_review_medium3.sql
 - Flag-fix pass (2026-09-25): quote roles, the Admin Log, refused events, cron alarms
 - purge-orphaned-kyc-objects.mjs
@@ -300,13 +299,13 @@
 - The Animation Decision Framework
 - clip-path for Animation
 - buyer-minor-fixes-b.spec.ts
-- 5. The contextual targeting algorithm — full technical detail
+- public.accept_buyer_terms
 - My Profile work: flags
 - public.enforce_product_cap
-- Low bugs, batch 2 of 6: listings, stores and browsing content (2026-11-20)
+- AddBusinessCategoriesModal.tsx
 - .instructions.md
 - OpenRfqLeads.tsx
-- Testing Patterns
+- Cosora — Deferred / Follow-Up Items
 - csv.ts
 - faqs-snapshot/index.ts
 - support-sweep/index.ts
@@ -315,15 +314,15 @@
 - 12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)
 - 5. CONTEXT-AWARE PROACTIVITY
 - 8. DARK MODE PROTOCOL
-- search-smoke.mjs
+- Core Philosophy
 - Medium bugs, batch 3 of 4: quotes, chat, profile, Seller Home (2026-11-19)
 - migrate-kyc-to-private-bucket.mjs
 - The Sonner Principles (Building Loved Components)
 - Cosora
 - product-thumbs/index.ts
-- Visibility.tsx
+- RealtimeHubProvider
 - Low bugs, batch 1 of 6: buyer Home and feeds (2026-11-20)
-- Medium bugs, batch 1 of 4: buyer browsing (2026-11-19)
+- ToDo
 - 20260910130000_vendor_catalog_recompute_async.sql
 - 20260915170000_admin_flags_and_review_log_rpcs.sql
 - admin.product_views_fold
@@ -331,16 +330,16 @@
 - Medium bugs, batch 2 of 4: frame, sign-up gate, Back, Register (2026-11-19)
 - Cosora-Admin review 2026-11-22 — High fixes, batch 1 (AR-H01 – AR-H18)
 - Interest photos
-- Company disclosure and messaging consent — plan (2026-11-24)
+- @radix-ui/react-select
 - embed-query/index.ts
 - site-config-snapshot/index.ts
 - public.vendor_ad_verifications
 - 20261013100000_vendor_tax_ids_guard.sql
-- Reviews.tsx
+- @radix-ui/react-tooltip
 - @radix-ui/react-collapsible
 - 2026-09-10 (Master Prompt 6) — first load/scale pass: 2 severe defects invisible at production volume
 - D. Notifications
-- messaging.ts
+- react-dom
 - @playwright/test
 - 17_rls_explain.sql
 - view_cap_race.sh
@@ -362,48 +361,37 @@
 - summary.sql
 - 20260924161525_fx_rates_cache_and_daily_refresh.sql
 - Subscriptions P5: ad reach by state (2026-10-09)
-- productDocuments.ts
-- following.spec.ts
+- tailwind-merge
+- vaul
 - Cosora-Admin review — Medium batch 1 (AR-M01 to AR-M21), 2026-11-22
 - Cosora-Admin review — Medium batch 2 (AR-M22 to AR-M41), 2026-11-22
 - Spring Animations
-- Seller Home audit: the Low items, plan and record (2026-11-17)
+- remove-sample-listings.sql
 - usePendingEnquiry.ts
-- recentSearches.ts
-- CSS Transform Mastery
+- ClarityMask.tsx
+- ScrollToTopOnNavigate.tsx
 - Cosora-Admin review — Low batch 1 (AR-L01 to AR-L20), 2026-11-23
 - Cosora-Admin review — Low batch 3 (AR-L41 to AR-L52), 2026-11-23
-- sub
+- Landing
 - UI language — catalogues, the page translator, the account setting (2026-09-26)
-- buy
 - 20260716120100_subscription_functions.sql
 - The Three Sides of Cosora
-- @radix-ui/react-aspect-ratio
 - admin-review-medium3-plan-2026-11-22.md
-- cmdk
-- qrcode
-- @radix-ui/react-accordion
 - @radix-ui/react-alert-dialog
-- @radix-ui/react-checkbox
-- @radix-ui/react-label
-- @radix-ui/react-popover
-- @radix-ui/react-progress
-- @radix-ui/react-slot
+- form.tsx
 - @radix-ui/react-toast
-- react-day-picker
-- zod@^3.25.76
 - 20261120110000_low_batch2.sql
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 467 edges
 2. `2026-09-05 — Documentation system moved into `documentation/`` - 256 edges
 3. `useAuth()` - 239 edges
-4. `react` - 231 edges
+4. `react` - 232 edges
 5. `lucide-react` - 180 edges
 6. `sql()` - 154 edges
-7. `Test Run History` - 151 edges
-8. `react-router-dom` - 151 edges
-9. `Business Rules — Discovered/Decided During Development` - 135 edges
+7. `react-router-dom` - 151 edges
+8. `Test Run History` - 151 edges
+9. `Business Rules — Discovered/Decided During Development` - 136 edges
 10. `errorMessage()` - 130 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -411,77 +399,77 @@
   documentation/securityflags.md → src/lib/queries/calls.ts
 - `2026-09-05 — Documentation system moved into `documentation/`` --references--> `CallBlock`  [INFERRED]
   documentation/changelog.md → src/lib/queries/calls.ts
-- `5.4 Back in the browser` --references--> `fetchCatalogueByIds()`  [INFERRED]
-  documentation/search.md → src/lib/queries/products.ts
-- `2026-09-07 — Hybrid product search: DB layer verified, browser layer 10/10 GREEN` --references--> `useYouMightLike()`  [INFERRED]
-  documentation/test.md → src/lib/queries/products.ts
-- `4.4 Similar listings (`related_products`)` --references--> `useVendorOtherProducts()`  [INFERRED]
-  documentation/ranking.md → src/lib/queries/products.ts
+- `2026-08-02 — Chat moderation 2.5c (contact card gating)` --references--> `useContactGate()`  [INFERRED]
+  documentation/test.md → src/lib/queries/calls.ts
+- `What is live` --references--> `useCallVendor()`  [INFERRED]
+  documentation/sample-listings-2026-11-24.md → src/lib/queries/calls.ts
+- `Product / UX rules` --references--> `reviews()`  [INFERRED]
+  documentation/claude.md → tests/local/review-fixes.spec.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (538 total, 205 thin omitted)
+## Communities (528 total, 210 thin omitted)
 
 ### Community 0 - "public.vendor_profiles"
 Cohesion: 0.02
-Nodes (142): pg_temp.claims(), pg_temp.feed_md5(), pg_temp.feed_products_v0(), pg_temp.reach_fixture(), public.subscription_plans, public.get_vendor_plan(), public.active_ads(), public.ad_category_benchmarks() (+134 more)
+Nodes (142): pg_temp.claims(), pg_temp.feed_md5(), pg_temp.feed_products_v0(), pg_temp.reach_fixture(), pg_temp.submit(), public.subscription_plans, public.get_vendor_plan(), public.active_ads() (+134 more)
 
 ### Community 1 - "Sale.tsx"
 Cohesion: 0.05
-Nodes (83): Buyer side and public pages (61), Display currency — converted for display, never for money (2026-09-24), BuyerShell(), BuyerShellProps, BuyerBell(), BuyerTopBar(), ChatsButton(), useMinWidth() (+75 more)
+Nodes (87): Buyer side and public pages (61), BuyerShell(), BuyerTopBar(), ChatsButton(), useMinWidth(), HOME_TABS, HomeTabHref, homeTabOf() (+79 more)
 
 ### Community 2 - "public.subscription_plans"
 Cohesion: 0.02
-Nodes (100): admin.apply_due_plan_prices(), public.subscription_invoices, public.subscription_payment_orders, public.subscription_usage, public.vendor_subscriptions, subscription_invoices_vendor_idx, subscription_payment_orders_vendor_idx, vendor_subscriptions_period_idx (+92 more)
+Nodes (96): admin.apply_due_plan_prices(), public.subscription_invoices, public.subscription_payment_orders, public.subscription_usage, public.vendor_subscriptions, subscription_invoices_vendor_idx, subscription_payment_orders_vendor_idx, vendor_subscriptions_period_idx (+88 more)
 
 ### Community 3 - "cn"
 Cohesion: 0.03
-Nodes (129): class-variance-authority, @radix-ui/react-dialog, react, NavLink, NavLinkCompatProps, SIZES, StarSize, NOT_YOURS (+121 more)
+Nodes (144): class-variance-authority@^0.7.1, class-variance-authority, react, NavLink, NavLinkCompatProps, SIZES, StarSize, Alert (+136 more)
 
-### Community 4 - "DialogContent"
-Cohesion: 0.06
-Nodes (73): Client, lucide-react, sonner, CallNumberModal(), ProductQuoteRequestModal(), ProductQuoteRequestModalProps, Row, copyText() (+65 more)
+### Community 4 - "errorMessage"
+Cohesion: 0.03
+Nodes (134): Client, Vendor private fields — readers first, then the revoke (admin completion Phase 4, 2026-09-28), CallNumberModal(), SaveToFolderModal(), copyText(), Mark(), Option(), PATHS (+126 more)
 
 ### Community 5 - "public.profiles"
 Cohesion: 0.02
-Nodes (91): pg_temp.claims(), pg_temp.ok(), pg_temp.try_as(), pg_temp.ok(), public.enforce_ad_location_scope(), public.enforce_catalogue_plan(), public.enforce_lead_cap(), trg_ads_location_scope (+83 more)
+Nodes (87): pg_temp.claims(), pg_temp.ok(), pg_temp.try_as(), pg_temp.ok(), public.account_is_active(), embedding_pipeline_health_log_status_idx, public.embedding_pipeline_health_log, public.record_embedding_pipeline_health() (+79 more)
 
 ### Community 6 - "20261118190000_product_moderation.sql"
 Cohesion: 0.08
 Nodes (17): pg_temp.pm_claims(), public.admin_flag_add(), public.get_vendor_plan(), public.my_product_cap(), public.vendor_entitlements(), admin.product_moderation_actions, admin.product_moderation_reasons, public.admin_flag_add() (+9 more)
 
 ### Community 7 - "public.product_videos"
-Cohesion: 0.04
-Nodes (47): pg_temp.as_admin(), pg_temp.claims(), pg_temp.latest_sub(), pg_temp.ok(), pg_temp.submit(), public.countries, admin.office_photos_before_20261113, admin.registration_exempt (+39 more)
+Cohesion: 0.03
+Nodes (48): pg_temp.as_admin(), pg_temp.claims(), pg_temp.latest_sub(), pg_temp.ok(), admin.vendor_overseas_tier(), public.countries, public.country_code_for(), public.overseas_lead_count() (+40 more)
 
 ### Community 8 - "@tanstack/react-query"
-Cohesion: 0.06
-Nodes (56): Brand colours, Business Rules — Predefined, Engineering conventions treated as product rules, Legal & compliance, Locale, Product / UX rules, MPF-1: Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin, Part 3: Fit (live 2026-11-15) (+48 more)
+Cohesion: 0.09
+Nodes (37): DeleteAccountCard(), InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, cancelDeletion(), confirmDeletion(), DeletionChannel (+29 more)
 
 ### Community 9 - "Test Run History"
 Cohesion: 0.02
-Nodes (124): 2026-06-02 — Playwright: New Arrivals buyer tabs, 2026-08-02 — Chat moderation 2.5d (contact gate refactor), 2026-08-02 — Flag-pattern regex verification, 2026-09-05 — Chat moderation 3 (notifications, suspension enforcement, contact gate), 2026-09-05 — `product-videos` storage reconciliation queries (Phase 5), 2026-09-05 — Video Closeup engagement counters + saves (Phases 2–3, DB layer), 2026-09-06 — Bunny Stream configuration probe + reconciliation false-positive (Phase 8), 2026-09-06 — Bunny Stream end to end, against the real library (Phase 8) (+116 more)
+Nodes (129): 2026-06-02 — Playwright: New Arrivals buyer tabs, 2026-08-02 — Chat moderation 2.5c (contact card gating), 2026-08-02 — Chat moderation 2.5d (contact gate refactor), 2026-08-02 — Flag-pattern regex verification, 2026-09-05 — Chat moderation 3 (notifications, suspension enforcement, contact gate), 2026-09-05 — `product-videos` storage reconciliation queries (Phase 5), 2026-09-05 — Video Closeup engagement counters + saves (Phases 2–3, DB layer), 2026-09-06 — Bunny Stream configuration probe + reconciliation false-positive (Phase 8) (+121 more)
 
-### Community 10 - "public.support_tickets"
-Cohesion: 0.11
-Nodes (13): public.support_tickets, admin.support_side_of(), public.support_end_chat(), public.support_post_message(), public.support_prepare_upload(), public.support_reopen(), public.support_start_chat(), public.support_submit_feedback() (+5 more)
+### Community 10 - "ads.ts"
+Cohesion: 0.05
+Nodes (46): 12. Files touched this session (non-exhaustive high-signal list), Fixed 2026-09-10 (Master Prompt 7), 2026-09-08 — Visit-level tracking (Phase 3): routing 17/17, UI 5/5 GREEN, migration NOT applied, Live-database verification scripts — `scripts/`, AdDestination, adDestination(), AdRouteInput, isProfileGoalAd() (+38 more)
 
 ### Community 11 - "OtpVerify.tsx"
-Cohesion: 0.07
-Nodes (63): Mobile number + OTP login: the brief and where it stands (2026-09-22), MPF-20: The sign-in step re-applies a signup name, 2026-09-27 — Dummy OTP switched on: any 6 digits sign in as any phone number — Severity: High (accepted for now), Task 12: Whole-branch validation and docs, User journey, 2026-09-09 (prove the write path) — a vendor actually completed registration, and the counts moved, BB, CosoraLogo() (+55 more)
+Cohesion: 0.13
+Nodes (28): Buyer sign-up: the record, the steps, the gate and the back button (2026-11-14; branch `buyer-signup/fixes`, not live), BB, CosoraLogoProps, SendOtpResult, cleanPhoneDigits(), COUNTRY_CODES, CountryCode, isCompletePhone() (+20 more)
 
 ### Community 12 - "useLang"
-Cohesion: 0.06
-Nodes (107): Shared (18), Category pictures, reports in Cosora-Admin, JPEG-only admin pictures (2026-10-16), The requester side (plan P3, buyer app), SellerHomeBlockedState, SellerHomeState(), LoadFailed(), CallOrEmail(), HoursBanner() (+99 more)
+Cohesion: 0.04
+Nodes (155): Seller side (33), Shared (18), Category pictures, reports in Cosora-Admin, JPEG-only admin pictures (2026-10-16), FAQ read path — Storage CDN snapshots, table fallback (2026-09-24, Phase 23), FAQs — one table, admin RPCs, three surfaces (2026-09-23), Seller Help and stored translations (Help & Support P5, 2026-10-01), The requester side (plan P3, buyer app), FaqContact (+147 more)
 
 ### Community 13 - "Business Rules — Discovered/Decided During Development"
 Cohesion: 0.06
-Nodes (52): Decided without asking, 6. The results page `/search/results`, Props, SpotlightRail(), ToTopButton(), afterOverlay(), historyIdx(), popOverlayEntry() (+44 more)
+Nodes (63): A row policy is not a column policy (2026-10-10), An edit to approved content goes back to review (Mitra, 2026-10-10), Business Rules — Discovered/Decided During Development, Decisions of 2026-10-10 (Mitra), Decided without asking, Subscriptions P10: featured listings, spotlight and seal tiers (2026-10-09; database applied 2026-10-09, switch off), SpotlightRail(), afterOverlay() (+55 more)
 
-### Community 14 - "sql"
-Cohesion: 0.32
-Nodes (11): cleanup(), rest(), sql(), cat, enumLabels(), probe(), valueFor(), cat (+3 more)
+### Community 14 - "MyQuotes.tsx"
+Cohesion: 0.07
+Nodes (43): MPF-18: A vendor can set their own quote to "accepted", 11. Where the code and tests live, Part 1, F3: one vocabulary, editable by admins (live 2026-11-01), Part 2: Standing (live 2026-11-15), Part 3: Fit (live 2026-11-15), Personalised ranking (2026-10-07, `documentation/ranking-foundations-design-2026-10-07.md`), Quotes: who changes what (MPF-18), BuyerStateNudge() (+35 more)
 
 ### Community 15 - "AccountManager.tsx"
 Cohesion: 0.13
@@ -492,36 +480,36 @@ Cohesion: 0.02
 Nodes (65): dir, outfile, dir, o, outfile, dir, entry, file (+57 more)
 
 ### Community 17 - "Onboarding.tsx"
-Cohesion: 0.04
-Nodes (107): Database (buyer repo, migration `20261122100000_admin_review_high.sql`, plus `100100` for the money view), Registration documents, plan changes and the 7-day guarantee (2026-10-02), Seller registration — one submit, a publish gate, reviewed photos (2026-11-13), Vendor store — the profile score is a contract, not a number (2026-09-08), 2026-09-11 — Master Prompt 8, Phase 3: KYC re-upload 1/1, /kyc 1/1, onboarding write-path 3/3, Drawer(), DrawerContent, DrawerDescription (+99 more)
+Cohesion: 0.05
+Nodes (68): Database (buyer repo, migration `20261122100000_admin_review_high.sql`, plus `100100` for the money view), Registration documents, plan changes and the 7-day guarantee (2026-10-02), Seller registration — one submit, a publish gate, reviewed photos (2026-11-13), Vendor store — the profile score is a contract, not a number (2026-09-08), 2026-09-11 — Master Prompt 8, Phase 3: KYC re-upload 1/1, /kyc 1/1, onboarding write-path 3/3, Drawer(), DrawerContent, DrawerDescription (+60 more)
 
 ### Community 18 - "@playwright/test"
-Cohesion: 0.04
-Nodes (51): @playwright/test, PHRASES, rows, ROLES, ROUTES, staff, tag, PNG (+43 more)
+Cohesion: 0.06
+Nodes (38): PNG, tag, TILE_JPEG, made, tag, made, tag, listed (+30 more)
 
 ### Community 19 - "products.ts"
-Cohesion: 0.04
-Nodes (97): Decided without asking, SH-017 · Low · ✔ seen · [T] — Home prices are rounded, SH-064 · Low · ✔ seen — Products rounds prices, `engagement_events` — visit-level tracking (migration 20260907170000), Product detail — rendered from the row, never a template (2026-09-11), Product moderation: remove and flag with managed reasons (2026-10-07, `documentation/product-moderation-design-2026-10-07.md`), OPTIONS, ProductChatOptionsSheet() (+89 more)
+Cohesion: 0.05
+Nodes (64): Seller registration (Mitra, 2026-11-13; onboarding audit fixes 1–20), Decided without asking, Open Flags (unresolved, needs attention), SH-017 · Low · ✔ seen · [T] — Home prices are rounded, SH-064 · Low · ✔ seen — Products rounds prices, Product moderation: remove and flag with managed reasons (2026-10-07, `documentation/product-moderation-design-2026-10-07.md`), SlideProps, VideoCloseUp (+56 more)
 
 ### Community 20 - "BusinessProfile.tsx"
-Cohesion: 0.10
-Nodes (34): SH-053 · Low · ✔ checked — Custom sheets aren't dialogs, Catalogue review (2026-10-10), PhotoStatusBadge(), webUrl(), addPremisesPhotos(), countedPhotos(), deletePremisesPhoto(), fetchMyPremisesPhotos() (+26 more)
+Cohesion: 0.05
+Nodes (73): SH-053 · Low · ✔ checked — Custom sheets aren't dialogs, Batch 1 (20): built and tested locally, 2026-11-17, Batch 2 (7, and the failing chat spec): built and tested locally, 2026-11-17, Mitra's decisions (2026-11-17), Release, Seller Home audit: the Low items, plan and record (2026-11-17), Part 1, F2: who the vendor is, and where, BusinessTypeSheet() (+65 more)
 
 ### Community 21 - "dependencies"
 Cohesion: 0.05
-Nodes (41): dependencies, class-variance-authority@^0.7.1, clsx@^2.1.1, framer-motion@^12.23.26, lucide-react@^0.462.0, @radix-ui/react-avatar@^1.1.10, @radix-ui/react-context-menu@^2.2.15, @radix-ui/react-dialog@^1.1.14 (+33 more)
+Nodes (43): dependencies, cmdk@^1.1.1, framer-motion@^12.23.26, lucide-react@^0.462.0, qrcode@^1.5.4, @radix-ui/react-aspect-ratio@^1.1.7, @radix-ui/react-checkbox@^1.3.2, @radix-ui/react-dialog@^1.1.14 (+35 more)
 
 ### Community 22 - "Subscription.tsx"
-Cohesion: 0.03
-Nodes (120): Task 5: Every vendor gets the ranked feed; the cap leaves the vendor UI, Seller side (33), DashboardLayout(), Badge(), BadgeProps, badgeVariants, CardDescription, CardHeader (+112 more)
+Cohesion: 0.05
+Nodes (69): AutopayCard(), DAY, INR, METHOD, DAY, PlanCheckoutDialog(), whatHappens(), GST_RATE (+61 more)
 
 ### Community 23 - "public.engagement_events"
-Cohesion: 0.03
-Nodes (64): e_before, pg_temp.cats(), pg_temp.ok(), pg_temp.terms(), pg_temp.win(), engagement_events_vendor_time_idx, engagement_events_vendor_type_time_idx, public.engagement_events (+56 more)
+Cohesion: 0.04
+Nodes (60): e_before, pg_temp.cats(), pg_temp.ok(), pg_temp.terms(), pg_temp.win(), engagement_events_vendor_time_idx, engagement_events_vendor_type_time_idx, public.engagement_events (+52 more)
 
 ### Community 24 - "public.vendor_profiles"
-Cohesion: 0.09
-Nodes (19): public.my_vendor_settings(), public.admin_keyword_add(), public.admin_vendor_list(), ad_orders_refund_id_idx, ad_orders_refund_review_idx, admin.payment_entries, admin.trg_ad_paid_campaign_stopped(), public.ad_order_refund_claim() (+11 more)
+Cohesion: 0.11
+Nodes (15): public.admin_vendor_list(), ad_orders_refund_id_idx, ad_orders_refund_review_idx, admin.payment_entries, admin.trg_ad_paid_campaign_stopped(), public.ad_order_refund_claim(), public.ad_order_refund_record(), public.admin_ad_order_resolve() (+7 more)
 
 ### Community 25 - "demoAccount"
 Cohesion: 0.03
@@ -529,51 +517,51 @@ Nodes (42): db, env, VENDOR, admin, cleanupComplaint, env, finish(), results (+3
 
 ### Community 26 - "admin.admin_users"
 Cohesion: 0.04
-Nodes (63): admin.admin_users, admin.is_admin(), admin.role_of(), admin.sync_from_profiles(), public.admin_role(), public.is_admin(), trg_profiles_sync_admin_users, admin.shadow_admin_columns() (+55 more)
+Nodes (65): admin.admin_users, admin.is_admin(), admin.role_of(), admin.sync_from_profiles(), public.admin_role(), public.is_admin(), trg_profiles_sync_admin_users, admin.shadow_admin_columns() (+57 more)
 
 ### Community 27 - "public"
-Cohesion: 0.04
-Nodes (51): pg_temp.search_md5(), r, admin.category_root_unit(), admin.fit_values(), admin.rfq_fit(), admin.vendor_location_history, admin.vendor_location_track(), public.category_root_of() (+43 more)
+Cohesion: 0.03
+Nodes (67): pg_temp.search_md5(), r, admin.attributes_guard(), attribute_definitions_form_key, trg_products_attributes_valid, trg_rfq_submissions_attributes_valid, trg_rfqs_attributes_valid, admin.category_root_unit() (+59 more)
 
 ### Community 28 - "public.reviews"
 Cohesion: 0.05
-Nodes (50): pg_temp.act(), _r, public.enforce_vendor_profile_admin_fields(), public.sync_vendor_rating(), public.enforce_product_videos_moderation(), public.enforce_products_moderation(), public.enforce_vendor_profile_admin_fields(), public.reject_vendor_content() (+42 more)
+Nodes (53): h16, pg_temp.h16_probe(), pg_temp.act(), _r, public.enforce_vendor_profile_admin_fields(), public.sync_vendor_rating(), public.enforce_product_videos_moderation(), public.enforce_products_moderation() (+45 more)
 
 ### Community 29 - "App.tsx"
-Cohesion: 0.03
-Nodes (107): Decided without asking, AccountInfo, AccountManager, AddSocialLinks, AdReceiptDetail, Advertisements, AdvertisementSlideshow, AliasRedirect() (+99 more)
+Cohesion: 0.04
+Nodes (93): AccountInfo, AccountManager, AddSocialLinks, AdReceiptDetail, Advertisements, AdvertisementSlideshow, AliasRedirect(), Analytics (+85 more)
 
 ### Community 30 - "VendorProfile.tsx"
-Cohesion: 0.05
-Nodes (53): K. Messages, SH-101 · Medium · ✔ seen — Signed out, the inbox is fake, SH-102 · Medium · ✔ seen — The back arrows loop, SH-103 · Medium · reviewer — The seller's Call button can't reach the buyer, SH-104 · Medium · reviewer — A bad thread id fails silently, SH-106 · Medium · reviewer — The Calls tab never shows buyers' calls, SH-107 · Low · reviewer — Smaller chat problems, Calls — one write path, `log_call()` (2026-09-23) (+45 more)
+Cohesion: 0.08
+Nodes (35): MPF-3: Every user's email and phone is readable without signing in, 2026-09-23 — Every user's email and phone readable with the public anon key — Severity: High (fixed; the signed-in half closed 2026-09-24), SH-103 · Medium · reviewer — The seller's Call button can't reach the buyer, Calls — one write path, `log_call()` (2026-09-23), Profile contact details — private columns, narrow readers (2026-09-23), Documented asymmetries — re-confirmed, not assumed, BlockCopy, BUYER_CONTACT_REFUSAL_COPY (+27 more)
 
 ### Community 31 - "My Profile work: fixed flags"
 Cohesion: 0.06
-Nodes (34): Fixed flags, Flag-fix pass decisions (2026-09-25), MPF-18: A vendor can set their own quote to "accepted", MPF-19: Interim: signed-in users can still read every user's email and phone, MPF-22: Seller-role accounts with no completed registration go to `/onboarding` when switching back, MPF-23: `log_engagement_event()` swallows every error, MPF-25: The deployed subscription payment functions are older than the repo, MPF-26: FAQ edits and deletes leave no record of who made them or what the text was (+26 more)
+Nodes (36): App changes, Company disclosure and messaging consent — plan (2026-11-24), Database: migration `20261124100000_company_disclosure_marketing_consent.sql`, Decisions (Mitra, 2026-11-24), Not changed (outside this brief), Placeholders left for Mitra, The company facts, one copy per repo, Fixed flags (+28 more)
 
 ### Community 32 - "Upload.tsx"
 Cohesion: 0.06
-Nodes (60): FormControl, FormDescription, FormFieldContext, FormFieldContextValue, FormItem, FormItemContext, FormItemContextValue, FormLabel (+52 more)
+Nodes (59): Mitra's ten bugs (2026-10-17), Progress, SelectContent, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator (+51 more)
 
 ### Community 33 - "subscription-autopay/index.ts"
-Cohesion: 0.06
-Nodes (49): Cosora-Admin review 2026-11-22: the High batch (LIVE 2026-11-22), Cosora-Admin review 2026-11-23: Low batch 3 (LIVE 2026-11-23), Subscriptions P1: billing core (2026-10-08), Subscriptions P3: autopay (2026-10-08), Candidate, RazorpayPayment, autopayIncident(), ChargeTarget (+41 more)
+Cohesion: 0.07
+Nodes (47): Cosora-Admin review 2026-11-22: the High batch (LIVE 2026-11-22), Subscriptions P1: billing core (2026-10-08), Subscriptions P3: autopay (2026-10-08), Candidate, RazorpayPayment, autopayIncident(), ChargeTarget, chargeTarget() (+39 more)
 
 ### Community 34 - "ref_node_fs"
 Cohesion: 0.05
 Nodes (24): db, env, KIND, N, ROUNDS, db, env, admin (+16 more)
 
 ### Community 35 - "payments.ts"
-Cohesion: 0.09
-Nodes (35): 2026-10-08 — Subscriptions P3: autopay (local stack, mock Razorpay: harness 18/18; all four harnesses green; autopay flow check 49/49; end to end 22/22; browser 11/11; typecheck 0 in both apps; i18n 7,333/7,333; admin build), paidAdOutcome(), AdQuote, DISCOUNT_CHECKOUT_TIMEOUT_S, discountRefusal(), DiscountTarget, invokeQuote(), PlanQuote (+27 more)
+Cohesion: 0.11
+Nodes (24): AdCheckoutMessage, AdPublishOutcomeInput, freeAdOutcome(), paidAdOutcome(), AD_REACH_TEXT, AdItem, AdPublishAnswer, adReachRefusal() (+16 more)
 
 ### Community 36 - "_shared/adPricing.ts"
 Cohesion: 0.06
-Nodes (52): Decided after the first build (Mitra, 2026-11-17: "add the field for message and change the wording"), corsHeaders, PlanRow, corsHeaders, corsHeaders, recordDemoRefundTrace(), vendorIdFromJwt(), checkAdOrder() (+44 more)
+Nodes (52): Decided after the first build (Mitra, 2026-11-17: "add the field for message and change the wording"), Seller Home high-priority fixes (2026-11-16; branch `seller-home/fixes`, not live), corsHeaders, PlanRow, corsHeaders, corsHeaders, recordDemoRefundTrace(), vendorIdFromJwt() (+44 more)
 
-### Community 37 - "MobileBottomNav"
-Cohesion: 0.08
-Nodes (46): Task 1: Back that never leaves the site (H-08, H-09, H-10), MobileBottomNav(), LegalFooter(), P(), PolicyBody(), Text(), TermsClauses(), PolicySection (+38 more)
+### Community 37 - "react-router-dom"
+Cohesion: 0.03
+Nodes (112): What changed, MPF-13: Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav, SH-004 · High · ✔ seen · [T] — Back after switching to Buyer shows a broken page, Sitemap, Buyer-Side Layout & Flows, react-router-dom, BuyerFrame(), BuyerShellProps (+104 more)
 
 ### Community 38 - "Log"
 Cohesion: 0.04
@@ -583,113 +571,113 @@ Nodes (57): 2026-09-10 — image-search has no rate limit — Severity: Medium, 
 Cohesion: 0.04
 Nodes (40): Checks, Code review (medium), Low bugs, batch 5: the database items (2026-11-20), Mitra's calls, Release (when Mitra says), What changed, readOwnVendorRow(), VENDOR_PUBLIC_COLUMNS (+32 more)
 
-### Community 40 - "Input"
-Cohesion: 0.10
-Nodes (24): getVendorBlogById(), VendorBlog, vendorBlogCategories, VendorBlogCategory, vendorBlogs, delay(), fetchVendorBlogFeed(), fetchVendorQuoteSummary() (+16 more)
+### Community 40 - "MyPayments.tsx"
+Cohesion: 0.05
+Nodes (51): Display currency — converted for display, never for money (2026-09-24), 2026-09-24 — Phase 20: MPF-11 fixed (INR byte-identical 239/239; USD spec 1/1; forced + scheduled FX refresh; GST check 30/30 and harness 12/12; MPF-25 found), Badge(), BadgeProps, badgeVariants, getVendorBlogById(), VendorBlog, vendorBlogCategories (+43 more)
 
 ### Community 41 - "Open"
 Cohesion: 0.04
-Nodes (53): Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16, Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10, Build a Cosora-run sale feature, so "MEGA SALE" describes a real sale — added 2026-11-20, Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08, Build the "Unverified Seller" label the GST answer promises, or reword it — added 2026-10-02, Buyer-side review 2026-11-18: the full bug list (13 High, 75 Medium, 104 Low) — added 2026-11-18, CA: GST on plans and ads sold to sellers outside India — added 2026-11-13, Check three audit suspicions against production — added 2026-11-01 (+45 more)
+Nodes (51): Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16, Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10, Build a Cosora-run sale feature, so "MEGA SALE" describes a real sale — added 2026-11-20, Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08, Build the "Unverified Seller" label the GST answer promises, or reword it — added 2026-10-02, Buyer-side review 2026-11-18: the full bug list (13 High, 75 Medium, 104 Low) — added 2026-11-18, CA: GST on plans and ads sold to sellers outside India — added 2026-11-13, Check three audit suspicions against production — added 2026-11-01 (+43 more)
 
-### Community 42 - "Help.tsx"
+### Community 42 - "20260801095820_chat_moderation_and_account_suspension.sql"
 Cohesion: 0.07
-Nodes (43): FAQ read path — Storage CDN snapshots, table fallback (2026-09-24, Phase 23), FAQs — one table, admin RPCs, three surfaces (2026-09-23), Seller Help and stored translations (Help & Support P5, 2026-10-01), FaqContact, FaqSection(), AccordionContent, AccordionItem, AccordionTrigger (+35 more)
+Nodes (24): account_suspensions_open_idx, conversation_reviews_conversation_idx, conversation_reviews_pending_idx, public.account_suspensions, public.chat_block_reasons, public.check_message_blocklist(), public.check_message_flag_patterns(), public.conversation_reviews (+16 more)
 
 ### Community 43 - "freshAccount"
 Cohesion: 0.07
-Nodes (48): Design (approved 2026-11-16), Global Constraints, Review Focus, Seller Home Fixes Implementation Plan, newPanFiles(), newRowHasFile(), panRows(), PNG (+40 more)
+Nodes (48): Global Constraints, newPanFiles(), newRowHasFile(), panRows(), PNG, rejectedPan(), scan, cleanup (+40 more)
 
 ### Community 44 - "requirementSchemas.ts"
 Cohesion: 0.04
-Nodes (51): Bounds on what a buyer can set off, ACCESSORY_MATERIALS, ACCESSORY_TYPES, adultSizes, APPAREL_TYPES, apparelSchema(), budget(), CAMPAIGN_DURATION (+43 more)
+Nodes (49): ACCESSORY_MATERIALS, ACCESSORY_TYPES, adultSizes, APPAREL_TYPES, apparelSchema(), budget(), CAMPAIGN_DURATION, CHANNELS (+41 more)
 
 ### Community 45 - "changelog.md"
-Cohesion: 0.04
-Nodes (84): 2026-09-05 — Approve no longer leaves a stale rejection reason on a live row, 2026-09-05 — Cosora-Admin can moderate Video Closeups at all (Phase 0), 2026-09-05 — Documentation system moved into `documentation/`, Changelog, SH-100 · High · ✔ seen — Every chat header shows an invented rating, Task 2: A PNG cover works and a failed upload leaves nothing behind (SH-068), Task 4: The chat header shows only real data (SH-100), Known Constraints / Tech Debt (+76 more)
+Cohesion: 0.05
+Nodes (78): 2026-09-05 — Approve no longer leaves a stale rejection reason on a live row, 2026-09-05 — Cosora-Admin can moderate Video Closeups at all (Phase 0), 2026-09-05 — Documentation system moved into `documentation/`, Changelog, Task 4: Seller Home data and states (SH-006, SH-007, SH-008, SH-014, SH-016, SH-026, SH-027), Known Constraints / Tech Debt, 2026-09-06 (browser half) — Bunny Stream in a real browser: 6/6 GREEN, and a correction, 2026-09-08 (my-store pass) — Vendor "My Store" cluster de-mocked: 11/11 GREEN, through the real UI (+70 more)
 
 ### Community 46 - "seller-home-low.spec.ts"
 Cohesion: 0.07
-Nodes (21): env, service, ACCOUNTS, b64(), env, firstRun, rpc(), token() (+13 more)
+Nodes (19): env, service, ACCOUNTS, b64(), env, firstRun, rpc(), token() (+11 more)
 
-### Community 47 - "DashboardLayout"
-Cohesion: 0.06
-Nodes (69): 9. Build prompt index, P3. Requester screens (buyer app), T4 — Participant report (`submit_report`), ConfirmDialog(), AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription (+61 more)
+### Community 47 - "ChatThread.tsx"
+Cohesion: 0.12
+Nodes (25): 9. Build prompt index, P3. Requester screens (buyer app), T4 — Participant report (`submit_report`), useKeyboardInset(), CANDIDATES, MAX_SECONDS, pickMime(), RecorderState (+17 more)
 
 ### Community 48 - "20260929114918_blog_cms_rpcs.sql"
 Cohesion: 0.05
-Nodes (24): blog_categories_sort_idx, blog_posts_tags_idx, public.blog_settings, public.touch_blog_updated_at(), trg_admin_audit, trg_blog_categories_updated_at, trg_blog_settings_updated_at, public.admin_blog_category_delete() (+16 more)
+Nodes (27): blog_categories_sort_idx, blog_posts_tags_idx, public.blog_settings, public.touch_blog_updated_at(), trg_admin_audit, trg_blog_categories_updated_at, trg_blog_settings_updated_at, public.admin_blog_category_delete() (+19 more)
 
-### Community 49 - "Leads.tsx"
-Cohesion: 0.12
-Nodes (21): SH-014 · Medium · reviewer — The home ignores requests sent straight to the seller, R1: signed-out visitors read no RFQ, Subscriptions P7: overseas requirements (2026-10-09; database applied 2026-10-09, switch off), OverseasBadge(), SignInForLeads(), fetchOverseasLeadCount(), OverseasLeadCount, OverseasTier (+13 more)
+### Community 49 - "plan.ts"
+Cohesion: 0.15
+Nodes (18): Task 5: Every vendor gets the ranked feed; the cap leaves the vendor UI, AD_SCOPE_LABEL, AdLocationScope, adStateAllowance(), canRunAds(), capReached(), isUnlimited(), PlanDisplay (+10 more)
 
 ### Community 50 - "Quotes.tsx"
 Cohesion: 0.08
-Nodes (33): SH-080 · Medium · reviewer — Analytics reads every message ever, useCrmAnalytics(), fetchMyQuotedRfqs(), fetchMySubmittedQuotes(), mapQuoteStatus(), MySubmittedQuote, useMySubmittedQuotes(), fetchVendorOrderValue() (+25 more)
+Nodes (35): SH-080 · Medium · reviewer — Analytics reads every message ever, formatLeadValue(), useCrmAnalytics(), fetchMyQuotedRfqs(), fetchMySubmittedQuotes(), mapQuoteStatus(), MySubmittedQuote, useMySubmittedQuotes() (+27 more)
 
 ### Community 51 - "vendor-serious.spec.ts"
 Cohesion: 0.11
 Nodes (16): asAccount(), clientFor(), openAs(), PNG, quote(), requirement(), tag, BASE_PNG (+8 more)
 
-### Community 52 - "preferencesStore.ts"
-Cohesion: 0.13
-Nodes (31): isBuyerCategoryId(), normaliseInterestIds(), accountCompleted(), BuyerPreferences, cleanOther(), completedAccounts(), completeOnboarding(), EMPTY (+23 more)
+### Community 52 - "ForYou.tsx"
+Cohesion: 0.06
+Nodes (72): Buyer interests — `pref_category_map` (Interest Preference v2, 2026-10-11), CategoryPickerGrid(), Props, TileCheck(), BUYER_CATEGORIES, BUYER_CATEGORY_LABEL, BuyerCategory, clipOtherInterest() (+64 more)
 
 ### Community 53 - "verifiedUserId"
 Cohesion: 0.06
 Nodes (28): corsHeaders, emailBody(), sendEmail(), sendWhatsApp(), userIdFromJwt(), callerIdFromJwt(), corsHeaders, BunnyVideo (+20 more)
 
 ### Community 54 - "_shared/discounts.ts"
-Cohesion: 0.11
-Nodes (15): Discount codes — priced by the server (admin completion Phase 10, 2026-09-29), 2026-09-29 — Admin completion Phase 10: discount codes (harness 19/19 twice; race 1 of 10; flow 53/53), OpenMandate, CheckoutGate, checkoutGate(), CheckoutRefusal, subscriptionAmounts(), activatePlanChange() (+7 more)
+Cohesion: 0.12
+Nodes (15): Discount codes — priced by the server (admin completion Phase 10, 2026-09-29), OpenMandate, CheckoutGate, checkoutGate(), CheckoutRefusal, releaseDiscount(), subscriptionAmounts(), activatePlanChange() (+7 more)
 
 ### Community 55 - "auth.users"
-Cohesion: 0.13
-Nodes (19): admin.attributes_guard(), attribute_definitions_form_key, trg_products_attributes_valid, trg_rfq_submissions_attributes_valid, trg_rfqs_attributes_valid, admin.require_rfq_reviewer(), admin.rfq_review_reasons, public.admin_rfq_pending_count() (+11 more)
+Cohesion: 0.10
+Nodes (21): public.account_deletion_blocker(), public.account_deletion_blocker(), public.account_deletion_channels(), admin.contact_address(), admin.require_rfq_reviewer(), admin.rfq_review_reasons, public.admin_rfq_pending_count(), public.admin_rfq_review_reason_save() (+13 more)
 
 ### Community 56 - "searchFilters.ts"
 Cohesion: 0.06
 Nodes (39): withFacetVocabulary(), APPAREL_FABRICS, APPAREL_SUBS, BOTTOM_GROUPS, BOTTOM_SUBS, CATEGORY, COLOUR, DEFAULT_DOMAIN (+31 more)
 
 ### Community 57 - "Advertisements.tsx"
-Cohesion: 0.06
-Nodes (47): Client, AdCheckoutMessage, AdPublishOutcomeInput, freeAdOutcome(), hasManualAdType(), moderationReasonText(), deleteAd(), pauseMyCampaign() (+39 more)
+Cohesion: 0.07
+Nodes (39): Client, deleteAd(), pauseMyCampaign(), resumeMyCampaign(), setCampaignRunning(), useVendorHomeState(), SellerRegistration, AD_TYPES (+31 more)
 
 ### Community 58 - "Notifications.tsx"
-Cohesion: 0.11
-Nodes (24): T10 — Notifications, devOnlySampleNotifications(), dismissNotification(), markAllNotificationsRead(), markNotificationRead(), NOTIFICATION_PAGE, BUCKET_ORDER, bucketOf() (+16 more)
+Cohesion: 0.07
+Nodes (38): Batch 1 (20), AD_META, CERTIFICATE_META, devOnlySampleNotifications(), FALLBACK_META, KIND_META, KindMeta, NotifGroup (+30 more)
 
-### Community 59 - "savedStore.ts"
-Cohesion: 0.08
-Nodes (56): SaveToFolderModal(), allPages(), chunks(), POSTGREST_MAX_ROWS, fetchSavedVendors(), Row, SavedVendor, useSavedVendors() (+48 more)
+### Community 59 - "rfqs.ts"
+Cohesion: 0.09
+Nodes (35): R2 — The same leads on every plan, SH-105 · Medium · reviewer — Opening a thread rewrites the conversation, Cosora-Admin review 2026-11-22: Medium batch 2 (LIVE 2026-11-22), allPages(), chunks(), POSTGREST_MAX_ROWS, ensureConversation(), upsertConversation() (+27 more)
 
 ### Community 60 - "public.rfqs"
-Cohesion: 0.03
-Nodes (71): rfqs_open_marketplace_idx, rfqs_product_id_idx, rfqs_vendor_id_status_idx, public.enqueue_rfq_embedding(), rfqs_embedding_idx, trg_rfqs_enqueue_embedding, public.embedding_pipeline_health(), _health_before (+63 more)
+Cohesion: 0.04
+Nodes (60): rfqs_open_marketplace_idx, rfqs_product_id_idx, rfqs_vendor_id_status_idx, public.enqueue_rfq_embedding(), rfqs_embedding_idx, trg_rfqs_enqueue_embedding, public.embedding_pipeline_health(), _health_before (+52 more)
 
 ### Community 61 - "package.json"
 Cohesion: 0.06
-Nodes (30): date-fns@^3.6.0, embla-carousel-react@^8.6.0, @hookform/resolvers@^3.10.0, input-otp@^1.4.2, next-themes@^0.3.0, @radix-ui/react-hover-card@^1.1.14, @radix-ui/react-menubar@^1.1.15, @radix-ui/react-scroll-area@^1.2.9 (+22 more)
+Nodes (34): clsx@^2.1.1, date-fns@^3.6.0, embla-carousel-react@^8.6.0, @hookform/resolvers@^3.10.0, input-otp@^1.4.2, next-themes@^0.3.0, @radix-ui/react-accordion@^1.2.11, @radix-ui/react-avatar@^1.1.10 (+26 more)
 
 ### Community 62 - "sellerCategories.ts"
-Cohesion: 0.07
-Nodes (36): BOTTOMWEAR, DRESS_LENGTH, fashionCertificationOptions, fashionGenderOptions, fashionOccasionOptions, freelancerCommonFields, GARMENTS, NECKLINE (+28 more)
+Cohesion: 0.06
+Nodes (41): CategorySelectorProps, iconMap, typeColors, typeLabels, BOTTOMWEAR, DRESS_LENGTH, fashionCertificationOptions, fashionGenderOptions (+33 more)
 
-### Community 63 - "Terms.tsx"
-Cohesion: 0.19
-Nodes (18): MarketingConsentSwitches(), acceptBuyerTerms(), BUYER_TERMS_VERSION, isStaleTerms(), MARKETING_LABELS, MarketingChannel, MarketingChoice, MarketingConsent (+10 more)
+### Community 63 - "notifications.ts"
+Cohesion: 0.12
+Nodes (25): C. Header, menu and bottom bar, SH-026 · Low · reviewer — Recent Messages shows archived chats and no unread state, SH-028 · Medium · ✔ seen · [T] — Header search is broken, SH-029 · Medium · ✔ seen · [T] — The phone menu hides Sign Out, SH-030 · High · reviewer — Live subscriptions don't scale, SH-031 · Medium · reviewer — Badges reload on every navigation, SH-032 · Medium · reviewer — A failed plan check looks like "not on your plan", SH-033 · Low · reviewer — The Chats badge counts archived chats (+17 more)
 
 ### Community 64 - "notification-dispatch/index.ts"
 Cohesion: 0.09
-Nodes (29): send(), escapeHtml(), fill(), OutboxRow, RenderedEmail, renderEmail(), renderSms(), value() (+21 more)
+Nodes (30): MPF-11: A second currency picker in the buyer menu drawer saves nothing and converts nothing, send(), escapeHtml(), fill(), OutboxRow, RenderedEmail, renderEmail(), renderSms() (+22 more)
 
 ### Community 65 - "devDependencies"
-Cohesion: 0.06
-Nodes (34): devDependencies, autoprefixer@^10.4.21, eslint@^9.32.0, @eslint/js@^9.32.0, eslint-plugin-react-hooks@^5.2.0, eslint-plugin-react-refresh@^0.4.20, globals@^15.15.0, @playwright/test@^1.44.0 (+26 more)
+Cohesion: 0.07
+Nodes (30): devDependencies, autoprefixer@^10.4.21, eslint@^9.32.0, @eslint/js@^9.32.0, eslint-plugin-react-hooks@^5.2.0, eslint-plugin-react-refresh@^0.4.20, globals@^15.15.0, @playwright/test@^1.44.0 (+22 more)
 
 ### Community 67 - "freelancersData.ts"
 Cohesion: 0.06
-Nodes (34): A1. Accessors (live `pg_get_functiondef`), A2. Column type, A3. Seed set (live), A. Admin identity, Admin-schema separation — Phase 0 spec, Appendix A: queries used (read-only, single statements, via MCP `execute_sql`), B4. RLS policies (live `pg_policies`): the Phase 2 regression contract, B5. Triggers gating on admin role (live) (+26 more)
+Nodes (35): A1. Accessors (live `pg_get_functiondef`), A2. Column type, A3. Seed set (live), A. Admin identity, Admin-schema separation — Phase 0 spec, Appendix A: queries used (read-only, single statements, via MCP `execute_sql`), B4. RLS policies (live `pg_policies`): the Phase 2 regression contract, B5. Triggers gating on admin role (live) (+27 more)
 
 ### Community 68 - "Vendor Side"
 Cohesion: 0.06
@@ -699,29 +687,29 @@ Nodes (36): Changed 2026-09-29 (admin completion, Phase 10: discount codes), Cha
 Cohesion: 0.05
 Nodes (35): badge, badgeLeak, badRepeat, badSize, bogus, bothPlacedAndUnplaced, bothRepeatAndInterleaved, cardTypes (+27 more)
 
-### Community 70 - "framer-motion"
-Cohesion: 0.08
-Nodes (41): MPF-13: Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav, SH-004 · High · ✔ seen · [T] — Back after switching to Buyer shows a broken page, framer-motion, buyerTabs, DashboardHeader(), DashboardHeaderProps, DashboardLayoutProps, buyerNavigation (+33 more)
+### Community 70 - "RecentlyViewed.tsx"
+Cohesion: 0.21
+Nodes (21): ConfirmDialog(), AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay (+13 more)
 
 ### Community 71 - "Local-stack E2E — `tests/local/` (Help & Support launch gate, P7)"
-Cohesion: 0.08
-Nodes (29): Global Constraints, Ranking Part 1 · F1 (keep what the forms collect) Implementation Plan, Review Focus, Task 1: Database — attributes, search text, triggers, admin detail, Task 2: Product form saves every field, Task 4: Vendors and admins see the details, Task 5: Docs and release, Access (A5) (+21 more)
+Cohesion: 0.07
+Nodes (34): Global Constraints, Ranking Part 1 · F1 (keep what the forms collect) Implementation Plan, Review Focus, Task 1: Database — attributes, search text, triggers, admin detail, Task 2: Product form saves every field, Task 3: Requirement form saves its answers, Task 4: Vendors and admins see the details, Task 5: Docs and release (+26 more)
 
 ### Community 72 - "20261120140000_low_batch5.sql"
-Cohesion: 0.11
-Nodes (15): public.account_is_active(), public.account_not_deleted(), public.contact_check(), public.extend_rfq_deadline(), public.my_account_status(), public.my_conversation_ids(), public.my_quoted_rfq_ids(), public.my_rfq_ids() (+7 more)
+Cohesion: 0.08
+Nodes (21): public.account_is_active(), public.account_not_deleted(), public.active_ads(), public.contact_check(), public.extend_rfq_deadline(), public.my_account_status(), public.my_conversation_ids(), public.my_quoted_rfq_ids() (+13 more)
 
 ### Community 73 - "main.tsx"
-Cohesion: 0.23
-Nodes (7): Error boundaries (2026-10-18), AppErrorBoundary, Props, State, isChunkLoadError(), reloadOnceForNewDeploy(), catalogReady
+Cohesion: 0.15
+Nodes (13): Error boundaries (2026-10-18), AppErrorBoundary, Props, RouteErrorBoundary(), State, ClarityQueue, inject(), PROJECT_ID (+5 more)
 
 ### Community 74 - "Ranking on Cosora: every ordering, how it works"
 Cohesion: 0.06
-Nodes (33): 10. Known gaps, 12. History, 1. The map, 2. Words used here, 3.1 Paid plans and what they buy in ranking, 3.2 Recent demand (`product_trend`), 3.3 Meaning: embeddings and similarity, 3.4 Ratings (+25 more)
+Nodes (33): 10. Known gaps, 12. History, 1. The map, 2. Words used here, 4.1 Feeds and their sorts (`feed_products`), 4.2 For You (`for_you_products`), 4.3 Search (`match_products`), 4.4 Similar listings (`related_products`) (+25 more)
 
 ### Community 75 - "chat.ts"
-Cohesion: 0.07
-Nodes (35): useIsDesktop(), useCalls(), AttachmentKind, AUDIO_EXT, CHAT_ATTACHMENT_BUCKET, CHAT_ATTACHMENT_MAX_BYTES, CHAT_LIST_LIMIT, CHAT_PAGE_SIZE (+27 more)
+Cohesion: 0.09
+Nodes (30): SH-006 · High · ✔ checked · [T] — Seller Home won't hold up at 10,000 concurrent users, Chat files, blocks and per-person chat state (2026-10-18; migration `20261018160000_chat_real_actions.sql`), The rest of the buyer audit (2026-10-19; migration `20261019100000_audit_second_fixes.sql`), Unread chat messages (2026-10-14), T1 — Core message pipeline, AttachmentKind, AUDIO_EXT, CHAT_ATTACHMENT_BUCKET (+22 more)
 
 ### Community 76 - "Buyer Side"
 Cohesion: 0.05
@@ -736,40 +724,40 @@ Cohesion: 0.09
 Nodes (26): SH-108 · Low · reviewer — Reviews read whole tables in the browser, Reviews: who writes what (2026-09-29, migration `20260928190320`), bucketsFrom(), fetchMyReviews(), fetchProductReviews(), fetchVendorProductReviews(), fetchVendorReviews(), ProductReview (+18 more)
 
 ### Community 79 - "20261009193707_subscriptions_p8_crm.sql"
-Cohesion: 0.10
-Nodes (28): admin.crm_config, admin.crm_lock(), admin.crm_move(), admin.crm_on_conversation(), admin.crm_on_quote(), admin.crm_on_rfq(), admin.crm_refresh_next(), admin.crm_rfq_for() (+20 more)
+Cohesion: 0.11
+Nodes (26): admin.crm_config, admin.crm_lock(), admin.crm_move(), admin.crm_on_conversation(), admin.crm_on_quote(), admin.crm_on_rfq(), admin.crm_refresh_next(), admin.vendor_crm_level() (+18 more)
 
 ### Community 80 - "ForYou.tsx"
 Cohesion: 0.05
-Nodes (105): 12. Files touched this session (non-exhaustive high-signal list), 1. The map, Open Flags (unresolved, needs attention), Fixed 2026-09-10 (Master Prompt 7), 2026-09-08 — Visit-level tracking (Phase 3): routing 17/17, UI 5/5 GREEN, migration NOT applied, Live-database verification scripts — `scripts/`, T9 — Contact exposure gating, BrandAvatar() (+97 more)
+Nodes (89): 1. The map, T9 — Contact exposure gating, BrandAvatar(), ABOVE_CARD_LINK, CardLinkOverlay(), CardImg(), CardPhotos(), CardSpecs() (+81 more)
 
 ### Community 81 - "ProfileAccountPrefs.tsx"
-Cohesion: 0.12
-Nodes (34): RFC-4180, Data & Export — client-side, owner-filtered (2026-09-23), The account setting (`lib/languagePreference.ts`, `components/i18n/LanguageSync.tsx`), 2026-09-26 — Language covers the platform and follows the account (check 6,943/6,943; spec 4/4 + a mutation check; 26% → 79% in a browser), LanguageSync(), formatRateDate(), isLang(), setLang() (+26 more)
+Cohesion: 0.16
+Nodes (24): RFC-4180, MPF-8: "Export All Data" covers the brief's tables, not every table the buyer owns rows in, Phase 19 decisions (2026-09-24), Data & Export — client-side, owner-filtered (2026-09-23), AllDataExport, allPages(), brandNames(), buildAllDataJson() (+16 more)
 
-### Community 82 - "SellerHome.tsx"
-Cohesion: 0.08
-Nodes (32): Task 4: Seller Home data and states (SH-006, SH-007, SH-008, SH-014, SH-016, SH-026, SH-027), BusinessProfileScore(), BusinessProfileScoreProps, NextStepCard(), DoneMap, primaryActions, QuickActionButton(), QuickActionItem (+24 more)
+### Community 82 - "supabase.ts"
+Cohesion: 0.10
+Nodes (21): AuthContextValue, CLIENT_RETRIED, PROFILE_COLUMNS, ProfileRow, readProfileRow(), wait(), CompositeTypes, Constants (+13 more)
 
 ### Community 83 - "Admin Side"
 Cohesion: 0.05
 Nodes (40): Added 2026-09-25 (flag-fix pass), Added 2026-09-26, Added 2026-09-27 (admin completion, Phases 1–3), Added 2026-09-28 (admin completion, Phase 4a), Added 2026-09-28 (admin completion, Phase 5), Added 2026-09-28 (admin completion, Phase 6), Added 2026-09-28 (admin completion, Phase 7), Added 2026-09-28 (admin completion, Phase 8) (+32 more)
 
 ### Community 84 - "Technical Implementation"
-Cohesion: 0.06
-Nodes (36): Account-deletion code limits are per account (2026-10-18; migration `20261018160100_account_deletion_code_cap.sql`), Admin write model: roles live in the database (admin completion, 2026-09-27), Ads in semantic search; RLS and translation checks in CI; the Bunny slow-encode proof (2026-10-13; built, not live), Cleanup ahead of P13: subscription_usage and the payment-mode shims (2026-10-10), Cosora-Admin review 2026-11-22: Medium batch 3 (LIVE 2026-11-22), Cosora-Admin review 2026-11-23: Low batch 1 (LIVE 2026-11-23), Cosora-Admin review 2026-11-23: Low batch 2 (LIVE 2026-11-23), Dummy OTP: mobile sign-in without SMS (2026-09-27) (+28 more)
+Cohesion: 0.04
+Nodes (55): Account-deletion code limits are per account (2026-10-18; migration `20261018160100_account_deletion_code_cap.sql`), Admin write model: roles live in the database (admin completion, 2026-09-27), Ads in semantic search; RLS and translation checks in CI; the Bunny slow-encode proof (2026-10-13; built, not live), Architecture, Assert deltas, not absolutes, Catalogue review (2026-10-10), Cleanup ahead of P13: subscription_usage and the payment-mode shims (2026-10-10), Core Structure (+47 more)
 
 ### Community 85 - "registration-fixes.spec.ts"
 Cohesion: 0.12
 Nodes (20): gateOn(), listingSellers, objectsOf(), overseasSellerWithListing(), pendingOverseasSeller(), photoUrl(), signContract(), switchedOn (+12 more)
 
 ### Community 86 - "reviews"
-Cohesion: 0.07
-Nodes (30): 5.1 What it is, 5.2 The formula, 5.3 The five parts, 5.4 A worked example, 5.5 Where Standing is used, 5.6 How it is kept, and who can see it, 5. Sellers for buyers: Standing, A — activity (+22 more)
+Cohesion: 0.06
+Nodes (35): 3.1 Paid plans and what they buy in ranking, 3.2 Recent demand (`product_trend`), 3.3 Meaning: embeddings and similarity, 3.4 Ratings, 3.5 Profile score, 3.6 The trade-buyer lift for international sellers, 3. Shared building blocks, A — activity (+27 more)
 
-### Community 87 - "20260930212818_support_schema.sql"
-Cohesion: 0.13
-Nodes (20): admin.support_append_only(), admin.support_is_open_at(), admin.support_next_open_at(), admin.support_rollout_allows(), public.help_guides, public.support_holidays, public.support_hours, public.support_settings (+12 more)
+### Community 87 - "public.support_tickets"
+Cohesion: 0.04
+Nodes (78): pg_temp.act(), _r, admin.support_append_only(), admin.support_is_open_at(), admin.support_next_open_at(), admin.support_rollout_allows(), public.help_guides, public.support_attachment_read_allowed() (+70 more)
 
 ### Community 88 - "discount-flow-check.mjs"
 Cohesion: 0.07
@@ -779,33 +767,33 @@ Nodes (22): call(), DEMO, dir, edgeWrites(), eqv(), fc, fulfilModel(), FUNCTIONS
 Cohesion: 0.09
 Nodes (28): add(), BARE_UTILITIES, calleeName(), catalogs, decode(), DISPLAY_ATTRS, displayStrength(), ENTITIES (+20 more)
 
-### Community 90 - "admin.ad_reason_codes"
-Cohesion: 0.14
-Nodes (14): admin.ad_reason_codes, public.admin_ad_reason_codes(), public.approve_vendor_videos_bulk(), public.pause_ad_campaign_by_admin(), public.reject_ad_campaign(), public.suspend_ad_campaign(), public.ad_apply_decision(), public.ad_reason_labels() (+6 more)
+### Community 90 - "20261120100000_medium_batch4.sql"
+Cohesion: 0.11
+Nodes (16): admin.product_view_queue, admin.products_off_when_deleted(), public.ad_impressions(), public.chat_buyer_social(), public.product_review_summary(), trg_profiles_image_urls, trg_profiles_products_off_when_deleted, trg_vendor_profiles_image_urls (+8 more)
 
 ### Community 91 - "surface-sweep.py"
-Cohesion: 0.15
-Nodes (10): Customers — a summary refreshed on demand (admin completion Phase 6, 2026-09-28), 2026-09-28 — Admin completion Phase 6: customers (migration rehearsed and applied, md5 matches; harness 10 21/21 rehearsed and live), norm_url(), fresh(), main(), plan(), setup(), sql() (+2 more)
+Cohesion: 0.24
+Nodes (8): 2026-09-28 — Admin completion Phase 6: customers (migration rehearsed and applied, md5 matches; harness 10 21/21 rehearsed and live), fresh(), main(), plan(), setup(), sql(), teardown(), visit()
 
-### Community 92 - "20260930213451_support_admin_rpcs.sql"
-Cohesion: 0.12
-Nodes (8): public.support_ticket_staff, admin.support_ticket_rows, public.admin_feedback_mark_reviewed(), public.admin_fraud_set_outcome(), public.admin_support_assignees(), public.admin_support_counts(), public.admin_support_reassign(), trg_fraud_finding_on_outcome
+### Community 92 - "Products.tsx"
+Cohesion: 0.11
+Nodes (21): duplicateProduct(), fetchProductCap(), useProductCap(), VendorProductRow, DAY, E, listContainer, listItem (+13 more)
 
 ### Community 93 - "serviceVendorsData.ts"
-Cohesion: 0.13
-Nodes (15): Task 8: Buyer sees "Removed by Cosora" and the reason, base(), GENERIC_PORTFOLIO, LOGISTICS_PORTFOLIO, P(), PHOTO_PORTFOLIO, PRINT_PORTFOLIO, REVIEWS_A (+7 more)
+Cohesion: 0.12
+Nodes (16): Task 8: Buyer sees "Removed by Cosora" and the reason, base(), GENERIC_PORTFOLIO, getServiceVendor(), LOGISTICS_PORTFOLIO, P(), PHOTO_PORTFOLIO, PRINT_PORTFOLIO (+8 more)
 
 ### Community 94 - "VideoCloseUpsViewer.tsx"
-Cohesion: 0.19
-Nodes (21): Video Closeups: links, real reviews, saved videos (2026-10-16), CardLink(), formatCount(), VideoCloseUpsViewer(), VideoCloseUpsViewerProps, VideoSlide(), VideoSlideProps, claimFirstView() (+13 more)
+Cohesion: 0.16
+Nodes (24): Video Closeups: links, real reviews, saved videos (2026-10-16), CardLink(), formatCount(), VideoCloseUpsViewer(), VideoCloseUpsViewerProps, VideoSlide(), VideoSlideProps, CosoraLogo() (+16 more)
 
-### Community 95 - "BusinessReachSheets.tsx"
-Cohesion: 0.21
-Nodes (17): Part 1, F2: who the vendor is, and where, BusinessTypeSheet(), CapacitySheet(), SaveButton(), ServedStatesSheet(), editFieldClass, EditSheet(), sellerCategories (+9 more)
+### Community 95 - "runStateOf"
+Cohesion: 0.16
+Nodes (17): SH-088 · High · ✔ checked — Paid ad days run out during review, hasManualAdType(), CampaignLike, daysBooked(), fmt(), holdsDays(), isSealCampaign(), moderationReasonText() (+9 more)
 
 ### Community 96 - "Medium bugs, batch 4 of 4: speed and database (2026-11-20)"
-Cohesion: 0.29
-Nodes (6): Checked on the local stack, Code review of batch 3 (run on this branch, fixed here), Code review of batch 4, Medium bugs, batch 4 of 4: speed and database (2026-11-20), Mitra's decisions (2026-11-19), Release
+Cohesion: 0.15
+Nodes (12): Checked on the local stack, Code review of batch 3 (run on this branch, fixed here), Code review of batch 4, Decided without asking, Medium bugs, batch 4 of 4: speed and database (2026-11-20), Mitra's decisions (2026-11-19), Release, idle() (+4 more)
 
 ### Community 97 - "invoice-render/index.ts"
 Cohesion: 0.08
@@ -816,92 +804,92 @@ Cohesion: 0.30
 Nodes (22): Postgres facts that are not guessable (all cost a failed migration to learn), Decisions made in this plan (refining the spec), A — category answers, vendorOptions(), collar(), fabric(), inseam(), jeansFacets() (+14 more)
 
 ### Community 99 - "OldAdvertisements.tsx"
-Cohesion: 0.07
-Nodes (35): Ad types done by hand: plan and record (2026-11-17), How it works, Release (each step needs Mitra's yes), Still open, Tests, What changed, Batch 2 (16) — done (2026-11-17), sellableAdTypes() (+27 more)
+Cohesion: 0.15
+Nodes (17): AdRow, CampaignCard(), E, effStatus(), FilterTab, fmtDateRange(), formatNum(), listContainer (+9 more)
 
-### Community 100 - "public.support_events"
-Cohesion: 0.18
-Nodes (11): public.support_events, support_events_ticket_idx, admin.fraud_findings, admin.support_purge_due(), admin.support_purge_log, fraud_findings_subject_idx, public.admin_fraud_findings(), public.support_receipt_record() (+3 more)
+### Community 100 - "sellerHome.ts"
+Cohesion: 0.16
+Nodes (15): GettingStartedCard(), gettingStartedRows(), Row, chatsFrom(), fetchSellerHome(), fetchSellerHomeChats(), num(), numOrNull() (+7 more)
 
 ### Community 101 - "Cosora — Project Memory (read this first, every session)"
-Cohesion: 0.09
-Nodes (21): Architecture Snapshot, Bunny Stream — the deploy checklist (order matters, twice), Cosora — Project Memory (read this first, every session), Documentation Protocol — follow every session, unprompted, Domain Terms, How the automation actually works (`.claude/settings.json`), Pointers, Product semantic search — what is left to switch it on (+13 more)
+Cohesion: 0.07
+Nodes (27): Architecture Snapshot, Brand colours, Bunny Stream — the deploy checklist (order matters, twice), Business Rules — Predefined, Cosora — Project Memory (read this first, every session), Documentation Protocol — follow every session, unprompted, Domain Terms, How the automation actually works (`.claude/settings.json`) (+19 more)
 
-### Community 102 - "VendorSettings.tsx"
-Cohesion: 0.11
-Nodes (23): LANG_OPTIONS, NOTIFICATION_DELIVERY_LIVE, ContactChannels, Raw, setContactConsent(), useContactChannels(), DEFAULT_VENDOR_NOTIFICATIONS, useVendorSettings() (+15 more)
+### Community 102 - "i18n.ts"
+Cohesion: 0.05
+Nodes (67): The account setting (`lib/languagePreference.ts`, `components/i18n/LanguageSync.tsx`), 2026-09-26 — Language covers the platform and follows the account (check 6,943/6,943; spec 4/4 + a mutation check; 26% → 79% in a browser), LanguageSync(), MarketingConsentSwitches(), MarketingOptIn(), acceptBuyerTerms(), BUYER_TERMS_VERSION, isStaleTerms() (+59 more)
 
 ### Community 103 - "video-closeups-bunny.spec.ts"
 Cohesion: 0.08
 Nodes (20): ADMIN, adminDb, db, env, LOCAL_PATH, REFERERS, results, VENDOR (+12 more)
 
 ### Community 104 - "admin.audit_log"
-Cohesion: 0.11
-Nodes (16): pg_temp.act(), _r, pg_temp.act(), _r, admin.audit_actor_name(), admin.audit_log, admin.audit_log_append_only(), admin.audit_row_change() (+8 more)
+Cohesion: 0.14
+Nodes (13): pg_temp.act(), _r, admin.audit_actor_name(), admin.audit_log, admin.audit_log_append_only(), admin.audit_row_change(), audit_log_actor_idx, audit_log_at_idx (+5 more)
 
 ### Community 105 - "engagement.ts"
-Cohesion: 0.09
-Nodes (23): AdAttribution, adAttribution(), CTA_LABELS, ctaPerformance(), CtaRow, dailySeries(), DayPoint, EngagementEventType (+15 more)
+Cohesion: 0.08
+Nodes (36): AdAttribution, adAttribution(), CTA_LABELS, CtaName, ctaPerformance(), CtaRow, dailySeries(), DayPoint (+28 more)
 
 ### Community 106 - "vendorDashboard.ts"
 Cohesion: 0.15
 Nodes (20): Task 5: Seller Home content and copy (SH-010, SH-012, SH-013, SH-017, SH-018, SH-020, SH-021, SH-022, SH-024, SH-025), SellerHome, ABOUT_MIN_CHARS, aboutCounts(), aboutLength(), charLength(), EMPTY_CHECKS, filled() (+12 more)
 
-### Community 107 - "public.admin_support_get"
-Cohesion: 0.21
-Nodes (10): public.support_callbacks, public.support_fraud_details, public.support_callback_slots(), public.support_request_callback(), public.admin_callback_log_attempt(), public.admin_support_claim(), public.admin_support_get(), public.admin_support_reveal_contact() (+2 more)
+### Community 107 - "vendorAnalytics.ts"
+Cohesion: 0.13
+Nodes (16): EMPTY_RESPONSIVENESS, fetchRepeatBuyers(), fetchVendorProductRatings(), LeadFunnel, METRIC_SCOPE_NOTE, ProductRating, RepeatBuyers, ThreadResponse (+8 more)
 
-### Community 108 - "Analytics.tsx"
-Cohesion: 0.07
-Nodes (60): MPF-2: Buyers write their own `calls` rows, and vendor call analytics trusts them, Vendor analytics — three modules, one rule (2026-09-07), adCountersTotal(), AdOrderRow, AdPerformance, CampaignEconomics, campaignEconomics(), CampaignRow (+52 more)
+### Community 108 - "Vendor analytics — three modules, one rule (2026-09-07)"
+Cohesion: 0.18
+Nodes (19): MPF-2: Buyers write their own `calls` rows, and vendor call analytics trusts them, 2026-09-23 — Buyer-written `calls` rows feed vendor analytics unchecked — Severity: Low, Vendor analytics — three modules, one rule (2026-09-07), revenueBookedSince(), CallAnalytics, callAnalyticsForWindow(), CallContextBucket, fetchVendorCalls() (+11 more)
 
 ### Community 109 - "useAuth"
-Cohesion: 0.03
-Nodes (97): SH-002 · Medium · [T] — The registration banner is hidden in production, SH-031 · Medium · reviewer — Badges reload on every navigation, File structure, Task 0: Bring the audit onto the branch, Task 10: Leads deep link, fresh counts, promo banner (SH-009, SH-015, SH-019, SH-087), Task 11: Header search, phone menu, plan check errors (SH-028, SH-029, SH-032), Task 13: Release (each step needs Mitra's yes; not run automatically), Task 1: Block list read once per query in `rfqs_select` (SH-006) (+89 more)
+Cohesion: 0.02
+Nodes (141): SH-002 · Medium · [T] — The registration banner is hidden in production, Subscriptions P0: foundations and safety (2026-10-08), framer-motion, lucide-react, @tanstack/react-query, ALWAYS_OPEN, BuyerSignupGate(), RegisteredVendorGate() (+133 more)
 
 ### Community 110 - "public.search_query_embeddings"
-Cohesion: 0.18
-Nodes (8): public.has_query_embedding(), public.search_products(), public.search_query_embeddings, embed_query_rate_limit_window_idx, public.embed_query_rate_limit, public.prune_search_query_embeddings(), public.image_search_rate_check(), public.search_products()
+Cohesion: 0.21
+Nodes (7): public.has_query_embedding(), public.search_products(), public.search_query_embeddings, embed_query_rate_limit_window_idx, public.embed_query_rate_limit, public.prune_search_query_embeddings(), public.search_products()
 
 ### Community 111 - "lib.mjs"
-Cohesion: 0.12
-Nodes (27): [cat], one(), cap, [cat, catName, catParent], PLANS, price, v, want (+19 more)
+Cohesion: 0.05
+Nodes (86): 10. Built for volume: what holds at 10,000 concurrent buyers, and what to watch, Customers — a summary refreshed on demand (admin completion Phase 6, 2026-09-28), cdnStatus, GAP, handleSummary(), name(), options, pad() (+78 more)
 
 ### Community 112 - "env"
 Cohesion: 0.08
 Nodes (24): name, runs-on, steps, DEMO_ADMIN_PASSWORD, DEMO_BUYER_PASSWORD, DEMO_VENDOR_PASSWORD, FIXTURE_PASSWORD, MP5_LINK_PASSWORD (+16 more)
 
 ### Community 113 - "marketplace.k6.js"
-Cohesion: 0.15
-Nodes (22): 2026-10-18 — A chat file's name skipped moderation — Severity: Medium (fixed and live the same day), account(), body(), buyer(), capRefusals, feedPage(), GAP, get() (+14 more)
+Cohesion: 0.08
+Nodes (37): 2026-09-10 — No rejection path for non-product images — Severity: Low, 2026-10-18 — A chat file's name skipped moderation — Severity: Medium (fixed and live the same day), 2026-09-05 — Chat + Chat-Moderation Full Pipeline (T1–T13, both layers), 2026-09-23 — Phase 2: Delete my account (throwaway buyer, request → confirm → sweep → anonymized; cancel untouched; cleaned to 0), 2026-10-08 — Subscriptions P0: foundations and safety (local stack: harness 29/29; flow check 76/76; tax ids 18/18; browser 11/11; typecheck 0 in both apps; i18n 7,283/7,283; admin build), T10 — Notifications, T11 — Admin panel structure, T12 — Adversarial / RLS-bypass, every role (+29 more)
 
-### Community 114 - "recentlyViewedStore.ts"
-Cohesion: 0.10
-Nodes (35): Task 5: Recently Viewed shows only real data (H-05), Animation system, Client stores — `src/lib/*Store.ts`, Data Fetching & State, Key Modules, Seed / mock data (still client-side), Shared helpers, Trends — curated chrome, real cards (2026-09-11) (+27 more)
+### Community 114 - "savedStore.ts"
+Cohesion: 0.06
+Nodes (71): Task 5: Recently Viewed shows only real data (H-05), Animation system, Client stores — `src/lib/*Store.ts`, Data Fetching & State, Key Modules, Seed / mock data (still client-side), Shared helpers, Trends — curated chrome, real cards (2026-09-11) (+63 more)
 
-### Community 115 - "carousel.tsx"
+### Community 115 - "otp.ts"
 Cohesion: 0.17
-Nodes (20): BuiltInBanner(), SellerPromoBanner(), SLIDES, BannerCard(), VendorDashboardBanners(), Carousel, CarouselApi, CarouselContent (+12 more)
+Nodes (15): Mobile number + OTP login: the brief and where it stands (2026-09-22), 2026-09-27 — Dummy OTP switched on: any 6 digits sign in as any phone number — Severity: High (accepted for now), Dummy OTP: mobile sign-in without SMS (2026-09-27), Wire up mobile OTP delivery (or finish the dev-mode bypass safely) — added 2026-09-23, dummyOtpEnabled(), lastSend, OTP_LENGTH, OTP_NOT_LIVE_MESSAGE (+7 more)
 
 ### Community 116 - "siteConfig.ts"
-Cohesion: 0.13
-Nodes (28): Site content — banners and theme (admin completion Phase 9, 2026-09-29), SiteThemeApplier(), DEFAULT_THEME, fontStack(), fromSnapshot(), fromTables(), googleFontUrl(), HERO_SLIDES_MAX (+20 more)
+Cohesion: 0.05
+Nodes (66): 8.1 Why it exists, and its source, 8.2 The rules, 8.3 The machinery, 8.4 Cosora-Admin › Trending searches (`/trending-searches`), 8.5 Where it stands (2026-11-01), 8. Trending searches (built 2026-10-18), Site content — banners and theme (admin completion Phase 9, 2026-09-29), BuiltInBanner() (+58 more)
 
 ### Community 117 - "public.conversations"
-Cohesion: 0.02
-Nodes (106): pg_temp.act(), _r, lt_real_before, lt_real_now, lt_report, lt_users, messages_quote_id_idx, messages_rfq_id_idx (+98 more)
+Cohesion: 0.03
+Nodes (77): pg_temp.act(), _r, lt_real_before, lt_real_now, lt_report, lt_users, messages_quote_id_idx, messages_rfq_id_idx (+69 more)
 
 ### Community 118 - "lib/adPricing.ts"
 Cohesion: 0.16
 Nodes (15): AD_PRICE, BROADCAST_MESSAGES, clampDays(), clampMessages(), computeOrderRupees(), PER_MESSAGE_TYPES, PriceLine, priceLines() (+7 more)
 
 ### Community 119 - "20260928070410_customers.sql"
-Cohesion: 0.17
-Nodes (17): admin.customer_rows, admin.customer_summary_meta, admin.customer_tags, admin.profile_tags, customer_summary_active_idx, customer_summary_id_idx, customer_summary_spend_idx, profile_tags_tag_idx (+9 more)
+Cohesion: 0.20
+Nodes (16): admin.customer_rows, admin.customer_summary_meta, admin.customer_tags, admin.profile_tags, customer_summary_active_idx, customer_summary_id_idx, customer_summary_spend_idx, profile_tags_tag_idx (+8 more)
 
-### Community 120 - "vendorStore.ts"
-Cohesion: 0.11
-Nodes (26): 2026-10-08 — Subscriptions P2: notification delivery (local stack: harness 21/21; dispatch check 16/16; end to end 13/13; browser 2/2; flow check 97/97; typecheck 0 in both apps; i18n 7,287/7,287; admin build), fmtDate(), INR, InvoiceSheet(), money(), NOTICES, paise(), TITLES (+18 more)
+### Community 120 - "InvoiceDetail.tsx"
+Cohesion: 0.16
+Nodes (17): 2026-10-08 — Subscriptions P2: notification delivery (local stack: harness 21/21; dispatch check 16/16; end to end 13/13; browser 2/2; flow check 97/97; typecheck 0 in both apps; i18n 7,287/7,287; admin build), InvoiceDetail, fmtDate(), INR, InvoiceSheet(), money(), NOTICES, paise() (+9 more)
 
 ### Community 121 - "20261013100100_admin_activity_views.sql"
 Cohesion: 0.21
@@ -916,36 +904,36 @@ Cohesion: 0.15
 Nodes (17): attribute_definitions_form_active, attribute_definitions_unique, public.admin_attribute_save(), public.admin_attribute_set_active(), public.attribute_definitions, trg_admin_audit, admin.attributes_guard(), attribute_definitions_form_active (+9 more)
 
 ### Community 124 - "DisplayCurrencyContext.tsx"
-Cohesion: 0.26
-Nodes (14): MPF-11: A second currency picker in the buyer menu drawer saves nothing and converts nothing, DisplayCurrency, DisplayCurrencyContext, DisplayCurrencyProvider(), passthrough, CODES, convertInrText(), CurrencyCode (+6 more)
+Cohesion: 0.28
+Nodes (13): DisplayCurrency, DisplayCurrencyContext, DisplayCurrencyProvider(), passthrough, CODES, convertInrText(), CurrencyCode, currencyCodeOf() (+5 more)
 
 ### Community 125 - "attributeDefinitions.ts"
-Cohesion: 0.14
-Nodes (21): Task 3: The listing form and search facets read the definitions, DynamicFormFieldsProps, FieldRendererProps, Field, FieldType, requirementSchemas, Section, codeVocabulary (+13 more)
+Cohesion: 0.17
+Nodes (18): Task 3: The listing form and search facets read the definitions, Field, FieldType, requirementSchemas, Section, codeVocabulary, FieldType, SellerCategory (+10 more)
 
 ### Community 126 - "Seller Home audit, 2026-11-15"
-Cohesion: 0.06
-Nodes (30): A1. Documents and context read, A2. Screens and features, A3. Database objects, A4. Back-button and navigation checks, A. Right after registration, Appendix A. What was audited, Appendix E. Screenshots, Appendix F. Clean-up (+22 more)
+Cohesion: 0.08
+Nodes (24): A1. Documents and context read, A2. Screens and features, A3. Database objects, A4. Back-button and navigation checks, A. Right after registration, Appendix A. What was audited, Appendix E. Screenshots, Appendix F. Clean-up (+16 more)
 
 ### Community 127 - "F. Products and Upload"
 Cohesion: 0.14
 Nodes (14): F. Products and Upload, SH-054 · Medium · ✔ seen — Required fields aren't enforced, SH-055 · Medium · ✔ checked — A blank MOQ is saved as "2", SH-056 · Medium · reviewer — PDFs on a live listing skip review, SH-057 · Medium · reviewer — Any staff role can change live listing photos, SH-058 · Medium · reviewer — A failed photo upload leaves a broken listing, SH-059 · Medium · reviewer — Publishing at the limit discards the form, SH-060 · Medium · reviewer — Back or refresh loses the whole upload (+6 more)
 
-### Community 128 - "queries/searchTrends.ts"
-Cohesion: 0.18
-Nodes (15): 8.3 The machinery, Trending searches (2026-10-18; built, not live), fetchTrendingSearches(), SEARCH_TRENDS_STALE_TIME_MS, useTrendingSearches(), isShowable(), istYesterday(), labels() (+7 more)
+### Community 128 - "chatData.ts"
+Cohesion: 0.14
+Nodes (12): SH-100 · High · ✔ seen — Every chat header shows an invented rating, Task 4: The chat header shows only real data (SH-100), callGroupsInOrder(), CallRecord, CALLS, ChatMessage, Conversation, CONVERSATIONS (+4 more)
 
 ### Community 129 - "react-router-dom"
-Cohesion: 0.05
-Nodes (88): MPF-3: Every user's email and phone is readable without signing in, MPF-9: Every profile save rewrites every field; an empty country becomes "India", Phase 14 decisions (2026-09-24), Buyer sign-up: the record, the steps, the gate and the back button (2026-11-14; branch `buyer-signup/fixes`, not live), Profile contact details — private columns, narrow readers (2026-09-23), Profile editing — two routes, one hook (2026-09-23), 2026-09-23 — Phase 4: /profile/edit and /profile/business-details (hard load + reload, saves verified by SQL, demo-buyer restored md5-identical), 2026-09-24 — Phase 20: MPF-11 fixed (INR byte-identical 239/239; USD spec 1/1; forced + scheduled FX refresh; GST check 30/30 and harness 12/12; MPF-25 found) (+80 more)
+Cohesion: 0.06
+Nodes (79): Task 1: Back that never leaves the site (H-08, H-09, H-10), sonner, SIGNUP_STEPS, SignupHeader(), Field(), inputCls, ProfileFormActions(), ProfileFormLoading() (+71 more)
 
 ### Community 130 - "autopay-flow-check.mjs"
 Cohesion: 0.10
 Nodes (11): call(), dir, fulfils, handlers, jwt(), LIVE, NO_KEYS, order (+3 more)
 
-### Community 131 - "rfqs.ts"
-Cohesion: 0.04
-Nodes (106): 11. Where the code and tests live, SH-105 · Medium · reviewer — Opening a thread rewrites the conversation, Cosora-Admin review 2026-11-22: Medium batch 2 (LIVE 2026-11-22), Part 2: Standing (live 2026-11-15), ConvertedPriceNote(), CompareTable(), Props, Row() (+98 more)
+### Community 131 - "DirectRequestThread.tsx"
+Cohesion: 0.11
+Nodes (37): ConvertedPriceNote(), CompareTable(), Props, Row(), BLUE, DetailRow(), DirectRequestThread(), E (+29 more)
 
 ### Community 132 - "onboarding-back.spec.ts"
 Cohesion: 0.11
@@ -953,15 +941,15 @@ Nodes (15): enter(), heading(), pdf(), PNG, png(), toContract(), toStep6(), toSt
 
 ### Community 133 - "VendorProfile.tsx"
 Cohesion: 0.07
-Nodes (27): allCategoryImageSlots(), categoryBannerSlot(), CategoryImageSlot, categoryTileSlot(), NEW_ARRIVALS_TILE_CATEGORIES, NEW_ARRIVALS_TILES, NewArrivalsTileKey, SLOT_PATTERN (+19 more)
+Nodes (30): useCategoryPicture(), allCategoryImageSlots(), categoryBannerSlot(), CategoryImageSlot, categoryTileSlot(), NEW_ARRIVALS_TILE_CATEGORIES, NEW_ARRIVALS_TILES, NewArrivalsTileKey (+22 more)
 
 ### Community 134 - "Test Log & Test Suites"
-Cohesion: 0.14
-Nodes (13): 2026-11-22 — Cosora-Admin review, High batch (local stack; branch `fix/admin-review-high-2026-11-22`), 2026-11-22 — Cosora-Admin review, Medium batch 1 (local stack; branch `fix/admin-review-medium1-2026-11-22`), 2026-11-22 — Cosora-Admin review, Medium batch 2 (local stack; branch `fix/admin-review-medium2-2026-11-22`), 2026-11-22 — Cosora-Admin review, Medium batch 3, and the Medium release, 2026-11-23 — Cosora-Admin review, Low batch 1 (local stack), 2026-11-23 — Cosora-Admin review, Low batch 2 (local stack), 2026-11-23 — Cosora-Admin review, Low batch 3 (local stack), 2026-11-23 — Cosora-Admin review Low batches 1–3, release (+5 more)
+Cohesion: 0.20
+Nodes (9): 2026-11-22 — Cosora-Admin review, High batch (local stack; branch `fix/admin-review-high-2026-11-22`), 2026-11-22 — Cosora-Admin review, Medium batch 1 (local stack; branch `fix/admin-review-medium1-2026-11-22`), 2026-11-22 — Cosora-Admin review, Medium batch 2 (local stack; branch `fix/admin-review-medium2-2026-11-22`), 2026-11-22 — Cosora-Admin review, Medium batch 3, and the Medium release, 2026-11-23 — Cosora-Admin review, Low batch 1 (local stack), 2026-11-23 — Cosora-Admin review, Low batch 2 (local stack), 2026-11-23 — Cosora-Admin review, Low batch 3 (local stack), 2026-11-23 — Cosora-Admin review Low batches 1–3, release (+1 more)
 
 ### Community 135 - "20261122100000_admin_review_high.sql"
-Cohesion: 0.11
-Nodes (7): public.accept_buyer_terms(), admin.listing_revs, admin.notify_moderation_outcome(), admin.trg_listing_rev_files(), public.admin_support_counts(), trg_product_documents_listing_rev, trg_product_images_listing_rev
+Cohesion: 0.09
+Nodes (15): product_images_product_position_idx, admin.product_photo_paths(), admin.trg_products_photos_follow(), public.product_photo_in_use(), trg_products_photos_on_delete, trg_products_thumbs_off, admin.listing_revs, admin.notify_moderation_outcome() (+7 more)
 
 ### Community 136 - "following-and-quote-chat-check.mjs"
 Cohesion: 0.17
@@ -976,12 +964,12 @@ Cohesion: 0.10
 Nodes (20): compilerOptions, allowImportingTsExtensions, isolatedModules, jsx, lib, module, moduleDetection, moduleResolution (+12 more)
 
 ### Community 139 - "2. Phase-by-phase build narrative"
-Cohesion: 0.07
-Nodes (27): 10. Complete verification proof log (this session), 11. Complete bug/gap ledger — verified current status, 1. Ground rules the whole build operated under, 3. THE actual security hole this entire build closed, 4. Complete migration list applied this session (in order), 6. Role of the vector database — **none, for advertisements**, 7. Where every ad type is placed — complete map, 8. Certificate fulfilment — full detail (+19 more)
+Cohesion: 0.04
+Nodes (48): 10. Complete verification proof log (this session), 11. Complete bug/gap ledger — verified current status, 1. Ground rules the whole build operated under, 2. Phase-by-phase build narrative, 3. THE actual security hole this entire build closed, 4. Complete migration list applied this session (in order), 5. The contextual targeting algorithm — full technical detail, 6. Role of the vector database — **none, for advertisements** (+40 more)
 
 ### Community 140 - "AutoTranslate.tsx"
-Cohesion: 0.18
-Nodes (18): applyAttr(), applyAttrs(), applyText(), ATTR_SELECTOR, ATTRS, AutoTranslate(), LAST_SET_ATTR, LAST_SET_TEXT (+10 more)
+Cohesion: 0.16
+Nodes (20): Catalogues, applyAttr(), applyAttrs(), applyText(), ATTR_SELECTOR, ATTRS, AutoTranslate(), LAST_SET_ATTR (+12 more)
 
 ### Community 141 - "B. Seller Home page"
 Cohesion: 0.10
@@ -991,29 +979,29 @@ Nodes (20): B. Seller Home page, SH-005 · High · ✔ seen · [T] — Seller Ho
 Cohesion: 0.10
 Nodes (19): Before releasing (from the review; each step still needs Mitra's yes), Decisions, Deferred minors (not fixed; Mitra decides), Final whole-branch review, Global Constraints, Notes, Record of the build (2026-11-16), Review Focus (+11 more)
 
-### Community 143 - "i18n.ts"
-Cohesion: 0.11
-Nodes (22): translateY with percentages, Catalogues, applyDocLang(), buildCatalog(), Catalog, catalogs, current, emit() (+14 more)
+### Community 143 - "returnTo.ts"
+Cohesion: 0.25
+Nodes (12): ReturnToTracker(), BUYER_LANDING, isAuthPath(), peekLandingFor(), readLanding(), rememberReturnTo(), worthReturning(), RouteSide (+4 more)
 
 ### Community 144 - "steps"
 Cohesion: 0.10
 Nodes (19): name, runs-on, steps, jobs, checks, name, on, pull_request (+11 more)
 
 ### Community 145 - "20260929080502_discount_codes.sql"
-Cohesion: 0.16
-Nodes (12): admin.discount_attempts, admin.discount_codes, admin.discount_evaluate(), admin.discount_redemptions, discount_attempts_vendor_idx, discount_redemptions_code_idx, discount_redemptions_vendor_idx, public.admin_discount_code_set_active() (+4 more)
+Cohesion: 0.17
+Nodes (11): admin.discount_attempts, admin.discount_codes, admin.discount_evaluate(), admin.discount_redemptions, discount_attempts_vendor_idx, discount_redemptions_code_idx, discount_redemptions_vendor_idx, public.admin_discount_code_set_active() (+3 more)
 
 ### Community 146 - "Search.tsx"
 Cohesion: 0.05
-Nodes (57): Buyer feeds — pages from `feed_products()` (2026-10-14), Data access — `src/lib/queries/`, RPCs, SlideProps, AD_SLOTS, AD_TYPES, AdSlot, AdSlotRepeat (+49 more)
+Nodes (63): 11. Known gaps and open items, 12. Tests and tools, 13. History, 2. The whole path in one picture, 4. The search landing page `/search`, 5.1 `search_products(query, match_count)`, 5.2 `match_products`: the one place results are ranked, 5.3 The first search of a new phrase (+55 more)
 
 ### Community 147 - "AddSocialLinks.tsx"
 Cohesion: 0.09
-Nodes (21): 2026-11-20 — Medium batch 4 (built, not released) — Severity: Low, saveVendorProfile(), hostMatches(), MESSAGING_HOSTS, normaliseSocialLink(), SOCIAL_MAX_PER_PLATFORM, SOCIAL_PLATFORMS, SocialKey (+13 more)
+Nodes (20): hostMatches(), MESSAGING_HOSTS, normaliseSocialLink(), SOCIAL_MAX_PER_PLATFORM, SOCIAL_PLATFORMS, SocialKey, socialLinksForDisplay(), AddSocialLinks() (+12 more)
 
 ### Community 148 - "fetchOpenRfqs"
-Cohesion: 0.15
-Nodes (12): Delivery, How a removal is stored (approach A), R1 — No RFQ data for signed-out visitors, R2 — The same leads on every plan, R3 — Admin oversight: remove and flag, R4 — Personalisation (later, own spec), Reads and screens, RFQ / Leads pipeline — design (R1–R3) (+4 more)
+Cohesion: 0.17
+Nodes (11): Delivery, How a removal is stored (approach A), R1 — No RFQ data for signed-out visitors, R3 — Admin oversight: remove and flag, R4 — Personalisation (later, own spec), Reads and screens, RFQ / Leads pipeline — design (R1–R3), Testing (+3 more)
 
 ### Community 149 - "faqs-admin-editable.spec.ts"
 Cohesion: 0.17
@@ -1027,25 +1015,21 @@ Nodes (14): built, certOnly, ck, dir, ek, mismatches, mixedSpec, perProductScali
 Cohesion: 0.11
 Nodes (17): Admin Panel, Authentication, Brand Colors, Buyer Side, Core Mechanics, Cosora — Product Context, Current Build Status, How Buyers Operate (+9 more)
 
-### Community 152 - "MyReviews.tsx"
-Cohesion: 0.13
-Nodes (20): ReviewPhotoPicker(), StarPicker(), StarRating(), WriteReviewModal(), MyReviewItem, useMyReviews(), CORAL, E (+12 more)
+### Community 152 - "ProductDetail.tsx"
+Cohesion: 0.06
+Nodes (54): `engagement_events` — visit-level tracking (migration 20260907170000), Product detail — rendered from the row, never a template (2026-09-11), OPTIONS, ProductChatOptionsSheet(), ProductChatOptionsSheetProps, ReviewPhotoPicker(), ReviewPhotoStrip(), StarPicker() (+46 more)
 
 ### Community 153 - "20261120100000_medium_batch4.sql"
-Cohesion: 0.10
-Nodes (15): public.my_followed_brands(), public.saved_vendors, admin.image_urls_check(), admin.own_storage_url(), admin.product_view_queue, admin.products_off_when_deleted(), public.ad_impressions(), public.chat_buyer_social() (+7 more)
+Cohesion: 0.14
+Nodes (10): admin.refresh_vendor_standing(), admin.vendor_standing, public.vendor_standing(), public.my_followed_brands(), public.saved_vendors, admin.image_urls_check(), public.new_brand_suggestions(), public.seller_home_chats() (+2 more)
 
 ### Community 154 - "public.product_videos"
-Cohesion: 0.04
-Nodes (47): public.admin_role(), public.approve_vendor_content(), public.enforce_admin_grants(), public.enforce_ads_moderation(), public.enforce_products_moderation(), public.enforce_vendor_profile_admin_fields(), trg_ads_moderation, trg_products_moderation (+39 more)
+Cohesion: 0.03
+Nodes (58): public.admin_role(), public.approve_vendor_content(), public.enforce_admin_grants(), public.enforce_ads_moderation(), public.enforce_products_moderation(), public.enforce_vendor_profile_admin_fields(), trg_ads_moderation, trg_products_moderation (+50 more)
 
 ### Community 155 - "components.json"
 Cohesion: 0.12
 Nodes (16): aliases, components, hooks, lib, ui, utils, rsc, $schema (+8 more)
-
-### Community 156 - "public.product_photo_in_use"
-Cohesion: 0.16
-Nodes (11): product_images_product_position_idx, public.active_ads(), admin.product_photo_paths(), admin.trg_products_photos_follow(), public.ad_impressions(), public.product_photo_in_use(), trg_products_photos_on_delete, trg_products_thumbs_off (+3 more)
 
 ### Community 157 - "1. Seller Help (new surface `seller_help`, **active**)"
 Cohesion: 0.12
@@ -1055,25 +1039,21 @@ Nodes (16): 1. Seller Help (new surface `seller_help`, **active**), 2. Buyer Hel
 Cohesion: 0.09
 Nodes (23): `admin.product_moderation_actions` (the ledger), `admin.product_moderation_reasons` (the templates), Buyer/vendor app, Cosora-Admin, Data, Decisions (Mitra, 2026-10-07), Guard: `trg_products_moderation_guard` (BEFORE INSERT OR UPDATE, invoker), Manager joins product moderation (+15 more)
 
-### Community 159 - "Search on Cosora: how it works"
-Cohesion: 0.06
-Nodes (33): 10. Built for volume: what holds at 10,000 concurrent buyers, and what to watch, 11. Known gaps and open items, 12. Tests and tools, 13. History, 2. The whole path in one picture, 3.1 The text a listing is searched by, 3.2 The meaning of a listing (embeddings), 3. Making a listing findable (+25 more)
-
-### Community 160 - "public.support_attachments"
-Cohesion: 0.14
-Nodes (16): public.support_attachment_read_allowed(), public.support_attachment_upload_allowed(), public.support_attachments, public.support_categories, public.support_messages, admin.support_check_files(), admin.support_rate_check(), admin.support_reserve_upload() (+8 more)
+### Community 159 - "3.1 The text a listing is searched by"
+Cohesion: 0.67
+Nodes (3): 3.1 The text a listing is searched by, 3.2 The meaning of a listing (embeddings), 3. Making a listing findable
 
 ### Community 161 - "pg_proc"
-Cohesion: 0.05
-Nodes (36): h16, pg_temp.h16_probe(), public.for_you_products(), public.log_call(), public.admin_faq_reorder(), public.admin_search_candidates(), public.admin_site_banner_delete(), public.admin_site_banner_reorder() (+28 more)
+Cohesion: 0.04
+Nodes (47): pg_temp.act(), _r, public.for_you_products(), public.log_call(), public.admin_faq_reorder(), public.admin_audit_record(), public.admin_search_candidates(), public.admin_payments_summary() (+39 more)
 
 ### Community 162 - "catalogues.ts"
-Cohesion: 0.16
-Nodes (17): H. Upload Catalogue, SH-071 · High · ✔ checked — "Who can view" is never saved, SH-072 · Medium · reviewer — Deleted catalogues stay downloadable, SH-073 · Medium · ✔ seen — The form stays usable at the Free limit, SH-074 · Low · ✔ seen — Invented and fixed figures, catalogueFileName(), createCatalogue(), deleteCatalogue() (+9 more)
+Cohesion: 0.15
+Nodes (18): H. Upload Catalogue, SH-071 · High · ✔ checked — "Who can view" is never saved, SH-072 · Medium · reviewer — Deleted catalogues stay downloadable, SH-073 · Medium · ✔ seen — The form stays usable at the Free limit, SH-074 · Low · ✔ seen — Invented and fixed figures, fileExt(), catalogueFileName(), createCatalogue() (+10 more)
 
 ### Community 163 - "public.csp_violations"
-Cohesion: 0.13
-Nodes (8): public.embedding_usage_daily, public.csp_violations, conversation_reviews_reporter_idx, csp_violations_least_seen_idx, public.csp_report_ingest(), public.submit_report(), public.admin_csp_violations(), public.admin_embedding_usage()
+Cohesion: 0.12
+Nodes (9): public.embedding_usage_daily, public.image_search_rate_check(), public.csp_violations, conversation_reviews_reporter_idx, csp_violations_least_seen_idx, public.csp_report_ingest(), public.submit_report(), public.admin_csp_violations() (+1 more)
 
 ### Community 164 - "image-search-check.mjs"
 Cohesion: 0.13
@@ -1084,32 +1064,32 @@ Cohesion: 0.12
 Nodes (12): ALL, BASE_ENV, dir, EMAIL, many, outfile, rows, run() (+4 more)
 
 ### Community 166 - "hooks/use-toast.ts"
-Cohesion: 0.13
-Nodes (25): Toast, ToastAction, ToastActionElement, ToastClose, ToastDescription, ToastProps, ToastTitle, toastVariants (+17 more)
+Cohesion: 0.16
+Nodes (16): ToastActionElement, ToastProps, Action, ActionType, actionTypes, addToRemoveQueue(), dispatch(), genId() (+8 more)
 
-### Community 167 - "support.k6.js"
-Cohesion: 0.15
-Nodes (14): inboxMs, listMs, options, postMs, rateLimited, readMs, requester(), rpc() (+6 more)
+### Community 167 - "adPerformance.ts"
+Cohesion: 0.18
+Nodes (12): adCountersTotal(), AdOrderRow, AdPerformance, CampaignEconomics, campaignEconomics(), CampaignRow, fetchAdPerformance(), OrderSpec (+4 more)
 
-### Community 168 - "notificationsStore.ts"
-Cohesion: 0.12
-Nodes (15): Batch 1 (20), AD_META, CERTIFICATE_META, FALLBACK_META, KIND_META, KindMeta, NotifGroup, notificationKindMeta() (+7 more)
+### Community 168 - "toast.tsx"
+Cohesion: 0.35
+Nodes (9): Toast, ToastAction, ToastClose, ToastDescription, ToastTitle, toastVariants, ToastViewport, Toaster() (+1 more)
 
 ### Community 169 - "Review Focus"
 Cohesion: 0.13
 Nodes (14): Decisions taken without asking (obvious fixes), Global Constraints, High-priority buyer bugs (H-01 to H-13) Implementation Plan, Mitra's decisions (2026-11-18), Review Focus, Task 10: Precomputed feed (H-11), Task 11: Docs, checks, review, Task 2: Scaffold routes and fill cards (H-02, H-01) (+6 more)
 
-### Community 170 - "buyerCategories.ts"
-Cohesion: 0.17
-Nodes (14): Buyer interests — `pref_category_map` (Interest Preference v2, 2026-10-11), For You ranking — `for_you_products()` (location soft boost 2026-09-23), Props, TileCheck(), BUYER_CATEGORIES, BUYER_CATEGORY_LABEL, BuyerCategory, clipOtherInterest() (+6 more)
+### Community 170 - "20261002104116_admin_staff_registry.sql"
+Cohesion: 0.24
+Nodes (6): admin.staff_members, admin.staff_work_email(), public.admin_staff_identifiers(), public.admin_staff_record(), staff_members_personal_email_key, staff_members_registered_by_idx
 
-### Community 171 - "Freelancers.tsx"
-Cohesion: 0.15
-Nodes (23): Brand, BrandTopProduct, emit(), followBrand(), getSnapshot(), hideBrand(), isUuid(), listeners (+15 more)
+### Community 171 - "seller-home-low.spec.ts"
+Cohesion: 0.24
+Nodes (9): Tax-id guard, admin activity, review reports, delivery team (2026-10-13; built, not live), account(), category(), clientFor(), firstId(), listing(), made, page() (+1 more)
 
 ### Community 172 - "CrmLeadSheet.tsx"
-Cohesion: 0.08
-Nodes (56): SideDrawer(), SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay, SheetTitle (+48 more)
+Cohesion: 0.14
+Nodes (28): SheetDescription, SheetHeader(), CrmLeadSheet(), historyLine(), localInput(), WHEN, addFollowUp(), addNote() (+20 more)
 
 ### Community 173 - "seller-home-fixes.spec.ts"
 Cohesion: 0.16
@@ -1128,8 +1108,8 @@ Cohesion: 0.13
 Nodes (15): Appendix B - Canonical Sources (read these before reinventing), Apple Liquid Glass (Apple platforms only), Atlassian, Bootstrap, Carbon, Fluent UI, GOV.UK, Material Web (+7 more)
 
 ### Community 177 - "Design Engineering"
-Cohesion: 0.09
-Nodes (22): Accessibility, Beauty is leverage, Core Philosophy, Damping at boundaries, Debugging Animations, Design Engineering, Frame-by-frame inspection, Friction instead of hard stops (+14 more)
+Cohesion: 0.08
+Nodes (23): 3D transforms for depth, Accessibility, CSS animations beat JS under load, CSS Transform Mastery, CSS variables are inheritable, Debugging Animations, Design Engineering, Frame-by-frame inspection (+15 more)
 
 ### Community 178 - "sub"
 Cohesion: 0.18
@@ -1148,8 +1128,8 @@ Cohesion: 0.25
 Nodes (8): Animate enter states with @starting-style, Buttons must feel responsive, Component Building Principles, Make popovers origin-aware, Never animate from scale(0), Tooltips: skip delay on subsequent hovers, Use blur to mask imperfect transitions, Use CSS transitions over keyframes for interruptible UI
 
 ### Community 182 - "public.product_documents"
-Cohesion: 0.18
-Nodes (12): public.product_documents, public.product_documents_cap(), trg_product_documents_cap, admin.product_documents_rereview(), trg_admin_audit, trg_product_documents_rereview, public.enforce_notification_update_columns(), public.my_profile_score() (+4 more)
+Cohesion: 0.39
+Nodes (6): public.product_documents, public.product_documents_cap(), trg_product_documents_cap, admin.product_documents_rereview(), trg_admin_audit, trg_product_documents_rereview
 
 ### Community 183 - "profile-data-export.spec.ts"
 Cohesion: 0.15
@@ -1161,7 +1141,7 @@ Nodes (4): Batch 1 — done (2026-11-17), Decisions, Release, Seller Home audit 
 
 ### Community 185 - "J. Advertising"
 Cohesion: 0.12
-Nodes (17): C5. Structure checks, J. Advertising, SH-086 · High · ✔ seen · [T] — The Advertise slideshow traps Back, SH-087 · High · ✔ checked · [T] — `site_banners` is abandoned, SH-088 · High · ✔ checked — Paid ad days run out during review, SH-089 · High · ✔ checked — "Changes needed" is a dead end, SH-090 · High · reviewer — "You were not charged" after a charge, SH-091 · Medium · reviewer — A second tap buys the campaign again (+9 more)
+Nodes (17): J. Advertising, SH-086 · High · ✔ seen · [T] — The Advertise slideshow traps Back, SH-087 · High · ✔ checked · [T] — `site_banners` is abandoned, SH-089 · High · ✔ checked — "Changes needed" is a dead end, SH-090 · High · reviewer — "You were not charged" after a charge, SH-091 · Medium · reviewer — A second tap buys the campaign again, SH-092 · Medium · reviewer — "Your ads are live" when they aren't, SH-093 · Medium · reviewer — The seal and the certificate can't be bought (+9 more)
 
 ### Community 186 - "race.mjs"
 Cohesion: 0.15
@@ -1184,8 +1164,8 @@ Cohesion: 0.14
 Nodes (11): APP, catchAll, config, current, fixed, missing, root, routes (+3 more)
 
 ### Community 191 - "AdvertisementSlideshow.tsx"
-Cohesion: 0.18
-Nodes (5): E, section, slides, TAP, TAP_T
+Cohesion: 0.15
+Nodes (8): brand(), BrandToken, AdvertisementSlideshow(), E, section, slides, TAP, TAP_T
 
 ### Community 192 - "chat-pipeline.spec.ts"
 Cohesion: 0.16
@@ -1220,28 +1200,28 @@ Cohesion: 0.22
 Nodes (12): recharts@^2.15.4, recharts, ChartConfig, ChartContainer, ChartContext, ChartContextProps, ChartLegendContent, ChartStyle() (+4 more)
 
 ### Community 200 - "Local-stack E2E — `tests/local/` (Help & Support launch gate, P7)"
-Cohesion: 0.12
-Nodes (16): 2026-10-18 — the audit's "fix first" list (branch `fix/first-fixes-2026-10-18`, local stack), 2026-10-19 — the rest of the buyer audit (branch `fix/audit-second-2026-10-19`, local stack), 2026-10-20 — the admin audit's low list (branch `fix/low-2026-10-20`, local stack), 2026-10-20 — the admin audit's medium list (branch `fix/medium-2026-10-20`, local stack), 2026-10-20 — the admin audit's serious findings (branch `fix/serious-2026-10-20`, local stack), 2026-10-21 — the rest of the vendor audit (branch `fix/vendor-rest-2026-10-21`, local stack), 2026-10-21 — the vendor audit's items 6-10 (branch `fix/vendor-6-10-2026-10-21`, local stack), 2026-10-21 — the vendor audit's serious list (branch `fix/vendor-serious-2026-10-21`, local stack) (+8 more)
+Cohesion: 0.06
+Nodes (40): Engineering conventions treated as product rules, MPF-1: Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin, MPF-20: The sign-in step re-applies a signup name, MPF-9: Every profile save rewrites every field; an empty country becomes "India", Phase 14 decisions (2026-09-24), User journey, Profile editing — two routes, one hook (2026-09-23), Profile stats — owner-filtered counts (2026-09-24) (+32 more)
 
 ### Community 201 - "faq-cdn-propagation.mjs"
 Cohesion: 0.17
 Nodes (11): acct, admin, env, fileUrl(), read(), results, settled, STYLES (+3 more)
 
 ### Community 202 - "stateCodeFor"
-Cohesion: 0.23
+Cohesion: 0.24
 Nodes (12): StateSelect(), INDIA_STATES, IndiaState, normalise(), stateByCode(), stateCodeFor(), checkContactChanges(), CONTACT_FIELDS (+4 more)
 
 ### Community 203 - "4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)"
 Cohesion: 0.17
 Nodes (12): 4.10 Quotes & Testimonials, 4.11 Page Theme Lock (Light / Dark Mode Consistency), 4.1 Typography, 4.2 Color Calibration, 4.3 Layout Diversification, 4.4 Materiality, Shadows, Cards, 4.5 Interactive UI States, 4.6 Data & Form Patterns (+4 more)
 
-### Community 204 - "assertWrote"
-Cohesion: 0.25
-Nodes (7): 2026-09-16: Phase 3c complete. HARD STOP: Phase 3 is complete only after Mitra's independent verification. Do not start Phase 4., 2026-09-21: Phase 4a complete (RPCs, additive). HARD STOP: wait for Mitra's independent go before 4b., 2026-09-22: Phase 4c complete (tables moved). HARD STOP: Phase 4 is complete only after Mitra's independent verification., 2026-09-22: Phase 5a complete (identity RPCs, additive). HARD STOP: 5b needs the external gate., 2026-09-22: Phase 5b complete (every reader/writer repointed). HARD STOP: 5c needs the external gate., 2026-09-22: Phase 5c complete. profiles.is_admin/admin_role DROPPED. Admin-db-separation build complete., Admin-schema separation: rolling context
+### Community 204 - "Admin-schema separation: rolling context"
+Cohesion: 0.09
+Nodes (16): 2026-09-16: Phase 3c complete. HARD STOP: Phase 3 is complete only after Mitra's independent verification. Do not start Phase 4., 2026-09-21: Phase 4a complete (RPCs, additive). HARD STOP: wait for Mitra's independent go before 4b., 2026-09-22: Phase 4c complete (tables moved). HARD STOP: Phase 4 is complete only after Mitra's independent verification., 2026-09-22: Phase 5a complete (identity RPCs, additive). HARD STOP: 5b needs the external gate., 2026-09-22: Phase 5b complete (every reader/writer repointed). HARD STOP: 5c needs the external gate., 2026-09-22: Phase 5c complete. profiles.is_admin/admin_role DROPPED. Admin-db-separation build complete., Admin-schema separation: rolling context, Checked (+8 more)
 
 ### Community 205 - "Help & Support: build plan"
-Cohesion: 0.09
-Nodes (22): 1. Goal, non-goals, done, 2. Decisions, 3. Phase plan, 4. Test plan, 5. Rollout and fallback, 6. Documentation per phase, 7. Risks and open questions, 8. Not building now, and why (+14 more)
+Cohesion: 0.10
+Nodes (19): 1. Goal, non-goals, done, 2. Decisions, 3. Phase plan, 4. Test plan, 5. Rollout and fallback, 6. Documentation per phase, 7. Risks and open questions, 8. Not building now, and why (+11 more)
 
 ### Community 206 - "Appendix B. Browser test output"
 Cohesion: 0.17
@@ -1262,10 +1242,6 @@ Nodes (11): Admin depends on buyer, Admin-schema separation (all in textile-spar
 ### Community 210 - "suspension-gate-check.mjs"
 Cohesion: 0.22
 Nodes (7): ADMIN, CASES, client(), env, results, signIn(), VENDOR
-
-### Community 211 - "seller-home-medium-b.spec.ts"
-Cohesion: 0.20
-Nodes (8): account(), fakeCheckout(), made, open(), routePayments(), allow(), listed, withAutopayBackend()
 
 ### Community 212 - "Personalised ranking, Part 3: Fit — design"
 Cohesion: 0.18
@@ -1291,13 +1267,13 @@ Nodes (8): ALL, ALLOW, BARE, failing, files, findings, HELPERS, WRAPPED
 Cohesion: 0.50
 Nodes (6): CountrySelect(), COUNTRIES, Country, countryByCode(), countryCodeFor(), normalise()
 
-### Community 218 - "Business Rules — Discovered/Decided During Development"
-Cohesion: 0.05
-Nodes (66): A row policy is not a column policy (2026-10-10), An edit to approved content goes back to review (Mitra, 2026-10-10), Business Rules — Discovered/Decided During Development, Decisions of 2026-10-10 (Mitra), Seller registration (Mitra, 2026-11-13; onboarding audit fixes 1–20), What changed, Task 3: Requirement form saves its answers, SH-006 · High · ✔ checked · [T] — Seller Home won't hold up at 10,000 concurrent users (+58 more)
+### Community 218 - "PostRequirement.tsx"
+Cohesion: 0.11
+Nodes (32): What changed, New Arrivals carousel, requirement pictures, the pinned bar (2026-10-14, second batch), Photo, QuickRfqModal(), QuickRfqModalProps, ToTopButton(), CategorySelector(), schemaForCategory() (+24 more)
 
-### Community 219 - "Record of the build (2026-11-16)"
-Cohesion: 0.50
-Nodes (4): Deferred minors (the final review's Minor findings, not fixed), Final whole-branch review, Record of the build (2026-11-16), Rulings made while building, in order (what was decided, why, what it costs if wrong)
+### Community 219 - "File structure"
+Cohesion: 0.11
+Nodes (18): Deferred minors (the final review's Minor findings, not fixed), Design (approved 2026-11-16), File structure, Final whole-branch review, Record of the build (2026-11-16), Review Focus, Rulings made while building, in order (what was decided, why, what it costs if wrong), Seller Home Fixes Implementation Plan (+10 more)
 
 ### Community 220 - "compilerOptions"
 Cohesion: 0.18
@@ -1327,13 +1303,13 @@ Nodes (6): anon, client(), env, mine, rows, signIn()
 Cohesion: 0.25
 Nodes (3): public.pref_category_map, public.buyer_cold_start_embedding(), public.buyer_taste_embedding()
 
-### Community 227 - "2. Phase-by-phase build narrative"
-Cohesion: 0.08
-Nodes (25): 2. Phase-by-phase build narrative, Phase 0 — Inspect before assuming, Phase 10 — Report, Phase 11 — Semantic ad matching, Phase 1 — Campaign state model, Phase 2 — Review RPCs, Phase 3 — Delivery, eligibility, targeting, sweep, frequency capping, Phase 4 — Admin review UI (+17 more)
+### Community 227 - "Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10"
+Cohesion: 0.16
+Nodes (14): Phase 7 — WhatsApp via real APIs, Category pictures and brand suggestions (2026-10-14), Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10, clickToChatProvider, MessageContext, messaging(), MessagingKind, MessagingProvider (+6 more)
 
-### Community 228 - "first-fixes.spec.ts"
-Cohesion: 0.27
-Nodes (8): amountFrom(), firstNumber(), MAX_QUANTITY, quantityFrom(), accounts, PDF, PNG, tag
+### Community 228 - "@playwright/test"
+Cohesion: 0.06
+Nodes (19): @playwright/test, PHRASES, rows, errors, FABRICATED, failed, results, SCREEN (+11 more)
 
 ### Community 229 - "fx-rates-refresh/index.ts"
 Cohesion: 0.22
@@ -1352,16 +1328,16 @@ Cohesion: 0.24
 Nodes (9): activeCard(), activeSlide(), catId(), fixture(), JPEG, objects, sellers, snapshot() (+1 more)
 
 ### Community 233 - "@supabase/supabase-js"
-Cohesion: 0.05
-Nodes (51): Responsibilities & features, @supabase/supabase-js, accounts, clientFor(), PDF, PNG, tag, globalSetup() (+43 more)
+Cohesion: 0.06
+Nodes (43): @supabase/supabase-js, accounts, clientFor(), PDF, PNG, tag, globalSetup(), servedSupabaseUrl() (+35 more)
 
 ### Community 234 - "otp-dev-verify/index.ts"
 Cohesion: 0.25
 Nodes (6): RFC-2606, admin(), confirmedNotAdmin(), corsHeaders, enabled(), META_KEYS
 
 ### Community 235 - "Appendix C. Database check output"
-Cohesion: 0.17
-Nodes (8): Appendix C. Database check output, C1. Local data and switches, C2. A seller right after registration, C3. Query cost as a seller (120 open requirements), C4. Rules probed with rolled-back writes, C6. After the end-to-end run (seller `home-c`), C7. The local copy is current, psql()
+Cohesion: 0.25
+Nodes (8): Appendix C. Database check output, C1. Local data and switches, C2. A seller right after registration, C3. Query cost as a seller (120 open requirements), C4. Rules probed with rolled-back writes, C5. Structure checks, C6. After the end-to-end run (seller `home-c`), C7. The local copy is current
 
 ### Community 236 - "Low bugs, batch 3: requirements, chats, help, profile and sign-up (2026-11-20)"
 Cohesion: 0.29
@@ -1376,20 +1352,16 @@ Cohesion: 0.22
 Nodes (8): Global Constraints, Ranking Fit (Part 3) Implementation Plan, Review Focus, Task 1: Family helper and the scoring function, Task 2: Lead feed reads `near`; "Near you" badge, Task 3: Buyer state nudge, Task 4: Docs, full suite, rehearsal, Task 5: Release
 
 ### Community 239 - "buyerGeography.ts"
-Cohesion: 0.21
-Nodes (11): BuyerGeography, coveragePct(), coverageSentence(), DENIED, fetchBuyerGeography(), GeoCityBucket, GeoStateBucket, RawGeo (+3 more)
+Cohesion: 0.22
+Nodes (9): BuyerGeography, coveragePct(), coverageSentence(), DENIED, fetchBuyerGeography(), GeoCityBucket, GeoStateBucket, RawGeo (+1 more)
 
-### Community 240 - "vendorPayments.ts"
-Cohesion: 0.15
-Nodes (16): AdReceipt, CERTIFICATE_STEPS, CertificateStatus, describeAdSpec(), fetchAdPayments(), fetchAdReceipt(), fetchSubscriptionPayments(), PaymentKind (+8 more)
+### Community 240 - "queries/discounts.ts"
+Cohesion: 0.22
+Nodes (9): AdQuote, DISCOUNT_CHECKOUT_TIMEOUT_S, DiscountTarget, invokeQuote(), PlanQuote, quoteAdDiscount(), QuoteResult, AdSpec (+1 more)
 
-### Community 241 - "BusinessProfileScorePage.tsx"
-Cohesion: 0.18
-Nodes (11): PROFILE_SCORE_WEIGHTS, BusinessProfileScorePage(), E, listContainer, listItem, page, scoreItems, ScoreTile() (+3 more)
-
-### Community 242 - "20261122110000_admin_review_medium1.sql"
-Cohesion: 0.17
-Nodes (3): admin.premises_photo_decide(), public.subscription_refund_event(), review_reports_status_created_idx
+### Community 241 - "Ad types done by hand: plan and record (2026-11-17)"
+Cohesion: 0.22
+Nodes (8): Ad types done by hand: plan and record (2026-11-17), How it works, Release (each step needs Mitra's yes), Still open, Tests, What changed, Batch 2 (16) — done (2026-11-17), sellableAdTypes()
 
 ### Community 243 - "snapshot-check.mjs"
 Cohesion: 0.25
@@ -1403,9 +1375,9 @@ Nodes (8): Global Constraints, Product moderation (remove / flag / reasons) Impl
 Cohesion: 0.22
 Nodes (3): corsHeaders, serviceHeaders, WorkRow
 
-### Community 246 - "2026-09-05 — Chat + Chat-Moderation Full Pipeline (T1–T13, both layers)"
-Cohesion: 0.18
-Nodes (11): 2026-09-05 — Chat + Chat-Moderation Full Pipeline (T1–T13, both layers), T11 — Admin panel structure, T12 — Adversarial / RLS-bypass, every role, T13 — Realtime & resilience, T1 — Core message pipeline, T2 — Keyword blocklist (hard stop), T3 — Regex auto-flag (soft stop), against the 3 live seeded patterns, T5 — Conversation lock, cross-cutting UI (+3 more)
+### Community 246 - "seller-home-low-b.spec.ts"
+Cohesion: 0.25
+Nodes (8): Responsibilities & features, account(), clientFor(), conversation(), firstId(), made, open(), tag
 
 ### Community 247 - "admin-chat-moderation.spec.ts"
 Cohesion: 0.25
@@ -1423,25 +1395,25 @@ Nodes (7): ANARKALI, assertNoTemplate(), bodyText(), POLO, REPO_ROOT, SHOTS, TEM
 Cohesion: 0.03
 Nodes (72): anonDb, env, signIn(), credential(), DEMO_EMAILS, demoPasswordFor(), fileEnv, hasCredentials() (+64 more)
 
-### Community 251 - "FreelancerProfile.tsx"
-Cohesion: 0.31
-Nodes (9): SampleProfilesNotice(), SampleTag(), getFreelancer(), getServiceVendor(), FreelancerProfile(), Stat(), Tab, DetailRow() (+1 more)
+### Community 251 - "K. Messages"
+Cohesion: 0.25
+Nodes (8): K. Messages, SH-101 · Medium · ✔ seen — Signed out, the inbox is fake, SH-102 · Medium · ✔ seen — The back arrows loop, SH-104 · Medium · reviewer — A bad thread id fails silently, SH-106 · Medium · reviewer — The Calls tab never shows buyers' calls, SH-107 · Low · reviewer — Smaller chat problems, dayGroup(), fetchCalls()
 
 ### Community 252 - "9. AI TELLS (Forbidden Patterns)"
 Cohesion: 0.25
 Nodes (8): 9.A Visual & CSS, 9. AI TELLS (Forbidden Patterns), 9.B Typography, 9.C Layout & Spacing, 9.D Content & Data ("Jane Doe" Effect), 9.E External Resources & Components, 9.F Production-Test Tells (banned outright), 9.G EM-DASH BAN (the single most-violated Tell)
 
-### Community 253 - "Performance Rules"
-Cohesion: 0.33
-Nodes (6): CSS animations beat JS under load, CSS variables are inheritable, Framer Motion hardware acceleration caveat, Only animate transform and opacity, Performance Rules, Use WAAPI for programmatic CSS animations
+### Community 253 - "useVendorData.ts"
+Cohesion: 0.39
+Nodes (7): delay(), fetchVendorBlogFeed(), fetchVendorQuoteSummary(), useVendorBlogFeed(), useVendorQuoteSummary(), VendorQuoteSummary, vendorQuoteSummaryFixture
 
 ### Community 254 - "quote-rfq-open-check.mjs"
 Cohesion: 0.25
 Nodes (5): closeRfq(), env, PASSWORD, results, rfq()
 
-### Community 255 - "pg_temp.act"
-Cohesion: 0.50
-Nodes (3): pg_temp.act(), _r, public.admin_support_prepare_upload()
+### Community 255 - "Gesture and Drag Interactions"
+Cohesion: 0.33
+Nodes (6): Damping at boundaries, Friction instead of hard stops, Gesture and Drag Interactions, Momentum-based dismissal, Multi-touch protection, Pointer capture for drag
 
 ### Community 256 - "optionalCredential"
 Cohesion: 0.03
@@ -1455,25 +1427,25 @@ Nodes (7): Calls I made (obvious fixes), Mitra's decisions (2026-11-18), Release
 Cohesion: 0.24
 Nodes (5): public.ad_apply_decision(), public.ad_review_metrics(), public.admin_ad_review_log_list(), public.guard_ad_deletion(), public.guard_ad_deletion()
 
-### Community 260 - "writeOwnVendorRow"
-Cohesion: 0.25
-Nodes (7): 2026-09-28 — Vendor private fields, Phase 4a: readers first — Severity: High (open until Phase 4b), Fixed / Closed Flags, Security Flags & Gaps, Appendix D. Reviewer output, 2026-09-28 — Phase 4b applied: vendor private columns revoked (md5 matches; harness 08 18/18 live; signed-out HTTP proof; 21/21 app selects replayed), 2026-09-28 — Phase 4b rehearsal: the revoke rehearsed and rolled back; one blocker found and fixed in code (harness 08 18/18 as designed), writeOwnVendorRow()
+### Community 260 - "Sample listings — plan and record (2026-11-24)"
+Cohesion: 0.33
+Nodes (5): Files, Open, Removing them, Sample listings — plan and record (2026-11-24), What is live
 
 ### Community 261 - "public.chat_unread_counts"
 Cohesion: 0.31
 Nodes (4): admin.profiles_phone_check(), public.chat_buyer_social(), public.chat_unread_counts(), trg_profiles_phone_check
 
 ### Community 262 - "Subscriptions P6: lead alerts and lead channels (2026-10-09)"
-Cohesion: 0.15
-Nodes (13): Checks, Client, Data, Matching and telling: `admin.lead_alert_fanout(rfq)`, Release order (when Mitra says), Subscriptions P6: lead alerts and lead channels (2026-10-09), The daily run: `public.lead_digest_run()`, The vendor's side (+5 more)
+Cohesion: 0.20
+Nodes (10): Bounds on what a buyer can set off, Checks, Client, Data, Matching and telling: `admin.lead_alert_fanout(rfq)`, Release order (when Mitra says), Subscriptions P6: lead alerts and lead channels (2026-10-09), The daily run: `public.lead_digest_run()` (+2 more)
 
 ### Community 263 - "Claude Code Documentation Hooks"
 Cohesion: 0.25
 Nodes (7): 1. CLAUDE.md, 2. changelog.md, 3. memory/MEMORY.md, Automatic Trigger Conditions, Claude Code Documentation Hooks, Documentation Update Protocol, Hook Behavior
 
-### Community 264 - "ad-attacks.mjs"
-Cohesion: 0.16
-Nodes (18): adRow(), cat, product(), served(), anon, attack(), check(), note() (+10 more)
+### Community 264 - "vite"
+Cohesion: 0.33
+Nodes (4): vite@^5.4.19, @vitejs/plugin-react-swc@^3.11.0, vite, @vitejs/plugin-react-swc
 
 ### Community 265 - "Local stack: a copy of Cosora's database on this machine"
 Cohesion: 0.25
@@ -1484,8 +1456,8 @@ Cohesion: 0.25
 Nodes (4): hx_keys, hx_old, hx_vendors, pg_temp.match_vendor_rfqs_old()
 
 ### Community 267 - "buyer-signup.spec.ts"
-Cohesion: 0.29
-Nodes (3): finishBuyerSteps(), passWelcome(), STEPS
+Cohesion: 0.15
+Nodes (6): finishBuyerSteps(), passWelcome(), STEPS, codeScreen(), signInByPhone(), routeDummyOtp()
 
 ### Community 268 - "generate-embedding/index.ts"
 Cohesion: 0.25
@@ -1496,8 +1468,8 @@ Cohesion: 0.20
 Nodes (9): config, entries, hashes, HEADERS, HTML, missing, root, scriptPolicies (+1 more)
 
 ### Community 270 - "Low bugs, batch 4: Seller Home, the careers page, sign-up leftovers, routes and docs (2026-11-20)"
-Cohesion: 0.29
-Nodes (6): Checks, Code review (medium), Low bugs, batch 4: Seller Home, the careers page, sign-up leftovers, routes and docs (2026-11-20), Mitra's call, Release (when Mitra says), What changed
+Cohesion: 0.33
+Nodes (5): Checks, Code review (medium), Low bugs, batch 4: Seller Home, the careers page, sign-up leftovers, routes and docs (2026-11-20), Mitra's call, Release (when Mitra says)
 
 ### Community 271 - "APPENDICES - Real Source-Backed Reference Material"
 Cohesion: 0.29
@@ -1515,9 +1487,9 @@ Nodes (7): 3.A Stack, 3.B State, 3.C Icons, 3.D Emoji Policy, 3. DEFAULT ARCHITE
 Cohesion: 0.29
 Nodes (7): 6.A Hardware Acceleration, 6.B Reduced Motion (mandatory), 6.C Dark Mode (mandatory for any consumer-facing page), 6.D Core Web Vitals Targets, 6.E DOM Cost, 6.F Z-Index Restraint, 6. PERFORMANCE & ACCESSIBILITY GUARDRAILS
 
-### Community 275 - "Architecture"
-Cohesion: 0.25
-Nodes (8): Architecture, Buyer-Side Layout & Flows, Core Structure, Forms & Validation, Multi-Role Architecture, Path Aliases, Routing, Styling
+### Community 275 - "registration-documents.spec.ts"
+Cohesion: 0.33
+Nodes (3): CSV, PDF, PNG
 
 ### Community 276 - "20261122130000_admin_review_medium3.sql"
 Cohesion: 0.27
@@ -1551,29 +1523,25 @@ Nodes (6): clip-path for Animation, Comparison sliders, Hold-to-delete pattern, 
 Cohesion: 0.22
 Nodes (8): carousel(), frontSlide(), made, PICTURE, rebuildSnapshot(), removeUploads(), seller(), tag
 
-### Community 284 - "5. The contextual targeting algorithm — full technical detail"
-Cohesion: 0.22
-Nodes (9): 5. The contextual targeting algorithm — full technical detail, Step 1 — Eligibility gate (`is_ad_eligible`), Step 2 — Targeting match (`ad_targeting_matches`), Step 3 — Multi-category union (For You's case), Step 4 — Placement type filter, Step 5 — Ordering, Step 6 — Frequency capping (logging-only), Step 7 — Sweep (time-based promotion/expiry) (+1 more)
-
 ### Community 285 - "My Profile work: flags"
 Cohesion: 0.33
 Nodes (5): Moved to `ToDo.md` (2026-09-25), My Profile work: flags, Open decisions, Open flags, Status at a glance (2026-09-25, after the flag-fix pass)
 
-### Community 287 - "Low bugs, batch 2 of 6: listings, stores and browsing content (2026-11-20)"
-Cohesion: 0.33
-Nodes (5): Checked, Code review (medium, 10 findings, all fixed), Low bugs, batch 2 of 6: listings, stores and browsing content (2026-11-20), Mitra's decisions (2026-11-20), Release (when Mitra says)
+### Community 287 - "AddBusinessCategoriesModal.tsx"
+Cohesion: 0.60
+Nodes (3): AddBusinessCategoriesModal(), SelectCategoryModal(), CATEGORY_GROUPS
 
 ### Community 288 - ".instructions.md"
 Cohesion: 0.33
 Nodes (5): Code Generation Requirements, Context Management, Operational Philosophy, Output Rules, Session Initialization
 
 ### Community 289 - "OpenRfqLeads.tsx"
-Cohesion: 0.18
-Nodes (19): Part 1, F1: the forms keep every answer, Plan caps — the lead cap counts what the dashboard shows, and holds under concurrency (2026-09-16, 2026-09-23), Quotes: who changes what (MPF-18), Subscriptions P8: the CRM (2026-10-09; database applied 2026-10-09, switch off), RfqThumb(), BLUE, DirectQuoteRequests(), BLUE (+11 more)
+Cohesion: 0.13
+Nodes (28): Task 10: Leads deep link, fresh counts, promo banner (SH-009, SH-015, SH-019, SH-087), Subscriptions P7: overseas requirements (2026-10-09; database applied 2026-10-09, switch off), RfqReferenceImages(), RfqThumb(), BLUE, DirectQuoteRequests(), BLUE, OpenRfqLeads() (+20 more)
 
-### Community 290 - "Testing Patterns"
-Cohesion: 0.22
-Nodes (9): Assert deltas, not absolutes, Fixtures, Judging a write, Playwright, Prove the negative has a positive, Realtime channels are shared by topic, Test credentials come from the environment (2026-09-11, Master Prompt 8), Testing Patterns (+1 more)
+### Community 290 - "Cosora — Deferred / Follow-Up Items"
+Cohesion: 0.40
+Nodes (4): Cosora — Deferred / Follow-Up Items, High priority, Medium priority, Seller Home audit (2026-11-15) — what is still open
 
 ### Community 292 - "faqs-snapshot/index.ts"
 Cohesion: 0.33
@@ -1584,8 +1552,8 @@ Cohesion: 0.33
 Nodes (3): corsHeaders, Due, RunResult
 
 ### Community 294 - "20261119110000_buyer_terms_db_check.sql"
-Cohesion: 0.16
-Nodes (10): admin.enforce_buyer_terms(), trg_conversations_buyer_terms, trg_messages_buyer_terms, trg_product_reviews_buyer_terms, trg_reviews_buyer_terms, trg_rfq_submissions_buyer_terms, trg_rfqs_buyer_terms, trg_service_reviews_buyer_terms (+2 more)
+Cohesion: 0.21
+Nodes (9): admin.enforce_buyer_terms(), trg_conversations_buyer_terms, trg_messages_buyer_terms, trg_product_reviews_buyer_terms, trg_reviews_buyer_terms, trg_rfq_submissions_buyer_terms, trg_rfqs_buyer_terms, trg_service_reviews_buyer_terms (+1 more)
 
 ### Community 295 - "vercel.json"
 Cohesion: 0.33
@@ -1603,9 +1571,9 @@ Nodes (5): 5.A Sticky-Stack - Canonical Skeleton, 5.B Horizontal-Pan - Canonical
 Cohesion: 0.40
 Nodes (5): 8.A Token Strategy (pick one, stick to it), 8.B Do Not Prescribe Specific Colors Here, 8.C Default Mode, 8.D Test in Both Modes Before Finishing, 8. DARK MODE PROTOCOL
 
-### Community 299 - "search-smoke.mjs"
-Cohesion: 0.33
-Nodes (4): errors, FABRICATED, failed, results
+### Community 299 - "Core Philosophy"
+Cohesion: 0.50
+Nodes (4): Beauty is leverage, Core Philosophy, Taste is trained, not innate, Unseen details compound
 
 ### Community 300 - "Medium bugs, batch 3 of 4: quotes, chat, profile, Seller Home (2026-11-19)"
 Cohesion: 0.40
@@ -1627,17 +1595,13 @@ Nodes (4): Cosora, Deployment, Local development, Tech stack
 Cohesion: 0.36
 Nodes (5): asPaths(), json(), removePhotos(), RemoveRequest, thumbPathFor()
 
-### Community 305 - "Visibility.tsx"
-Cohesion: 0.25
-Nodes (8): MyVisibility, useMyVisibility(), DAY, E, page, PLACE, section, Visibility()
+### Community 305 - "RealtimeHubProvider"
+Cohesion: 0.67
+Nodes (3): Task 9: Live-update hub (SH-030, SH-031, SH-036), AuthProvider(), RealtimeHubProvider()
 
 ### Community 306 - "Low bugs, batch 1 of 6: buyer Home and feeds (2026-11-20)"
 Cohesion: 0.40
 Nodes (4): Checked on the local stack (browser), Decided without asking, Low bugs, batch 1 of 6: buyer Home and feeds (2026-11-20), Mitra's decision (2026-11-20)
-
-### Community 307 - "Medium bugs, batch 1 of 4: buyer browsing (2026-11-19)"
-Cohesion: 0.40
-Nodes (4): Database, Decided without asking (obvious fixes), Medium bugs, batch 1 of 4: buyer browsing (2026-11-19), Mitra's decisions (2026-11-19)
 
 ### Community 308 - "20260910130000_vendor_catalog_recompute_async.sql"
 Cohesion: 0.60
@@ -1659,17 +1623,9 @@ Nodes (7): Buyer / seller app, Cosora-Admin, Cosora-Admin review 2026-11-22 — 
 Cohesion: 0.50
 Nodes (3): From Mitra (2026-10-11), From Unsplash (2026-10-11), Interest photos
 
-### Community 318 - "Company disclosure and messaging consent — plan (2026-11-24)"
-Cohesion: 0.25
-Nodes (7): App changes, Company disclosure and messaging consent — plan (2026-11-24), Database: migration `20261124100000_company_disclosure_marketing_consent.sql`, Decisions (Mitra, 2026-11-24), Not changed (outside this brief), Placeholders left for Mitra, The company facts, one copy per repo
-
 ### Community 321 - "public.vendor_ad_verifications"
 Cohesion: 0.83
 Nodes (3): public.grant_ad_verification(), public.vendor_ad_verifications, vendor_ad_verifications_vendor_idx
-
-### Community 324 - "Reviews.tsx"
-Cohesion: 0.06
-Nodes (42): 2026-09-08 (my-store pass) — Vendor "My Store" cluster de-mocked: 11/11 GREEN, through the real UI, ReviewPhotoStrip(), reviewLinkFor(), ReviewLinkShare(), useVendorProductReviews(), kycStatusOf(), useMyVendorProfile(), BusinessTools() (+34 more)
 
 ### Community 326 - "2026-09-10 (Master Prompt 6) — first load/scale pass: 2 severe defects invisible at production volume"
 Cohesion: 0.67
@@ -1679,13 +1635,9 @@ Nodes (3): 2026-09-10 (Master Prompt 6) — first load/scale pass: 2 severe defe
 Cohesion: 0.25
 Nodes (8): D. Notifications, SH-034 · Medium · ✔ checked — Common seller notices lead nowhere, SH-035 · Medium · reviewer — Three tabs can never fill, SH-036 · Medium · reviewer — "Read all" sets off a reload storm, SH-037 · Low · reviewer — Unread stops at 100, SH-038 · Low · reviewer — Signed out, the page loads forever, SH-039 · Low · reviewer — Untranslated notice titles, SH-040 · Low · ✔ checked — A live guard with no migration file
 
-### Community 328 - "messaging.ts"
-Cohesion: 0.29
-Nodes (6): clickToChatProvider, MessageContext, MessagingKind, VendorContact, whatsappDigits(), whatsappLink()
-
 ### Community 329 - "@playwright/test"
-Cohesion: 0.05
-Nodes (36): accounts, tag, buyerContext(), made, PICTURE, seller(), tag, SCREEN (+28 more)
+Cohesion: 0.04
+Nodes (36): ROLES, ROUTES, staff, tag, accounts, tag, buyerContext(), made (+28 more)
 
 ### Community 337 - "Integrations"
 Cohesion: 0.29
@@ -1699,14 +1651,6 @@ Nodes (7): Checks, Paused listings, Release order (when Mitra says), Subscriptio
 Cohesion: 0.29
 Nodes (7): Checks, Data, Edge functions, Release order (when Mitra says), Subscriptions P5: ad reach by state (2026-10-09), What a plan lets an ad reach, Who sees an ad
 
-### Community 502 - "productDocuments.ts"
-Cohesion: 0.33
-Nodes (6): fetchProductDocuments(), MAX_PDF_BYTES, MAX_PDFS, PRODUCT_FILES_BUCKET, ProductDocument, useProductDocuments()
-
-### Community 503 - "following.spec.ts"
-Cohesion: 0.29
-Nodes (4): followers(), made, sellerWithListings(), tag
-
 ### Community 504 - "Cosora-Admin review — Medium batch 1 (AR-M01 to AR-M21), 2026-11-22"
 Cohesion: 0.33
 Nodes (5): Compatibility, Cosora-Admin review — Medium batch 1 (AR-M01 to AR-M21), 2026-11-22, Items, Mitra's decisions, Release order
@@ -1719,21 +1663,9 @@ Nodes (5): Compatibility, Cosora-Admin review — Medium batch 2 (AR-M22 to AR-M
 Cohesion: 0.40
 Nodes (5): Interruptibility advantage, Spring Animations, Spring-based mouse interactions, Spring configuration, When to use springs
 
-### Community 507 - "Seller Home audit: the Low items, plan and record (2026-11-17)"
-Cohesion: 0.33
-Nodes (5): Batch 1 (20): built and tested locally, 2026-11-17, Batch 2 (7, and the failing chat spec): built and tested locally, 2026-11-17, Mitra's decisions (2026-11-17), Release, Seller Home audit: the Low items, plan and record (2026-11-17)
-
 ### Community 508 - "usePendingEnquiry.ts"
 Cohesion: 0.60
 Nodes (5): Pending, PendingEnquiry(), read(), rememberPendingEnquiry(), write()
-
-### Community 509 - "recentSearches.ts"
-Cohesion: 0.80
-Nodes (4): keyFor(), read(), useRecentSearches(), write()
-
-### Community 510 - "CSS Transform Mastery"
-Cohesion: 0.50
-Nodes (4): 3D transforms for depth, CSS Transform Mastery, scale() scales children too, transform-origin
 
 ### Community 511 - "Cosora-Admin review — Low batch 1 (AR-L01 to AR-L20), 2026-11-23"
 Cohesion: 0.50
@@ -1743,37 +1675,33 @@ Nodes (3): Cosora-Admin review — Low batch 1 (AR-L01 to AR-L20), 2026-11-23, I
 Cohesion: 0.50
 Nodes (3): Cosora-Admin review — Low batch 3 (AR-L41 to AR-L52), 2026-11-23, Items, Mitra's decisions
 
-### Community 513 - "sub"
-Cohesion: 0.50
-Nodes (4): 2026-09-10 — No rejection path for non-product images — Severity: Low, 2026-09-23 — Phase 2: Delete my account (throwaway buyer, request → confirm → sweep → anonymized; cancel untouched; cleaned to 0), 2026-10-08 — Subscriptions P0: foundations and safety (local stack: harness 29/29; flow check 76/76; tax ids 18/18; browser 11/11; typecheck 0 in both apps; i18n 7,283/7,283; admin build), sub()
-
 ### Community 514 - "UI language — catalogues, the page translator, the account setting (2026-09-26)"
 Cohesion: 0.50
 Nodes (4): Glossary kept across both catalogues, The coverage check (`scripts/i18n-coverage-check.mjs`, `npm run i18n:check`), The page translator (`components/i18n/AutoTranslate.tsx`), UI language — catalogues, the page translator, the account setting (2026-09-26)
 
-### Community 515 - "buy"
-Cohesion: 0.50
-Nodes (4): buy(), fn(), sign(), step()
+### Community 525 - "form.tsx"
+Cohesion: 0.14
+Nodes (16): @radix-ui/react-label@^2.1.7, @radix-ui/react-slot@^1.2.3, react-hook-form@^7.61.1, @radix-ui/react-label, @radix-ui/react-slot, react-hook-form, FormControl, FormDescription (+8 more)
 
 ## Knowledge Gaps
 - **5 isolated node(s):** `RFC-4180`, `RFC-4180`, `RFC-4180`, `RFC-2606`, `RFC-4180`
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4322 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **205 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4331 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **210 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `@supabase/supabase-js` connect `@supabase/supabase-js` to `optionalCredential`, `onboarding-back.spec.ts`, `following-and-quote-chat-check.mjs`, `@tanstack/react-query`, `OtpVerify.tsx`, `@playwright/test`, `dependencies`, `purge-orphaned-kyc-objects.mjs`, `faqs-admin-editable.spec.ts`, `demoAccount`, `ref_node_fs`, `image-search-check.mjs`, `profile-save-diff.spec.ts`, `freshAccount`, `migrate-kyc-to-private-bucket.mjs`, `seller-home-low.spec.ts`, `vendor-serious.spec.ts`, `profile-data-export.spec.ts`, `contact-gate-check.mjs`, `package.json`, `chat-pipeline.spec.ts`, `mp12-sourcing-loop.spec.ts`, `sitemap.ts`, `recently-viewed-check.mjs`, `role-on-load.spec.ts`, `faq-cdn-propagation.mjs`, `@playwright/test`, `faqs-snapshot.spec.ts`, `ProfileAccountPrefs.tsx`, `suspension-gate-check.mjs`, `registration-fixes.spec.ts`, `faq-snapshot-check.mjs`, `engagement-event-failures-check.mjs`, `following.spec.ts`, `video-closeups-bunny.spec.ts`, `useAuth`, `admin-chat-moderation.spec.ts`, `mp7-admin-vendor-panels.spec.ts`, `@supabase/supabase-js`, `quote-rfq-open-check.mjs`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `@supabase/supabase-js` connect `@supabase/supabase-js` to `optionalCredential`, `onboarding-back.spec.ts`, `following-and-quote-chat-check.mjs`, `@tanstack/react-query`, `@playwright/test`, `dependencies`, `purge-orphaned-kyc-objects.mjs`, `faqs-admin-editable.spec.ts`, `demoAccount`, `ref_node_fs`, `image-search-check.mjs`, `profile-save-diff.spec.ts`, `freshAccount`, `seller-home-low.spec.ts`, `migrate-kyc-to-private-bucket.mjs`, `seller-home-low.spec.ts`, `vendor-serious.spec.ts`, `profile-data-export.spec.ts`, `contact-gate-check.mjs`, `package.json`, `notifications.ts`, `chat-pipeline.spec.ts`, `mp12-sourcing-loop.spec.ts`, `sitemap.ts`, `recently-viewed-check.mjs`, `role-on-load.spec.ts`, `faq-cdn-propagation.mjs`, `@playwright/test`, `faqs-snapshot.spec.ts`, `suspension-gate-check.mjs`, `supabase.ts`, `registration-fixes.spec.ts`, `faq-snapshot-check.mjs`, `engagement-event-failures-check.mjs`, `i18n.ts`, `video-closeups-bunny.spec.ts`, `useAuth`, `otp.ts`, `seller-home-low-b.spec.ts`, `admin-chat-moderation.spec.ts`, `mp7-admin-vendor-panels.spec.ts`, `@supabase/supabase-js`, `quote-rfq-open-check.mjs`?**
+  _High betweenness centrality (0.085) - this node is a cross-community bridge._
 - **Are the 255 inferred relationships involving `2026-09-05 — Documentation system moved into `documentation/`` (e.g. with `finish()` and `fileUrl()`) actually correct?**
   _`2026-09-05 — Documentation system moved into `documentation/`` has 255 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `RFC-4180`, `RFC-4180`, `RFC-4180` to the rest of the system?**
   _5 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `public.vendor_profiles` be split into smaller, more focused modules?**
-  _Cohesion score 0.019512786328929825 - nodes in this community are weakly interconnected._
-- **Why does `2026-09-05 — Documentation system moved into `documentation/`` connect `changelog.md` to `Sale.tsx`, `sub`, `rfqs.ts`, `DialogContent`, `VendorProfile.tsx`, `react-router-dom`, `@tanstack/react-query`, `OtpVerify.tsx`, `useLang`, `Business Rules — Discovered/Decided During Development`, `i18n.ts`, `Search.tsx`, `products.ts`, `AddSocialLinks.tsx`, `Subscription.tsx`, `MyReviews.tsx`, `demoAccount`, `VendorProfile.tsx`, `Upload.tsx`, `OpenRfqLeads.tsx`, `catalogues.ts`, `payments.ts`, `_shared/adPricing.ts`, `MobileBottomNav`, `hooks/use-toast.ts`, `subscription-autopay/index.ts`, `notificationsStore.ts`, `buyerCategories.ts`, `Freelancers.tsx`, `requirementSchemas.ts`, `migrate-kyc-to-private-bucket.mjs`, `CrmLeadSheet.tsx`, `DashboardLayout`, `Leads.tsx`, `Quotes.tsx`, `preferencesStore.ts`, `searchFilters.ts`, `Advertisements.tsx`, `race.mjs`, `savedStore.ts`, `Notifications.tsx`, `Terms.tsx`, `notification-dispatch/index.ts`, `Reviews.tsx`, `framer-motion`, `Local-stack E2E — `tests/local/` (Help & Support launch gate, P7)`, `faq-cdn-propagation.mjs`, `chat.ts`, `Help & Support: build plan`, `CompetitorAds.tsx`, `ForYou.tsx`, `ProfileAccountPrefs.tsx`, `SellerHome.tsx`, `reviews`, `Business Rules — Discovered/Decided During Development`, `VideoCloseUpsViewer.tsx`, `invoice-render/index.ts`, `vendorOptions`, `fx-rates-refresh/index.ts`, `Analytics.tsx`, `useAuth`, `marketplace.k6.js`, `recentlyViewedStore.ts`, `BusinessProfileScorePage.tsx`, `vendorStore.ts`, `f3-seed.mjs`, `FreelancerProfile.tsx`?**
-  _High betweenness centrality (0.049) - this node is a cross-community bridge._
+  _Cohesion score 0.019418641896220373 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `cn` to `react-router-dom`, `Sale.tsx`, `errorMessage`, `VendorProfile.tsx`, `@tanstack/react-query`, `ads.ts`, `OtpVerify.tsx`, `AutoTranslate.tsx`, `Business Rules — Discovered/Decided During Development`, `useLang`, `returnTo.ts`, `form.tsx`, `Onboarding.tsx`, `AccountManager.tsx`, `Search.tsx`, `BusinessProfile.tsx`, `dependencies`, `Subscription.tsx`, `MyQuotes.tsx`, `AddSocialLinks.tsx`, `ProductDetail.tsx`, `App.tsx`, `VendorProfile.tsx`, `AddBusinessCategoriesModal.tsx`, `Upload.tsx`, `OpenRfqLeads.tsx`, `react-router-dom`, `hooks/use-toast.ts`, `MyPayments.tsx`, `toast.tsx`, `CrmLeadSheet.tsx`, `changelog.md`, `ChatThread.tsx`, `Quotes.tsx`, `ForYou.tsx`, `Advertisements.tsx`, `Notifications.tsx`, `package.json`, `notifications.ts`, `AdvertisementSlideshow.tsx`, `RecentlyViewed.tsx`, `chart.tsx`, `main.tsx`, `chat.ts`, `reviews.ts`, `ForYou.tsx`, `countries.ts`, `PostRequirement.tsx`, `Products.tsx`, `VideoCloseUpsViewer.tsx`, `Medium bugs, batch 4 of 4: speed and database (2026-11-20)`, `OldAdvertisements.tsx`, `i18n.ts`, `engagement.ts`, `useAuth`, `usePendingEnquiry.ts`, `savedStore.ts`, `siteConfig.ts`, `attributeDefinitions.ts`, `InvoiceDetail.tsx`, `DisplayCurrencyContext.tsx`, `ClarityMask.tsx`, `ScrollToTopOnNavigate.tsx`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `useAuth()` (e.g. with `changelog.md` and `Task 2: Signed-out `/leads` and seller home ask the visitor to sign in`) actually correct?**
   _`useAuth()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `Sale.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.04514533085961658 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.045351473922902494 - nodes in this community are weakly interconnected._
