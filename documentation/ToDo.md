@@ -105,14 +105,8 @@ with no need to dictate format, context, or reference each time.
 ### Onboarding audit 2026-11-13: the findings outside items 1–20 — added 2026-11-13
 - Task: decide and fix, item by item.
 - Context (each still in the code on 2026-11-13):
-  - `/kyc` says "Add it below" when the PAN is missing, but offers no way to add a PAN there.
-  - A rejected Aadhaar keeps its file in `business-docs` until the seller replaces it.
+  - A rejected Aadhaar keeps its file in `business-docs` until the seller replaces it (audit #28).
   - The signature pad redraws on every pointer move (slow on old phones).
-  - Found in the 2026-11-13 walkthrough: the seller header on phones says "Kumar Textiles • Mumbai" for every seller
-    (`src/components/layout/DashboardHeader.tsx`, hardcoded; invented data on the seller's own pages); `/onboarding`
-    shows "Login" to a signed-in seller, and its banner reads "0% comission, get sales accross globe" (two typos;
-    "0% commission" also sits beside the Supplier Agreement's commission clause, see the unbacked-claims item);
-    Cosora-Admin's shared `Tabs` shows a small vertical scroll arrow when tabs carry counts (Blogs, Registrations).
 - Reference: the audit's list delivered in chat on 2026-11-13; items 1–20 were fixed on branch
   `onboarding/registration-fixes`.
 - Status: Open
@@ -134,14 +128,12 @@ with no need to dictate format, context, or reference each time.
   then "store everything in the todo.md".
 - Status: Open
 
-### Check four audit suspicions against production — added 2026-11-01
+### Check three audit suspicions against production — added 2026-11-01
 - Task: confirm or rule out, on production (read-only) or the local stack:
   1. no server-side length or rate limit on chat messages (`messages` insert): still no length check on the body on
      2026-11-20 (only the attachment name's);
   2. a buyer can write their own `country_code`, which stamps requirements as overseas (`rfqs_overseas_stamp`);
-  3. support data isn't purged after an account is deleted (the `support-sweep` job is unscheduled, D-21);
-  4. buyer GSTIN, PAN and phone are saved without validation (onboarding / profile). Answered 2026-11-14: it held;
-     fixed on branch `buyer-signup/fixes` (`20261114100100`: the database checks names, pincode, email, GSTIN and PAN).
+  3. support data isn't purged after an account is deleted (the `support-sweep` job is unscheduled, D-21).
   Fix what holds, or log it in securityflags.md.
 - Context: listed as "plausible, not verified" in the 2026-10-18 audit (SESSION-CONTEXT.md); the baseline Lovable
   tables (messages, conversations, products) aren't in migrations, so their constraints weren't visible then.
@@ -693,7 +685,7 @@ with no need to dictate format, context, or reference each time.
 - Context: it's 2–10 ms today on ~2,100 events, and each open Live Activity tab calls it every
   30 seconds. At 10,000 concurrent buyers the log could take millions of rows an hour, and the
   24-hour window would scan all of them per call. `engagement_events.product_id` and `viewer_id` are indexed since
-  2026-11-20 (review M-75); 59 other unindexed foreign keys remain (the buyer review's batch 4 follow-up above).
+  2026-11-20 (review M-75), and 60 more foreign keys got indexes on 2026-11-21 (review leftovers).
 - Reference: 2026-09-28, admin completion Phase 8 (Live Activity, native).
 - Priority: Low today; High before a traffic launch
 - Status: Open
