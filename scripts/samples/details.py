@@ -104,10 +104,65 @@ def _moq_line(moq, unit):
     return f"Minimum order: {m} {word}" if m.replace(",", "").isdigit() else f"Minimum order: {m}"
 
 
+# Unlabelled while Cosora isn't open to customers (Mitra, 2026-11-24: "remove the sample listing from all the 280
+# posts ... the app is not open for customers ... will show how it will actually look"). The stores and listings read
+# like real ones; the contact guard (admin.refuse_sample_contact) still refuses chats, requirements and reviews.
+# They must all be removed before launch (ToDo.md, securityflags.md). True puts every label back.
+LABELLED = False
+
+
+def shown_brand(brand):
+    return brand if LABELLED else brand.replace(" (Sample)", "")
+
+
+def shown_name(name):
+    return f"Sample · {name}" if LABELLED else name
+
+
+def store_about(brand, business, city, top=None):
+    if LABELLED:
+        return (f"{brand} is a sample seller created by Cosora to show how a store looks. "
+                f"It isn't a real business: it takes no orders, messages or requirements.")
+    return f"{shown_brand(brand)} {STORE_ABOUT.get(top, 'supplies businesses across India')}, from {city}."
+
+
+# What each store does, for its About line while unlabelled (by main category).
+STORE_ABOUT = {
+    "Accessories": "makes handcrafted bags, belts, stoles and jewellery for retailers and brands",
+    "Activewear": "manufactures activewear and athleisure for brands and retailers",
+    "Apparel & Home Categories": "manufactures everyday apparel, innerwear and home linen in bulk",
+    "Chemicals & Dyes": "supplies dyes and processing chemicals to textile mills and dye houses",
+    "Cosmetics & Beauty": "makes skincare, haircare and beauty products for private labels and retailers",
+    "Dress": "designs and manufactures women's dresses and jumpsuits for brands and boutiques",
+    "Ethnic Wear": "makes kurtas, sarees, lehengas and other ethnic wear for retailers",
+    "Fashion Accessories (Unisex)": "supplies fashion accessories to retailers and online stores",
+    "Finance & Compliance Services": "handles GST, tax, registration and finance work for fashion and textile businesses",
+    "Footwear": "manufactures footwear for brands, retailers and schools",
+    "Freelancers & Job Workers": "is a studio of designers, pattern makers and content creators working with fashion brands",
+    "IT, Software & SaaS": "builds software, apps and websites for apparel and textile businesses",
+    "Jeans": "manufactures denim jeans, shorts and jeggings for brands and retailers",
+    "Kidswear": "manufactures clothing for babies and children",
+    "Labels & Tags": "makes woven labels, printed labels and hang tags for garment brands",
+    "Logistics & Supply Chain": "moves, stores and clears goods for apparel and textile businesses",
+    "Machinery & Equipment": "supplies sewing, cutting, embroidery and finishing machinery to garment units",
+    "Marketing, PR & Photography": "shoots, markets and promotes fashion brands",
+    "Others (Custom)": "makes custom uniforms, home textiles and branded merchandise to order",
+    "Packaging": "makes packaging for apparel brands and online sellers",
+    "Printing & Manufacturing Services": "takes printing, embroidery, dyeing and finishing job work for garments and fabric",
+    "Raw Materials – Fabrics & Inputs": "supplies fabrics, yarn and sewing inputs to garment makers",
+    "Service Providers (Manufacturing & Fashion Ops)": "runs stitching, cutting, inspection and sourcing for fashion brands",
+    "Shirt": "manufactures shirts for men, women and children",
+    "T-shirts/Tops": "manufactures T-shirts and tops for brands and retailers",
+    "Trims & Accessories": "supplies buttons, zips, rivets and other trims to garment makers",
+    "Trousers": "manufactures trousers, chinos and pants for brands and retailers",
+    "Winter Wear": "makes sweaters, jackets, thermals and shawls for the winter trade",
+}
+
+
 def description(cat, item, answers, cols, photo=None):
     brand, city, _state, _ptype, business = cat["seller"]
     sub, _pic, name, price, moq, unit, extra, detail = item[:8]
-    store = brand.replace(" (Sample)", "")
+    store = shown_brand(brand)
     lines = []
     fabric = cols.get("fabric")
     if fabric:
@@ -138,9 +193,11 @@ def description(cat, item, answers, cols, photo=None):
     overview = detail.strip()
     if not overview.endswith("."):
         overview += "."
-    about = (f"Listed by {store} ({business}, {city}). "
-             "Like every sample store, it shows how a seller's listing reads; it takes no orders.")
-    parts = [NOTICE, f"{name}. {overview}", about, "Key details\n" + "\n".join("• " + x for x in lines)]
+    about = f"Listed by {store} ({business}, {city})."
+    if LABELLED:
+        about += " Like every sample store, it shows how a seller's listing reads; it takes no orders."
+    parts = ([NOTICE] if LABELLED else []) + [f"{name}. {overview}", about,
+                                              "Key details\n" + "\n".join("• " + x for x in lines)]
     if photo:
         parts.append(photo_credit(photo))
     return "\n\n".join(parts)
@@ -220,7 +277,8 @@ def main():
     parts = []
     for cat, ii, item, attrs, cols, desc in rows:
         pid = str(uuid.uuid5(NS, f"product:{cat['top']}:{ii}"))
-        sets = [f"description = {q(desc)}", f"attributes = {q(json.dumps(attrs, ensure_ascii=False))}::jsonb"]
+        sets = [f"name = {q(shown_name(item[2]))}", f"description = {q(desc)}",
+                f"attributes = {q(json.dumps(attrs, ensure_ascii=False))}::jsonb"]
         sets += [f"{c} = {q(cols[c])}" for c in DETAIL_COLUMNS]
         parts.append(f"-- {cat['top']} {ii}: {item[2]}\nupdate public.products set\n  " + ",\n  ".join(sets)
                      + f"\nwhere id = {q(pid)} and vendor_id in (select vendor_id from admin.sample_vendors);")
@@ -229,7 +287,28 @@ def main():
             vid = str(uuid.uuid5(NS, "vendor:" + cat["top"]))
             parts.append(f"update public.product_images set url = {q(STORAGE + '/' + photo_object(vid, ii))}\n"
                          f"where product_id = {q(pid)} and position = 0;")
+    # The stores' names and About text follow LABELLED too.
+    for cat in CATEGORIES:
+        brand, city, _st, _pt, business = cat["seller"]
+        vid = str(uuid.uuid5(NS, "vendor:" + cat["top"]))
+        parts.append(f"-- store: {cat['top']}\n"
+                     f"update public.vendor_profiles set brand_name = {q(shown_brand(brand))}, "
+                     f"about = {q(store_about(brand, business, city, cat['top']))}\n"
+                     f"where id = {q(vid)} and id in (select vendor_id from admin.sample_vendors);\n"
+                     f"update public.profiles set full_name = {q(shown_brand(brand))}\n"
+                     f"where id = {q(vid)} and id in (select vendor_id from admin.sample_vendors);")
     n = len(rows)
+    label_check = (f"""
+  if exists (select 1 from public.vendor_profiles v join admin.sample_vendors s on s.vendor_id = v.id
+              where v.brand_name not like '%(Sample)') then
+    raise exception 'sample details: a sample store is not labelled';
+  end if;""" if LABELLED else f"""
+  if exists (select 1 from public.products p join admin.sample_vendors s on s.vendor_id = p.vendor_id
+              where p.name like 'Sample ·%' or p.description like 'Sample listing:%')
+     or exists (select 1 from public.vendor_profiles v join admin.sample_vendors s on s.vendor_id = v.id
+              where v.brand_name like '%(Sample)' or v.about like '%sample seller%') then
+    raise exception 'sample details: a sample label is left';
+  end if;""")
     photo_check = "" if not PHOTOS else f"""
   if (select count(*) from public.product_images i join public.products p on p.id = i.product_id
        join admin.sample_vendors s on s.vendor_id = p.vendor_id where i.url like '%/samples/listing-%') <> {len(PHOTOS)} then
@@ -246,7 +325,7 @@ begin
   if (select count(*) from public.products p join admin.sample_vendors s on s.vendor_id = p.vendor_id
        where p.attributes <> '{{}}'::jsonb and p.description like '%Key details%') <> {n} then
     raise exception 'sample details: not every sample listing was filled';
-  end if;{photo_check}
+  end if;{label_check}{photo_check}
 end
 $check$;
 commit;

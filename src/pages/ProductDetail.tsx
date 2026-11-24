@@ -45,7 +45,7 @@ import trustedSeal from "@/assets/Trustedseal.png";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 import { useOverlayState } from "@/hooks/useBackCloses";
 import { SampleListingNotice } from "@/components/buyer/SampleProfile";
-import { useIsSampleVendor } from "@/lib/samples";
+import { SAMPLES_LABELLED, SAMPLE_CONTACT_COPY, useIsSampleVendor } from "@/lib/samples";
 
 // === Animation constants ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -440,6 +440,8 @@ const ProductDetail = () => {
   // A sample listing (2026-11-24) takes no chats, calls or reviews: the database refuses them, so the buttons go too.
   const isSample = useIsSampleVendor(row?.vendorId);
   const canReview = Boolean(row?.id) && row?.vendorId !== user?.id && !isSample;
+  // Unlabelled samples (pre-launch testing, 2026-11-24) show Chat and Call; a tap says the seller isn't taking enquiries.
+  const hideContact = isSample && SAMPLES_LABELLED;
   const myReview = (productReviews?.reviews ?? []).find((r) => r.buyerId && r.buyerId === user?.id);
   const breakdownPct = (star: number) => productReviews?.breakdown.find((b) => b.stars === star)?.percent ?? 0;
   const reviewCards: Review[] = (productReviews?.reviews ?? []).map((r, i) => ({
@@ -726,8 +728,10 @@ const ProductDetail = () => {
             )}
 
             {/* Chat + Call Now (inline, per reference); none on a sample listing. */}
-            {!isSample && <div className="flex items-center gap-2">
-              <button onClick={() => setChatOptionsOpen(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
+            {!hideContact && <div className="flex items-center gap-2">
+              <button onClick={() => (isSample
+                ? toast.info(SAMPLE_CONTACT_COPY.title, { description: SAMPLE_CONTACT_COPY.description })
+                : setChatOptionsOpen(true))} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
                 <MessageCircle className="h-4 w-4" /> Chat
               </button>
               <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-brand-buyer text-brand-buyer py-3 text-sm font-bold hover:bg-brand-buyer/5 transition-colors active:scale-[0.98]">

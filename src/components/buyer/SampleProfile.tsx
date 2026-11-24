@@ -1,5 +1,5 @@
 import { Info } from "lucide-react";
-import { useIsSampleVendor } from "@/lib/samples";
+import { SAMPLES_LABELLED, useIsSampleVendor } from "@/lib/samples";
 
 /**
  * Service Vendors and Freelancers show sample profiles, not Cosora accounts (Mitra, 2026-11-18: "Keep, remove fakes";
@@ -35,7 +35,7 @@ export function SampleTag() {
  */
 export function SampleListingNotice({ vendorId, kind }: { vendorId: string | null | undefined; kind: "listing" | "store" }) {
   const sample = useIsSampleVendor(vendorId);
-  if (!sample) return null;
+  if (!sample || !SAMPLES_LABELLED) return null;
   return (
     <div role="note" className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
       <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />

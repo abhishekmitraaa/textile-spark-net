@@ -50,8 +50,7 @@ def main(stage, photos=None):
         vid = str(uuid.uuid5(NS, "vendor:" + cat["top"]))
         vendors.append(vid)
         email = f"sample-seller-{ci:02d}@samples.cosora.invalid"
-        about = (f"{brand} is a sample seller created by Cosora to show how a store looks. "
-                 f"It isn't a real business: it takes no orders, messages or requirements.")
+        about = details.store_about(brand, business, city, cat["top"])  # labelled or not: details.LABELLED
         seed.append(f"""
 -- {ci:02d}. {cat['top']}: {brand}
 insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -59,12 +58,12 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', {q(vid)}, 'authenticated', 'authenticated', {q(email)},
         '{{"provider":"email","providers":["email"],"cosora_sample":true}}'::jsonb,
-        {q(json.dumps({"full_name": brand, "active_role": "seller"}))}::jsonb, now(), now(),
+        {q(json.dumps({"full_name": details.shown_brand(brand), "active_role": "seller"}))}::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = {q(brand)}, active_role = 'seller', onboarded = true where id = {q(vid)};
+update public.profiles set full_name = {q(details.shown_brand(brand))}, active_role = 'seller', onboarded = true where id = {q(vid)};
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ({q(vid)}, {q(brand)}, {q(about)}, {q(city)},
+values ({q(vid)}, {q(details.shown_brand(brand))}, {q(about)}, {q(city)},
         (select s.name from public.india_states s where s.code = {q(state_code)}), {q(state_code)}, 'India', 'IN',
         {q(business)}, {q(ptype)}, array[{q(business)}]::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ({q(vid)});
@@ -95,7 +94,7 @@ insert into admin.registration_exempt (vendor_id, reason) values ({q(vid)}, 'Sam
             col_values = ", ".join(q(cols[c]) for c in details.DETAIL_COLUMNS)
             seed.append(f"""insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, {col_names})
-values ({q(pid)}, {q(vid)}, {q('Sample · ' + name)}, {q(description)}, {q(price)}, '₹', {q(moq)}, {q(unit)}, {cat_expr},
+values ({q(pid)}, {q(vid)}, {q(details.shown_name(name))}, {q(description)}, {q(price)}, '₹', {q(moq)}, {q(unit)}, {cat_expr},
   'live', {q(city)}, {q(json.dumps(attrs, ensure_ascii=False))}::jsonb, {q(extra.get('customization_available', False))},
   {col_values});
 insert into public.product_images (product_id, url, position) values ({q(pid)}, {q(f'{STORAGE}/{vid}/samples/{fname}')}, 0);""")
@@ -123,7 +122,7 @@ begin
     raise exception 'samples: a listing has no photo';
   end if;
   if exists (select 1 from public.vendor_profiles v join admin.sample_vendors s on s.vendor_id = v.id
-              where v.brand_name not like '%(Sample)' or v.is_verified or v.has_phone or v.gstin is not null) then
+              where {"v.brand_name not like '%(Sample)' or " if details.LABELLED else ""}v.is_verified or v.has_phone or v.gstin is not null) then
     raise exception 'samples: a sample seller is not labelled, or claims a phone, GSTIN or verification';
   end if;
 end

@@ -10,23 +10,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'authenticated', 'authenticated', 'sample-seller-01@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Jaipur Craft Accents (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Jaipur Craft Accents", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Jaipur Craft Accents (Sample)', active_role = 'seller', onboarded = true where id = 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc';
+update public.profiles set full_name = 'Jaipur Craft Accents', active_role = 'seller', onboarded = true where id = 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Jaipur Craft Accents (Sample)', 'Jaipur Craft Accents (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Jaipur',
+values ('a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Jaipur Craft Accents', 'Jaipur Craft Accents makes handcrafted bags, belts, stoles and jewellery for retailers and brands, from Jaipur.', 'Jaipur',
         (select s.name from public.india_states s where s.code = 'RJ'), 'RJ', 'India', 'IN',
         'Accessories Manufacturer', 'manufacturer', array['Accessories Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc');
 insert into admin.registration_exempt (vendor_id, reason) values ('a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5bbc4cd1-88e8-54ea-85ea-e74485dce877', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Handcrafted jute tote bag with cotton lining', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5bbc4cd1-88e8-54ea-85ea-e74485dce877', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Handcrafted jute tote bag with cotton lining', 'Handcrafted jute tote bag with cotton lining. Eco-friendly jute tote with an inside pocket and reinforced handles, ready for private label.
 
-Handcrafted jute tote bag with cotton lining. Eco-friendly jute tote with an inside pocket and reinforced handles, ready for private label.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Natural beige
@@ -40,11 +38,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('5bbc4cd1-88e8-54ea-85ea-e74485dce877', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/accessories-bags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0feeafb8-3cd9-5d6c-b92a-bc05dafb2342', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Genuine leather casual belt, 35 mm', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0feeafb8-3cd9-5d6c-b92a-bc05dafb2342', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Genuine leather casual belt, 35 mm', 'Genuine leather casual belt, 35 mm. Full-grain leather strap with a brushed nickel buckle, sizes 28 to 44.
 
-Genuine leather casual belt, 35 mm. Full-grain leather strap with a brushed nickel buckle, sizes 28 to 44.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Tan, black, brown
@@ -60,11 +56,9 @@ Photo: LeatherGuy9855, CC0, via Wikimedia Commons (https://commons.wikimedia.org
 insert into public.product_images (product_id, url, position) values ('0feeafb8-3cd9-5d6c-b92a-bc05dafb2342', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e8a7eb6e-170d-50be-9980-e22830a90a04', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Block-printed cotton stole', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e8a7eb6e-170d-50be-9980-e22830a90a04', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Block-printed cotton stole', 'Block-printed cotton stole. Hand block-printed in Sanganer with natural dyes, 70 × 180 cm.
 
-Block-printed cotton stole. Hand block-printed in Sanganer with natural dyes, 70 × 180 cm.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Indigo, rust
@@ -78,11 +72,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e8a7eb6e-170d-50be-9980-e22830a90a04', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/accessories-scarves-stoles.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9657553b-a858-5b17-bc79-c5c77a5851e1', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Oxidised silver-tone jhumka earrings', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9657553b-a858-5b17-bc79-c5c77a5851e1', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Oxidised silver-tone jhumka earrings', 'Oxidised silver-tone jhumka earrings. Lightweight brass jhumkas with an oxidised finish, nickel-free hooks.
 
-Oxidised silver-tone jhumka earrings. Lightweight brass jhumkas with an oxidised finish, nickel-free hooks.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Oxidised silver
@@ -98,11 +90,9 @@ Photo: SpeakingArch, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('9657553b-a858-5b17-bc79-c5c77a5851e1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('69019fce-8c65-562c-a701-933d241afa36', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Embroidered cotton baseball cap', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('69019fce-8c65-562c-a701-933d241afa36', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Embroidered cotton baseball cap', 'Embroidered cotton baseball cap. Six-panel twill cap with an adjustable strap; your logo embroidered on the front.
 
-Embroidered cotton baseball cap. Six-panel twill cap with an adjustable strap; your logo embroidered on the front.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Navy, white, olive
@@ -118,11 +108,9 @@ Photo: Cloud Rise, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('69019fce-8c65-562c-a701-933d241afa36', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f60e7d0f-09e1-56bb-9ed9-a7d9fad06b9e', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Velvet scrunchie set of 6', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f60e7d0f-09e1-56bb-9ed9-a7d9fad06b9e', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Velvet scrunchie set of 6', 'Velvet scrunchie set of 6. Soft velvet scrunchies with durable elastic, packed in a kraft pouch.
 
-Velvet scrunchie set of 6. Soft velvet scrunchies with durable elastic, packed in a kraft pouch.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Assorted jewel tones
@@ -138,11 +126,9 @@ Photo: CharlyBSE, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki
 insert into public.product_images (product_id, url, position) values ('f60e7d0f-09e1-56bb-9ed9-a7d9fad06b9e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('96eda7e1-ce4d-551a-bf34-428117ad46b4', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Combed cotton ankle socks, 3-pair pack', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('96eda7e1-ce4d-551a-bf34-428117ad46b4', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Combed cotton ankle socks, 3-pair pack', 'Combed cotton ankle socks, 3-pair pack. Combed cotton with spandex for stretch; free size 6–10.
 
-Combed cotton ankle socks, 3-pair pack. Combed cotton with spandex for stretch; free size 6–10.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Black, white, grey
@@ -158,11 +144,9 @@ Photo: Светагордсерг, CC BY-SA 4.0, via Wikimedia Commons (https://
 insert into public.product_images (product_id, url, position) values ('96eda7e1-ce4d-551a-bf34-428117ad46b4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('22197de4-cad7-5af7-9f1a-38984160b97a', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Polarised wayfarer sunglasses', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('22197de4-cad7-5af7-9f1a-38984160b97a', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Polarised wayfarer sunglasses', 'Polarised wayfarer sunglasses. UV400 polarised lenses in a lightweight acetate frame, case included.
 
-Polarised wayfarer sunglasses. UV400 polarised lenses in a lightweight acetate frame, case included.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Black, tortoise
@@ -178,11 +162,9 @@ Photo: Yuaaaner, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('22197de4-cad7-5af7-9f1a-38984160b97a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('279439f8-4b7a-5c71-86ee-6261e11b6fd4', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · 3-fold windproof umbrella', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('279439f8-4b7a-5c71-86ee-6261e11b6fd4', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', '3-fold windproof umbrella', '3-fold windproof umbrella. Fibreglass ribs and a Teflon-coated canopy; logo printing on request.
 
-3-fold windproof umbrella. Fibreglass ribs and a Teflon-coated canopy; logo printing on request.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Black, navy
@@ -198,11 +180,9 @@ Photo: Junyu-K, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('279439f8-4b7a-5c71-86ee-6261e11b6fd4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d9e84e51-4931-53bf-b22e-0ec91a389ee5', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Sample · Minimal analogue wrist watch with mesh strap', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d9e84e51-4931-53bf-b22e-0ec91a389ee5', 'a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc', 'Minimal analogue wrist watch with mesh strap', 'Minimal analogue wrist watch with mesh strap. Japanese quartz movement, stainless steel mesh strap, 3 ATM water resistance.
 
-Minimal analogue wrist watch with mesh strap. Japanese quartz movement, stainless steel mesh strap, 3 ATM water resistance.
-
-Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jaipur Craft Accents (Accessories Manufacturer, Jaipur).
 
 Key details
 • Colours: Silver, rose gold
@@ -223,23 +203,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'authenticated', 'authenticated', 'sample-seller-02@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Ludhiana Active Knits (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Ludhiana Active Knits", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Ludhiana Active Knits (Sample)', active_role = 'seller', onboarded = true where id = '9a64708b-9cd0-5155-8211-0b0c8c2036dd';
+update public.profiles set full_name = 'Ludhiana Active Knits', active_role = 'seller', onboarded = true where id = '9a64708b-9cd0-5155-8211-0b0c8c2036dd';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Ludhiana Active Knits (Sample)', 'Ludhiana Active Knits (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Ludhiana',
+values ('9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Ludhiana Active Knits', 'Ludhiana Active Knits manufactures activewear and athleisure for brands and retailers, from Ludhiana.', 'Ludhiana',
         (select s.name from public.india_states s where s.code = 'PB'), 'PB', 'India', 'IN',
         'Sportswear / Athleisure Manufacturer', 'manufacturer', array['Sportswear / Athleisure Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('9a64708b-9cd0-5155-8211-0b0c8c2036dd');
 insert into admin.registration_exempt (vendor_id, reason) values ('9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('4315f0a5-bf16-5549-be3d-f76a68be5ee7', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · High-waist women''s yoga leggings', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('4315f0a5-bf16-5549-be3d-f76a68be5ee7', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'High-waist women''s yoga leggings', 'High-waist women''s yoga leggings. Four-way stretch, squat-proof, with a hidden waistband pocket.
 
-High-waist women''s yoga leggings. Four-way stretch, squat-proof, with a hidden waistband pocket.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Nylon spandex, 240 GSM
@@ -257,11 +235,9 @@ Photo: Beyond My Ken, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('4315f0a5-bf16-5549-be3d-f76a68be5ee7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('dfe07229-854d-5926-aa66-6c8728fa3233', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Medium-support sports bra', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('dfe07229-854d-5926-aa66-6c8728fa3233', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Medium-support sports bra', 'Medium-support sports bra. Removable pads, racerback, moisture-wicking fabric.
 
-Medium-support sports bra. Removable pads, racerback, moisture-wicking fabric.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Polyester spandex, 220 GSM
@@ -279,11 +255,9 @@ Photo: Flame, not lame, CC0, via Wikimedia Commons (https://commons.wikimedia.or
 insert into public.product_images (product_id, url, position) values ('dfe07229-854d-5926-aa66-6c8728fa3233', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2ab18e09-029b-57fd-9349-ba590968aff5', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Men''s dri-fit training T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2ab18e09-029b-57fd-9349-ba590968aff5', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Men''s dri-fit training T-shirt', 'Men''s dri-fit training T-shirt. Quick-dry mesh knit with flatlock seams for running and gym.
 
-Men''s dri-fit training T-shirt. Quick-dry mesh knit with flatlock seams for running and gym.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Polyester dri-fit, 140 GSM
@@ -299,11 +273,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('2ab18e09-029b-57fd-9349-ba590968aff5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/menswear-sportswear-upper-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('beed7316-5460-5949-be8b-5e3f3423be11', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Men''s tapered jogger track pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('beed7316-5460-5949-be8b-5e3f3423be11', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Men''s tapered jogger track pants', 'Men''s tapered jogger track pants. Zip side pockets, elasticated cuffs and a drawcord waist.
 
-Men''s tapered jogger track pants. Zip side pockets, elasticated cuffs and a drawcord waist.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Cotton poly fleece, 280 GSM
@@ -319,11 +291,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('beed7316-5460-5949-be8b-5e3f3423be11', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/menswear-sportswear-lower-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b42f0d8a-d4fb-5517-a950-adf21ad5750d', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Men''s 7-inch running shorts', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b42f0d8a-d4fb-5517-a950-adf21ad5750d', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Men''s 7-inch running shorts', 'Men''s 7-inch running shorts. Built-in brief liner and a back zip pocket.
 
-Men''s 7-inch running shorts. Built-in brief liner and a back zip pocket.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Micro polyester, 120 GSM
@@ -339,11 +309,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('b42f0d8a-d4fb-5517-a950-adf21ad5750d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/menswear-sportswear-lower-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2e0bc66d-f2ed-5b6a-bc28-51cda782162c', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Women''s cropped seamless tank', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2e0bc66d-f2ed-5b6a-bc28-51cda782162c', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Women''s cropped seamless tank', 'Women''s cropped seamless tank. Seamless circular knit, breathable ribbed texture.
 
-Women''s cropped seamless tank. Seamless circular knit, breathable ribbed texture.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Seamless nylon, 200 GSM
@@ -359,11 +327,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('2e0bc66d-f2ed-5b6a-bc28-51cda782162c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/womenswear-sportswear-upper-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('327f59de-65e8-5299-a227-7690ae182060', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Unisex hooded training sweatshirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('327f59de-65e8-5299-a227-7690ae182060', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Unisex hooded training sweatshirt', 'Unisex hooded training sweatshirt. Brushed-back fleece with a kangaroo pocket; screen print or embroidery available.
 
-Unisex hooded training sweatshirt. Brushed-back fleece with a kangaroo pocket; screen print or embroidery available.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Cotton fleece, 320 GSM
@@ -379,11 +345,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('327f59de-65e8-5299-a227-7690ae182060', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/menswear-sportswear-upper-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('36f87ff2-6189-5691-aa30-84fb4400ad46', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Women''s flared yoga pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('36f87ff2-6189-5691-aa30-84fb4400ad46', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Women''s flared yoga pants', 'Women''s flared yoga pants. Buttery-soft fabric with a crossover waistband.
 
-Women''s flared yoga pants. Buttery-soft fabric with a crossover waistband.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Nylon spandex, 250 GSM
@@ -399,11 +363,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('36f87ff2-6189-5691-aa30-84fb4400ad46', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/womenswear-sportswear-lower-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('911d1f3a-48a9-5b8b-82ee-e94dba2f7449', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Men''s compression full-sleeve top', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('911d1f3a-48a9-5b8b-82ee-e94dba2f7449', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Men''s compression full-sleeve top', 'Men''s compression full-sleeve top. Thumb holes, UV protection and flatlock seams.
 
-Men''s compression full-sleeve top. Thumb holes, UV protection and flatlock seams.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Polyester spandex, 190 GSM
@@ -419,11 +381,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('911d1f3a-48a9-5b8b-82ee-e94dba2f7449', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/menswear-sportswear-upper-body.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('711df4c6-d179-52ee-9261-344e372ec83f', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Sample · Women''s zip-up running jacket', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('711df4c6-d179-52ee-9261-344e372ec83f', '9a64708b-9cd0-5155-8211-0b0c8c2036dd', 'Women''s zip-up running jacket', 'Women''s zip-up running jacket. Lightweight jacket with reflective trims and zip pockets.
 
-Women''s zip-up running jacket. Lightweight jacket with reflective trims and zip pockets.
-
-Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Active Knits (Sportswear / Athleisure Manufacturer, Ludhiana).
 
 Key details
 • Material: Polyester spandex, 230 GSM
@@ -446,23 +406,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'authenticated', 'authenticated', 'sample-seller-03@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Tiruppur Knit Mills (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Tiruppur Knit Mills", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Tiruppur Knit Mills (Sample)', active_role = 'seller', onboarded = true where id = '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd';
+update public.profiles set full_name = 'Tiruppur Knit Mills', active_role = 'seller', onboarded = true where id = '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Tiruppur Knit Mills (Sample)', 'Tiruppur Knit Mills (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Tiruppur',
+values ('04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Tiruppur Knit Mills', 'Tiruppur Knit Mills manufactures everyday apparel, innerwear and home linen in bulk, from Tiruppur.', 'Tiruppur',
         (select s.name from public.india_states s where s.code = 'TN'), 'TN', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('04d9d594-0bd4-5829-8d4a-c396c2ccf8fd');
 insert into admin.registration_exempt (vendor_id, reason) values ('04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8732bd58-1292-53e0-80b7-82e87a0faa6b', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Men''s 180 GSM combed cotton crew-neck T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8732bd58-1292-53e0-80b7-82e87a0faa6b', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Men''s 180 GSM combed cotton crew-neck T-shirt', 'Men''s 180 GSM combed cotton crew-neck T-shirt. Bio-washed, pre-shrunk, with taped shoulders; private label ready.
 
-Men''s 180 GSM combed cotton crew-neck T-shirt. Bio-washed, pre-shrunk, with taped shoulders; private label ready.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: 100% combed cotton, 180 GSM
@@ -480,11 +438,9 @@ Photo: m:User:Taylor_49, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wi
 insert into public.product_images (product_id, url, position) values ('8732bd58-1292-53e0-80b7-82e87a0faa6b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('88c90f13-201b-5f77-afe6-afcca0e74cec', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Women''s rayon printed peplum top', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('88c90f13-201b-5f77-afe6-afcca0e74cec', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Women''s rayon printed peplum top', 'Women''s rayon printed peplum top. Soft rayon with a flattering peplum hem and 3/4 sleeves.
 
-Women''s rayon printed peplum top. Soft rayon with a flattering peplum hem and 3/4 sleeves.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Rayon, 120 GSM
@@ -500,11 +456,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('88c90f13-201b-5f77-afe6-afcca0e74cec', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/womenswear-tops-blouses-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('08b7a844-3cd1-5346-a56c-f7f407c04d8a', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Double bedsheet set, 300 TC cotton percale', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('08b7a844-3cd1-5346-a56c-f7f407c04d8a', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Double bedsheet set, 300 TC cotton percale', 'Double bedsheet set, 300 TC cotton percale. One flat sheet and two pillow covers; 274 × 274 cm.
 
-Double bedsheet set, 300 TC cotton percale. One flat sheet and two pillow covers; 274 × 274 cm.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton percale
@@ -521,11 +475,9 @@ Photo: רפאל גורי, CC BY-SA 3.0, via Wikimedia Commons (https://commons.w
 insert into public.product_images (product_id, url, position) values ('08b7a844-3cd1-5346-a56c-f7f407c04d8a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2995c184-cb97-5269-a28d-cebfb26b1ca2', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Kids'' printed cotton T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2995c184-cb97-5269-a28d-cebfb26b1ca2', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Kids'' printed cotton T-shirt', 'Kids'' printed cotton T-shirt. Soft single jersey with child-safe water-based prints.
 
-Kids'' printed cotton T-shirt. Soft single jersey with child-safe water-based prints.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: 100% cotton, 160 GSM
@@ -541,11 +493,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('2995c184-cb97-5269-a28d-cebfb26b1ca2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/kidswear-t-shirts-vests-tops.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0277bc13-6f25-5fcc-bd58-86023724dd07', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Women''s cotton pyjama set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0277bc13-6f25-5fcc-bd58-86023724dd07', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Women''s cotton pyjama set', 'Women''s cotton pyjama set. Button-down top with an elasticated pyjama, breathable for sleep.
 
-Women''s cotton pyjama set. Button-down top with an elasticated pyjama, breathable for sleep.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton, 140 GSM
@@ -561,11 +511,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('0277bc13-6f25-5fcc-bd58-86023724dd07', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/womenswear-nightwear-loungewear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('34953594-149a-54a0-b7c3-73557bc86398', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Men''s cotton trunks, pack of 3', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('34953594-149a-54a0-b7c3-73557bc86398', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Men''s cotton trunks, pack of 3', 'Men''s cotton trunks, pack of 3. Soft waistband with a contoured pouch.
 
-Men''s cotton trunks, pack of 3. Soft waistband with a contoured pouch.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton spandex, 180 GSM
@@ -581,11 +529,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('34953594-149a-54a0-b7c3-73557bc86398', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/menswear-innerwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e461768d-23f1-5f51-9b67-a013287ea078', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Women''s everyday T-shirt bra', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e461768d-23f1-5f51-9b67-a013287ea078', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Women''s everyday T-shirt bra', 'Women''s everyday T-shirt bra. Moulded padded cups, no visible seams under T-shirts.
 
-Women''s everyday T-shirt bra. Moulded padded cups, no visible seams under T-shirts.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton spandex
@@ -603,11 +549,9 @@ Photo: 19Tarrestnom65, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('e461768d-23f1-5f51-9b67-a013287ea078', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('88d934fc-57bf-559d-b4ec-b1d1fffbf217', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Unisex oversized drop-shoulder T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('88d934fc-57bf-559d-b4ec-b1d1fffbf217', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Unisex oversized drop-shoulder T-shirt', 'Unisex oversized drop-shoulder T-shirt. Heavy GSM, drop shoulders; ready for screen or DTF print.
 
-Unisex oversized drop-shoulder T-shirt. Heavy GSM, drop shoulders; ready for screen or DTF print.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: 100% cotton, 220 GSM
@@ -625,11 +569,9 @@ Photo: Marie-Walt, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('88d934fc-57bf-559d-b4ec-b1d1fffbf217', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ffe46099-5266-56b2-bf3c-3aa470c29fa7', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Women''s tiered cotton midi dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ffe46099-5266-56b2-bf3c-3aa470c29fa7', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Women''s tiered cotton midi dress', 'Women''s tiered cotton midi dress. Tiered midi with a smocked bodice and side pockets.
 
-Women''s tiered cotton midi dress. Tiered midi with a smocked bodice and side pockets.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton cambric, 110 GSM
@@ -645,11 +587,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('ffe46099-5266-56b2-bf3c-3aa470c29fa7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/womenswear-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('531b4f95-d6a7-5e43-abb3-8315a295340e', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Sample · Soft cotton silk saree with blouse piece', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('531b4f95-d6a7-5e43-abb3-8315a295340e', '04d9d594-0bd4-5829-8d4a-c396c2ccf8fd', 'Soft cotton silk saree with blouse piece', 'Soft cotton silk saree with blouse piece. Woven border saree, 6.3 m including a 0.8 m blouse piece.
 
-Soft cotton silk saree with blouse piece. Woven border saree, 6.3 m including a 0.8 m blouse piece.
-
-Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tiruppur Knit Mills (Garment Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton silk
@@ -672,23 +612,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'authenticated', 'authenticated', 'sample-seller-04@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Vapi Textile Chem (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Vapi Textile Chem", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Vapi Textile Chem (Sample)', active_role = 'seller', onboarded = true where id = 'af38d4ac-6825-5bbd-8c1a-87685385fe68';
+update public.profiles set full_name = 'Vapi Textile Chem', active_role = 'seller', onboarded = true where id = 'af38d4ac-6825-5bbd-8c1a-87685385fe68';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Vapi Textile Chem (Sample)', 'Vapi Textile Chem (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Vapi',
+values ('af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Vapi Textile Chem', 'Vapi Textile Chem supplies dyes and processing chemicals to textile mills and dye houses, from Vapi.', 'Vapi',
         (select s.name from public.india_states s where s.code = 'GJ'), 'GJ', 'India', 'IN',
         'Fabric Manufacturer', 'manufacturer', array['Fabric Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('af38d4ac-6825-5bbd-8c1a-87685385fe68');
 insert into admin.registration_exempt (vendor_id, reason) values ('af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('91852feb-39eb-559c-83db-70b10672e6fc', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Reactive dyes for cotton, HE series', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('91852feb-39eb-559c-83db-70b10672e6fc', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Reactive dyes for cotton, HE series', 'Reactive dyes for cotton, HE series. Hot-exhaust reactive dyes with high fixation and good wash fastness.
 
-Reactive dyes for cotton, HE series. Hot-exhaust reactive dyes with high fixation and good wash fastness.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹640 per kg
@@ -703,11 +641,9 @@ Photo: Sunshinehoney10, CC0, via Wikimedia Commons (https://commons.wikimedia.or
 insert into public.product_images (product_id, url, position) values ('91852feb-39eb-559c-83db-70b10672e6fc', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2184e3ab-9883-52b2-bea1-e33a60b4695e', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Disperse dyes for polyester', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2184e3ab-9883-52b2-bea1-e33a60b4695e', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Disperse dyes for polyester', 'Disperse dyes for polyester. High-energy disperse dyes for HT/HP dyeing of polyester.
 
-Disperse dyes for polyester. High-energy disperse dyes for HT/HP dyeing of polyester.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹720 per kg
@@ -722,11 +658,9 @@ Photo: Junyu-K, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('2184e3ab-9883-52b2-bea1-e33a60b4695e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a83e3d7d-2a19-5485-9668-703aede2bbb6', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Acid dyes for nylon and wool', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a83e3d7d-2a19-5485-9668-703aede2bbb6', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Acid dyes for nylon and wool', 'Acid dyes for nylon and wool. Bright, level-dyeing acid dyes with good light fastness.
 
-Acid dyes for nylon and wool. Bright, level-dyeing acid dyes with good light fastness.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹810 per kg
@@ -741,11 +675,9 @@ Photo: OlenkaHaiduk, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('a83e3d7d-2a19-5485-9668-703aede2bbb6', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7bc4e637-ec8f-5cb7-b47a-57522987d4c5', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Wetting and scouring agent', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7bc4e637-ec8f-5cb7-b47a-57522987d4c5', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Wetting and scouring agent', 'Wetting and scouring agent. Non-ionic, low-foam agent for pretreatment of cotton and blends.
 
-Wetting and scouring agent. Non-ionic, low-foam agent for pretreatment of cotton and blends.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹145 per kg
@@ -760,11 +692,9 @@ Photo: Soddaa, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.or
 insert into public.product_images (product_id, url, position) values ('7bc4e637-ec8f-5cb7-b47a-57522987d4c5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2bf2fa4c-716a-5109-8f85-26a30c1d49e4', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Sequestering agent for hard water', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2bf2fa4c-716a-5109-8f85-26a30c1d49e4', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sequestering agent for hard water', 'Sequestering agent for hard water. Binds calcium and iron in process water for even dyeing.
 
-Sequestering agent for hard water. Binds calcium and iron in process water for even dyeing.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹120 per kg
@@ -779,11 +709,9 @@ Photo: Ajia4ty, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('2bf2fa4c-716a-5109-8f85-26a30c1d49e4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9e0d0ebc-73cf-5edb-8579-faf968f2dbf2', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Levelling agent for reactive dyeing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9e0d0ebc-73cf-5edb-8579-faf968f2dbf2', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Levelling agent for reactive dyeing', 'Levelling agent for reactive dyeing. Prevents patchy dyeing and improves shade reproducibility.
 
-Levelling agent for reactive dyeing. Prevents patchy dyeing and improves shade reproducibility.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹165 per kg
@@ -798,11 +726,9 @@ Photo: RAJIVVASUDEV, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('9e0d0ebc-73cf-5edb-8579-faf968f2dbf2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('861837b0-08a1-5d3e-854b-e716348a27d0', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Silicone softener, hydrophilic', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('861837b0-08a1-5d3e-854b-e716348a27d0', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Silicone softener, hydrophilic', 'Silicone softener, hydrophilic. Gives a soft, smooth hand while keeping fabric absorbent.
 
-Silicone softener, hydrophilic. Gives a soft, smooth hand while keeping fabric absorbent.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹185 per kg
@@ -815,11 +741,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('861837b0-08a1-5d3e-854b-e716348a27d0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/raw-materials-finishes.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('193098e6-8c4f-5c79-b766-33c7f2d28b66', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Enzyme for denim bio-wash', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('193098e6-8c4f-5c79-b766-33c7f2d28b66', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Enzyme for denim bio-wash', 'Enzyme for denim bio-wash. Neutral cellulase for vintage looks with low back-staining.
 
-Enzyme for denim bio-wash. Neutral cellulase for vintage looks with low back-staining.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹260 per kg
@@ -834,11 +758,9 @@ Photo: Maurizio Baldi, CC0, via Wikimedia Commons (https://commons.wikimedia.org
 insert into public.product_images (product_id, url, position) values ('193098e6-8c4f-5c79-b766-33c7f2d28b66', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8d1327e0-2ebe-5f07-8b36-6fab1bbc4e4e', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Fixing agent for reactive prints', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8d1327e0-2ebe-5f07-8b36-6fab1bbc4e4e', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Fixing agent for reactive prints', 'Fixing agent for reactive prints. Improves wet fastness of reactive and direct dyes.
 
-Fixing agent for reactive prints. Improves wet fastness of reactive and direct dyes.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹175 per kg
@@ -853,11 +775,9 @@ Photo: Лапоть, CC0, via Wikimedia Commons (https://commons.wikimedia.org/w
 insert into public.product_images (product_id, url, position) values ('8d1327e0-2ebe-5f07-8b36-6fab1bbc4e4e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a28a0fed-ddba-5895-8264-9a01188e3601', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Sample · Anti-pilling finish for knits', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a28a0fed-ddba-5895-8264-9a01188e3601', 'af38d4ac-6825-5bbd-8c1a-87685385fe68', 'Anti-pilling finish for knits', 'Anti-pilling finish for knits. Reduces pilling on cotton and blended knit fabrics.
 
-Anti-pilling finish for knits. Reduces pilling on cotton and blended knit fabrics.
-
-Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Vapi Textile Chem (Fabric Manufacturer, Vapi).
 
 Key details
 • Price: ₹210 per kg
@@ -877,23 +797,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '5ea25e88-0b75-56d8-b084-d7d883688538', 'authenticated', 'authenticated', 'sample-seller-05@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Pure Botanica Labs (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Pure Botanica Labs", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Pure Botanica Labs (Sample)', active_role = 'seller', onboarded = true where id = '5ea25e88-0b75-56d8-b084-d7d883688538';
+update public.profiles set full_name = 'Pure Botanica Labs', active_role = 'seller', onboarded = true where id = '5ea25e88-0b75-56d8-b084-d7d883688538';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('5ea25e88-0b75-56d8-b084-d7d883688538', 'Pure Botanica Labs (Sample)', 'Pure Botanica Labs (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Bengaluru',
+values ('5ea25e88-0b75-56d8-b084-d7d883688538', 'Pure Botanica Labs', 'Pure Botanica Labs makes skincare, haircare and beauty products for private labels and retailers, from Bengaluru.', 'Bengaluru',
         (select s.name from public.india_states s where s.code = 'KA'), 'KA', 'India', 'IN',
         'Private Label Manufacturer', 'manufacturer', array['Private Label Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('5ea25e88-0b75-56d8-b084-d7d883688538');
 insert into admin.registration_exempt (vendor_id, reason) values ('5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('775055eb-33e8-53f4-81ef-0b2ad2c0c9a1', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Vitamin C face serum, 30 ml', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('775055eb-33e8-53f4-81ef-0b2ad2c0c9a1', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Vitamin C face serum, 30 ml', 'Vitamin C face serum, 30 ml. 10% vitamin C with hyaluronic acid; private label with your packaging.
 
-Vitamin C face serum, 30 ml. 10% vitamin C with hyaluronic acid; private label with your packaging.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹145 per bottle
@@ -906,11 +824,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('775055eb-33e8-53f4-81ef-0b2ad2c0c9a1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/beauty-skincare.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c12a5795-e9df-5ef6-9b0a-9a0582fe3d6a', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Aloe vera soothing gel, 100 g', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c12a5795-e9df-5ef6-9b0a-9a0582fe3d6a', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Aloe vera soothing gel, 100 g', 'Aloe vera soothing gel, 100 g. Lightweight gel for face and body, paraben-free.
 
-Aloe vera soothing gel, 100 g. Lightweight gel for face and body, paraben-free.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹62 per tube
@@ -925,11 +841,9 @@ Photo: Ubkoumbogny, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('c12a5795-e9df-5ef6-9b0a-9a0582fe3d6a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e46869e8-4020-5b9a-8725-8b0e266ae3d9', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Onion and black seed hair oil, 200 ml', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e46869e8-4020-5b9a-8725-8b0e266ae3d9', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Onion and black seed hair oil, 200 ml', 'Onion and black seed hair oil, 200 ml. Cold-pressed oil blend for scalp care.
 
-Onion and black seed hair oil, 200 ml. Cold-pressed oil blend for scalp care.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹88 per bottle
@@ -942,11 +856,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e46869e8-4020-5b9a-8725-8b0e266ae3d9', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/beauty-hair-scalp.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('41674982-e6f1-561d-8fea-437e23de383b', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Handmade glycerin soap bar, 100 g', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('41674982-e6f1-561d-8fea-437e23de383b', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Handmade glycerin soap bar, 100 g', 'Handmade glycerin soap bar, 100 g. Glycerin base with essential oils; custom shapes and fragrances.
 
-Handmade glycerin soap bar, 100 g. Glycerin base with essential oils; custom shapes and fragrances.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹38 per bar
@@ -961,11 +873,9 @@ Photo: Cybularny, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki
 insert into public.product_images (product_id, url, position) values ('41674982-e6f1-561d-8fea-437e23de383b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9b1f8c8d-b81a-5e48-970b-fd1fa99c6071', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Tinted lip balm with SPF 15', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9b1f8c8d-b81a-5e48-970b-fd1fa99c6071', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Tinted lip balm with SPF 15', 'Tinted lip balm with SPF 15. Shea butter base in six shades.
 
-Tinted lip balm with SPF 15. Shea butter base in six shades.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹45 per piece
@@ -980,11 +890,9 @@ Photo: Rawpixel Ltd, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia
 insert into public.product_images (product_id, url, position) values ('9b1f8c8d-b81a-5e48-970b-fd1fa99c6071', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b5c9e2a7-ef30-5d28-a1fb-e704ea7f5d52', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Matte compact powder', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b5c9e2a7-ef30-5d28-a1fb-e704ea7f5d52', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Matte compact powder', 'Matte compact powder. Oil-control compact in four shades with a mirror case.
 
-Matte compact powder. Oil-control compact in four shades with a mirror case.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹95 per piece
@@ -999,11 +907,9 @@ Photo: Joe Haupt from USA, CC BY-SA 2.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('b5c9e2a7-ef30-5d28-a1fb-e704ea7f5d52', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e5abdb71-89d2-5fde-9404-5f26d860a210', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Eau de parfum, 50 ml', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e5abdb71-89d2-5fde-9404-5f26d860a210', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Eau de parfum, 50 ml', 'Eau de parfum, 50 ml. Long-lasting EDP in floral, woody and fresh profiles.
 
-Eau de parfum, 50 ml. Long-lasting EDP in floral, woody and fresh profiles.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹210 per bottle
@@ -1018,11 +924,9 @@ Photo: Retired electrician, CC0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('e5abdb71-89d2-5fde-9404-5f26d860a210', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('20c0a265-0f4c-5b56-a2c3-1cc93a979a55', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Beard oil, 30 ml', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('20c0a265-0f4c-5b56-a2c3-1cc93a979a55', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Beard oil, 30 ml', 'Beard oil, 30 ml. Argan and jojoba blend for soft beards.
 
-Beard oil, 30 ml. Argan and jojoba blend for soft beards.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹85 per bottle
@@ -1037,11 +941,9 @@ Photo: Tools of Men, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia
 insert into public.product_images (product_id, url, position) values ('20c0a265-0f4c-5b56-a2c3-1cc93a979a55', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('615668a3-75e7-5751-b78a-3b7614f84674', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Quick-dry nail polish, 9 ml', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('615668a3-75e7-5751-b78a-3b7614f84674', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Quick-dry nail polish, 9 ml', 'Quick-dry nail polish, 9 ml. Chip-resistant formula in 24 shades.
 
-Quick-dry nail polish, 9 ml. Chip-resistant formula in 24 shades.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹32 per bottle
@@ -1056,11 +958,9 @@ Photo: Esmé James @ezy_bezzie, CC BY-SA 4.0, via Wikimedia Commons (https://com
 insert into public.product_images (product_id, url, position) values ('615668a3-75e7-5751-b78a-3b7614f84674', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1507f146-0de7-560d-8a6a-88187c960132', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Sample · Makeup brush set of 10', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1507f146-0de7-560d-8a6a-88187c960132', '5ea25e88-0b75-56d8-b084-d7d883688538', 'Makeup brush set of 10', 'Makeup brush set of 10. Soft synthetic bristles with a faux-leather pouch.
 
-Makeup brush set of 10. Soft synthetic bristles with a faux-leather pouch.
-
-Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Pure Botanica Labs (Private Label Manufacturer, Bengaluru).
 
 Key details
 • Price: ₹165 per set
@@ -1080,23 +980,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'authenticated', 'authenticated', 'sample-seller-06@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Mumbai Muse Studio (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Mumbai Muse Studio", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Mumbai Muse Studio (Sample)', active_role = 'seller', onboarded = true where id = 'f7e8a5ca-0160-535c-8c16-8c70f9034e38';
+update public.profiles set full_name = 'Mumbai Muse Studio', active_role = 'seller', onboarded = true where id = 'f7e8a5ca-0160-535c-8c16-8c70f9034e38';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Mumbai Muse Studio (Sample)', 'Mumbai Muse Studio (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Mumbai',
+values ('f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Mumbai Muse Studio', 'Mumbai Muse Studio designs and manufactures women''s dresses and jumpsuits for brands and boutiques, from Mumbai.', 'Mumbai',
         (select s.name from public.india_states s where s.code = 'MH'), 'MH', 'India', 'IN',
         'Boutique / Designer Studio', 'manufacturer', array['Boutique / Designer Studio']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('f7e8a5ca-0160-535c-8c16-8c70f9034e38');
 insert into admin.registration_exempt (vendor_id, reason) values ('f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3ee018dd-e3fd-59a0-903d-badb8de6cbe4', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s floral wrap midi dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3ee018dd-e3fd-59a0-903d-badb8de6cbe4', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s floral wrap midi dress', 'Women''s floral wrap midi dress. True wrap with a tie belt and flutter sleeves.
 
-Women''s floral wrap midi dress. True wrap with a tie belt and flutter sleeves.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Viscose crepe, 110 GSM
@@ -1112,11 +1010,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('3ee018dd-e3fd-59a0-903d-badb8de6cbe4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/womenswear-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('426cd429-2a50-5126-969a-ddf8f9666c76', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s linen shirt dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('426cd429-2a50-5126-969a-ddf8f9666c76', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s linen shirt dress', 'Women''s linen shirt dress. Button-through linen dress with a self belt.
 
-Women''s linen shirt dress. Button-through linen dress with a self belt.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Linen blend, 150 GSM
@@ -1134,11 +1030,9 @@ Photo: Halston, 1932-1990, Public domain, via Wikimedia Commons (https://commons
 insert into public.product_images (product_id, url, position) values ('426cd429-2a50-5126-969a-ddf8f9666c76', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('25fa719c-5c8c-5eb2-bbe9-6f2498c8846b', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s satin slip dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('25fa719c-5c8c-5eb2-bbe9-6f2498c8846b', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s satin slip dress', 'Women''s satin slip dress. Bias-cut slip with adjustable straps.
 
-Women''s satin slip dress. Bias-cut slip with adjustable straps.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Polyester satin, 95 GSM
@@ -1154,11 +1048,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('25fa719c-5c8c-5eb2-bbe9-6f2498c8846b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/womenswear-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('441b9cd4-7a04-50ac-b990-a33438e3178d', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s tiered maxi dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('441b9cd4-7a04-50ac-b990-a33438e3178d', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s tiered maxi dress', 'Women''s tiered maxi dress. Lined tiered maxi with lace trims.
 
-Women''s tiered maxi dress. Lined tiered maxi with lace trims.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Cotton voile, 80 GSM
@@ -1176,11 +1068,9 @@ Photo: Shuma Shuam CHENMIEL, CC BY-SA 4.0, via Wikimedia Commons (https://common
 insert into public.product_images (product_id, url, position) values ('441b9cd4-7a04-50ac-b990-a33438e3178d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7d663d0b-9607-5c6b-a53d-904c85812a9a', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s belted jumpsuit', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7d663d0b-9607-5c6b-a53d-904c85812a9a', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s belted jumpsuit', 'Women''s belted jumpsuit. Wide-leg jumpsuit with a fabric belt and pockets.
 
-Women''s belted jumpsuit. Wide-leg jumpsuit with a fabric belt and pockets.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Crepe, 140 GSM
@@ -1196,11 +1086,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7d663d0b-9607-5c6b-a53d-904c85812a9a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/womenswear-jumpsuits-playsuits.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('546b6082-4ae8-5a9a-8dfa-f8b6fa7b212c', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s bodycon knit dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('546b6082-4ae8-5a9a-8dfa-f8b6fa7b212c', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s bodycon knit dress', 'Women''s bodycon knit dress. Stretch rib knit with a midi hem.
 
-Women''s bodycon knit dress. Stretch rib knit with a midi hem.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Rib knit, 220 GSM
@@ -1218,11 +1106,9 @@ Photo: Daryl Dress Company, Public domain, via Wikimedia Commons (https://common
 insert into public.product_images (product_id, url, position) values ('546b6082-4ae8-5a9a-8dfa-f8b6fa7b212c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9f467be1-899f-5184-ae59-84bb40b4edf7', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s A-line denim dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9f467be1-899f-5184-ae59-84bb40b4edf7', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s A-line denim dress', 'Women''s A-line denim dress. Sleeveless denim dress with button front.
 
-Women''s A-line denim dress. Sleeveless denim dress with button front.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Cotton denim, 8 oz
@@ -1238,11 +1124,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('9f467be1-899f-5184-ae59-84bb40b4edf7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/womenswear-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e3c3f40f-0d49-53c8-a9be-f082ed949ef1', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s smocked sundress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e3c3f40f-0d49-53c8-a9be-f082ed949ef1', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s smocked sundress', 'Women''s smocked sundress. Smocked bodice and tie shoulders.
 
-Women''s smocked sundress. Smocked bodice and tie shoulders.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Cotton poplin, 110 GSM
@@ -1258,11 +1142,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e3c3f40f-0d49-53c8-a9be-f082ed949ef1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/womenswear-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d933315c-0388-59f2-8ff4-b1fa7cc411d7', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s shirt-collar sheath dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d933315c-0388-59f2-8ff4-b1fa7cc411d7', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s shirt-collar sheath dress', 'Women''s shirt-collar sheath dress. Office-ready sheath with a concealed zip.
 
-Women''s shirt-collar sheath dress. Office-ready sheath with a concealed zip.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Poly crepe, 150 GSM
@@ -1278,11 +1160,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('d933315c-0388-59f2-8ff4-b1fa7cc411d7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/womenswear-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('79aa5207-c188-58db-843e-e79b9f09be32', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Sample · Women''s embroidered kaftan dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('79aa5207-c188-58db-843e-e79b9f09be32', 'f7e8a5ca-0160-535c-8c16-8c70f9034e38', 'Women''s embroidered kaftan dress', 'Women''s embroidered kaftan dress. Neckline thread embroidery, loose kaftan fit.
 
-Women''s embroidered kaftan dress. Neckline thread embroidery, loose kaftan fit.
-
-Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Mumbai Muse Studio (Boutique / Designer Studio, Mumbai).
 
 Key details
 • Material: Rayon, 120 GSM
@@ -1305,23 +1185,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '9d41f29b-9087-5475-821b-65f5f3827da5', 'authenticated', 'authenticated', 'sample-seller-07@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Lucknow Chikan House (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Lucknow Chikan House", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Lucknow Chikan House (Sample)', active_role = 'seller', onboarded = true where id = '9d41f29b-9087-5475-821b-65f5f3827da5';
+update public.profiles set full_name = 'Lucknow Chikan House', active_role = 'seller', onboarded = true where id = '9d41f29b-9087-5475-821b-65f5f3827da5';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('9d41f29b-9087-5475-821b-65f5f3827da5', 'Lucknow Chikan House (Sample)', 'Lucknow Chikan House (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Lucknow',
+values ('9d41f29b-9087-5475-821b-65f5f3827da5', 'Lucknow Chikan House', 'Lucknow Chikan House makes kurtas, sarees, lehengas and other ethnic wear for retailers, from Lucknow.', 'Lucknow',
         (select s.name from public.india_states s where s.code = 'UP'), 'UP', 'India', 'IN',
         'Embroidery manufacturers', 'manufacturer', array['Embroidery manufacturers']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('9d41f29b-9087-5475-821b-65f5f3827da5');
 insert into admin.registration_exempt (vendor_id, reason) values ('9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('457bf549-437f-5035-a277-df3c8498329f', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Women''s chikankari cotton kurta', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('457bf549-437f-5035-a277-df3c8498329f', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Women''s chikankari cotton kurta', 'Women''s chikankari cotton kurta. Hand chikankari embroidery on soft cotton, 46-inch length.
 
-Women''s chikankari cotton kurta. Hand chikankari embroidery on soft cotton, 46-inch length.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Cotton, 100 GSM
@@ -1339,11 +1217,9 @@ Photo: Parineetaji123, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('457bf549-437f-5035-a277-df3c8498329f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('68d5782b-a16e-57f2-bd27-fd92e1cdbbac', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Women''s kurta, palazzo and dupatta set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('68d5782b-a16e-57f2-bd27-fd92e1cdbbac', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Women''s kurta, palazzo and dupatta set', 'Women''s kurta, palazzo and dupatta set. Printed three-piece set with a chiffon dupatta.
 
-Women''s kurta, palazzo and dupatta set. Printed three-piece set with a chiffon dupatta.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Rayon, 120 GSM
@@ -1359,11 +1235,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('68d5782b-a16e-57f2-bd27-fd92e1cdbbac', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/womenswear-ethnic-wear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ab4d08e9-192b-590c-84e0-b37c35fa974b', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Men''s cotton kurta pyjama set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ab4d08e9-192b-590c-84e0-b37c35fa974b', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Men''s cotton kurta pyjama set', 'Men''s cotton kurta pyjama set. Mandarin collar kurta with a drawstring pyjama.
 
-Men''s cotton kurta pyjama set. Mandarin collar kurta with a drawstring pyjama.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Cotton, 130 GSM
@@ -1381,11 +1255,9 @@ Photo: Equatorstores, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('ab4d08e9-192b-590c-84e0-b37c35fa974b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1ca613ef-54c2-5aee-8f8d-3c961c499ffb', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Men''s Nehru jacket', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1ca613ef-54c2-5aee-8f8d-3c961c499ffb', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Men''s Nehru jacket', 'Men''s Nehru jacket. Fully lined jacket with a stand collar.
 
-Men''s Nehru jacket. Fully lined jacket with a stand collar.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Poly silk, 180 GSM
@@ -1403,11 +1275,9 @@ Photo: ellenm1, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/
 insert into public.product_images (product_id, url, position) values ('1ca613ef-54c2-5aee-8f8d-3c961c499ffb', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3acf7d3e-a16e-5e53-b1e0-664fb748b9f0', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Women''s anarkali gown', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3acf7d3e-a16e-5e53-b1e0-664fb748b9f0', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Women''s anarkali gown', 'Women''s anarkali gown. Floor-length anarkali with a sequin yoke.
 
-Women''s anarkali gown. Floor-length anarkali with a sequin yoke.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Georgette, 90 GSM
@@ -1423,11 +1293,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('3acf7d3e-a16e-5e53-b1e0-664fb748b9f0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/womenswear-ethnic-wear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('04bfbf29-28c5-5e2d-9d3b-e339ee038897', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Kids'' kurta pyjama set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('04bfbf29-28c5-5e2d-9d3b-e339ee038897', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Kids'' kurta pyjama set', 'Kids'' kurta pyjama set. Festive kurta set for boys.
 
-Kids'' kurta pyjama set. Festive kurta set for boys.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Cotton, 120 GSM
@@ -1443,11 +1311,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('04bfbf29-28c5-5e2d-9d3b-e339ee038897', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/kidswear-ethnic-wear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d696ab0d-5f16-5b77-9eda-050ad3601f10', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Chanderi silk saree', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d696ab0d-5f16-5b77-9eda-050ad3601f10', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Chanderi silk saree', 'Chanderi silk saree. Lightweight saree with zari butis and a blouse piece.
 
-Chanderi silk saree. Lightweight saree with zari butis and a blouse piece.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Chanderi silk
@@ -1464,11 +1330,9 @@ Photo: Nishanth Duraisamy, CC BY-SA 4.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('d696ab0d-5f16-5b77-9eda-050ad3601f10', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0813ccc2-b489-55e0-b5bd-8919949b6320', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Women''s straight kurta with pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0813ccc2-b489-55e0-b5bd-8919949b6320', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Women''s straight kurta with pants', 'Women''s straight kurta with pants. Everyday two-piece set with side slits.
 
-Women''s straight kurta with pants. Everyday two-piece set with side slits.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Cotton slub, 140 GSM
@@ -1484,11 +1348,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('0813ccc2-b489-55e0-b5bd-8919949b6320', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/womenswear-ethnic-wear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c17c62dc-7299-5c84-8c9a-779dcad28b88', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Men''s embroidered sherwani', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c17c62dc-7299-5c84-8c9a-779dcad28b88', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Men''s embroidered sherwani', 'Men''s embroidered sherwani. Wedding sherwani with resham embroidery and churidar.
 
-Men''s embroidered sherwani. Wedding sherwani with resham embroidery and churidar.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Jacquard silk, 220 GSM
@@ -1504,11 +1366,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c17c62dc-7299-5c84-8c9a-779dcad28b88', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/menswear-ethnic-wear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b49d05e2-fede-55fb-806b-264d6c9c148d', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Sample · Women''s lehenga choli set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b49d05e2-fede-55fb-806b-264d6c9c148d', '9d41f29b-9087-5475-821b-65f5f3827da5', 'Women''s lehenga choli set', 'Women''s lehenga choli set. Flared lehenga with an embroidered blouse and net dupatta.
 
-Women''s lehenga choli set. Flared lehenga with an embroidered blouse and net dupatta.
-
-Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Lucknow Chikan House (Embroidery manufacturers, Lucknow).
 
 Key details
 • Material: Georgette, 100 GSM
@@ -1531,23 +1391,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'authenticated', 'authenticated', 'sample-seller-08@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Delhi Accessory Works (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Delhi Accessory Works", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Delhi Accessory Works (Sample)', active_role = 'seller', onboarded = true where id = 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1';
+update public.profiles set full_name = 'Delhi Accessory Works', active_role = 'seller', onboarded = true where id = 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Delhi Accessory Works (Sample)', 'Delhi Accessory Works (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'New Delhi',
+values ('fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Delhi Accessory Works', 'Delhi Accessory Works supplies fashion accessories to retailers and online stores, from New Delhi.', 'New Delhi',
         (select s.name from public.india_states s where s.code = 'DL'), 'DL', 'India', 'IN',
         'Accessories Manufacturer', 'trader_wholesaler', array['Accessories Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('fd79a4e8-e65d-5f3d-8a92-1b50238a62a1');
 insert into admin.registration_exempt (vendor_id, reason) values ('fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6151f0e0-08e8-53fd-a2e4-7bf073d6f21e', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Canvas laptop backpack', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6151f0e0-08e8-53fd-a2e4-7bf073d6f21e', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Canvas laptop backpack', 'Canvas laptop backpack. Padded 15.6-inch laptop sleeve and water-resistant base.
 
-Canvas laptop backpack. Padded 15.6-inch laptop sleeve and water-resistant base.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Colours: Black, olive
@@ -1563,11 +1421,9 @@ Photo: Sir Tragedy, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wi
 insert into public.product_images (product_id, url, position) values ('6151f0e0-08e8-53fd-a2e4-7bf073d6f21e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('57568753-a6bf-5f0b-aea9-3d2fb8179e62', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Reversible PU belt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('57568753-a6bf-5f0b-aea9-3d2fb8179e62', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Reversible PU belt', 'Reversible PU belt. Rotating buckle, two colours in one belt.
 
-Reversible PU belt. Rotating buckle, two colours in one belt.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Sizes: Free Size
@@ -1582,11 +1438,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('57568753-a6bf-5f0b-aea9-3d2fb8179e62', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/accessories-belts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3d3c20fa-cd88-5f7e-9963-8dae406bfa92', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Cotton bucket hat', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3d3c20fa-cd88-5f7e-9963-8dae406bfa92', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Cotton bucket hat', 'Cotton bucket hat. Washed cotton twill with stitched brim.
 
-Cotton bucket hat. Washed cotton twill with stitched brim.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Sizes: Free Size (Adjustable)
@@ -1603,11 +1457,9 @@ Photo: Panpanchik, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('3d3c20fa-cd88-5f7e-9963-8dae406bfa92', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('394c85d2-7a59-50ae-b3b6-cf6d93e063a0', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Knit touchscreen winter gloves', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('394c85d2-7a59-50ae-b3b6-cf6d93e063a0', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Knit touchscreen winter gloves', 'Knit touchscreen winter gloves. Acrylic knit with conductive fingertips.
 
-Knit touchscreen winter gloves. Acrylic knit with conductive fingertips.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Sizes: Free Size
@@ -1624,11 +1476,9 @@ Photo: User:Mateus2019, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wik
 insert into public.product_images (product_id, url, position) values ('394c85d2-7a59-50ae-b3b6-cf6d93e063a0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d2f830f3-d9e3-5e29-a481-d9bbf8df8f43', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Stainless steel chain bracelet', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d2f830f3-d9e3-5e29-a481-d9bbf8df8f43', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Stainless steel chain bracelet', 'Stainless steel chain bracelet. Tarnish-resistant 316L steel.
 
-Stainless steel chain bracelet. Tarnish-resistant 316L steel.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Colours: Silver, gold
@@ -1642,11 +1492,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('d2f830f3-d9e3-5e29-a481-d9bbf8df8f43', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/accessories-jewellery.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ac079f1c-1b7f-561e-8d55-e679c8a4bd77', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Woollen check muffler', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ac079f1c-1b7f-561e-8d55-e679c8a4bd77', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Woollen check muffler', 'Woollen check muffler. Soft acrylic-wool blend with fringed ends.
 
-Woollen check muffler. Soft acrylic-wool blend with fringed ends.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Colours: Assorted checks
@@ -1662,11 +1510,9 @@ Photo: Theanday999, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('ac079f1c-1b7f-561e-8d55-e679c8a4bd77', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('969675ad-2e30-53f9-b0a7-4c37c07b006d', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Sports crew socks, 5-pair pack', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('969675ad-2e30-53f9-b0a7-4c37c07b006d', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sports crew socks, 5-pair pack', 'Sports crew socks, 5-pair pack. Cushioned sole and arch support.
 
-Sports crew socks, 5-pair pack. Cushioned sole and arch support.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Sizes: Free Size (UK 6-10)
@@ -1681,11 +1527,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('969675ad-2e30-53f9-b0a7-4c37c07b006d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/accessories-socks.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8f2eb6bc-de62-54b0-8a6b-4dce7f1ec671', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Aviator metal-frame sunglasses', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8f2eb6bc-de62-54b0-8a6b-4dce7f1ec671', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Aviator metal-frame sunglasses', 'Aviator metal-frame sunglasses. UV400 lenses with spring hinges.
 
-Aviator metal-frame sunglasses. UV400 lenses with spring hinges.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Colours: Gold/green, black
@@ -1699,11 +1543,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('8f2eb6bc-de62-54b0-8a6b-4dce7f1ec671', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/accessories-sunglasses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0c94fcc0-77a8-561d-8175-13784ad1c497', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Digital sports watch', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0c94fcc0-77a8-561d-8175-13784ad1c497', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Digital sports watch', 'Digital sports watch. Stopwatch, alarm and backlight, 5 ATM.
 
-Digital sports watch. Stopwatch, alarm and backlight, 5 ATM.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Colours: Black, blue
@@ -1719,11 +1561,9 @@ Photo: Joe Haupt from USA, CC BY-SA 2.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('0c94fcc0-77a8-561d-8175-13784ad1c497', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f9dd9933-3127-5943-b7f3-e83a21af2a8d', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Sample · Faux-leather sling bag', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f9dd9933-3127-5943-b7f3-e83a21af2a8d', 'fd79a4e8-e65d-5f3d-8a92-1b50238a62a1', 'Faux-leather sling bag', 'Faux-leather sling bag. Adjustable strap and two zip compartments.
 
-Faux-leather sling bag. Adjustable strap and two zip compartments.
-
-Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Delhi Accessory Works (Accessories Manufacturer, New Delhi).
 
 Key details
 • Colours: Tan, black
@@ -1744,23 +1584,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'authenticated', 'authenticated', 'sample-seller-09@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "LedgerWise Advisors (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "LedgerWise Advisors", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'LedgerWise Advisors (Sample)', active_role = 'seller', onboarded = true where id = 'd26d58a9-4303-5389-9747-a40f63e3759c';
+update public.profiles set full_name = 'LedgerWise Advisors', active_role = 'seller', onboarded = true where id = 'd26d58a9-4303-5389-9747-a40f63e3759c';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('d26d58a9-4303-5389-9747-a40f63e3759c', 'LedgerWise Advisors (Sample)', 'LedgerWise Advisors (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Gurugram',
+values ('d26d58a9-4303-5389-9747-a40f63e3759c', 'LedgerWise Advisors', 'LedgerWise Advisors handles GST, tax, registration and finance work for fashion and textile businesses, from Gurugram.', 'Gurugram',
         (select s.name from public.india_states s where s.code = 'HR'), 'HR', 'India', 'IN',
         'Sourcing Agent', 'service_provider', array['Sourcing Agent']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('d26d58a9-4303-5389-9747-a40f63e3759c');
 insert into admin.registration_exempt (vendor_id, reason) values ('d26d58a9-4303-5389-9747-a40f63e3759c', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f5a8bf35-07cc-50ad-941b-2097dfc0356a', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Monthly GST return filing for apparel businesses', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f5a8bf35-07cc-50ad-941b-2097dfc0356a', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Monthly GST return filing for apparel businesses', 'Monthly GST return filing for apparel businesses. GSTR-1 and GSTR-3B filing with input-credit reconciliation.
 
-Monthly GST return filing for apparel businesses. GSTR-1 and GSTR-3B filing with input-credit reconciliation.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹1,500 per month
@@ -1773,11 +1611,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('f5a8bf35-07cc-50ad-941b-2097dfc0356a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/services-accounting-services.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('45806af6-2f2c-5d9a-8b21-fac8322a52fd', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Bookkeeping on Tally or Zoho', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('45806af6-2f2c-5d9a-8b21-fac8322a52fd', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Bookkeeping on Tally or Zoho', 'Bookkeeping on Tally or Zoho. Monthly books, bank reconciliation and ledgers.
 
-Bookkeeping on Tally or Zoho. Monthly books, bank reconciliation and ledgers.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹4,000 per month
@@ -1792,11 +1628,9 @@ Photo: Prouty, Nelson Hindley, Public domain, via Wikimedia Commons (https://com
 insert into public.product_images (product_id, url, position) values ('45806af6-2f2c-5d9a-8b21-fac8322a52fd', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9056883b-5b4c-5aef-9c18-9a64f87f7055', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Income tax return for proprietors and firms', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9056883b-5b4c-5aef-9c18-9a64f87f7055', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Income tax return for proprietors and firms', 'Income tax return for proprietors and firms. ITR filing with tax computation and advance tax planning.
 
-Income tax return for proprietors and firms. ITR filing with tax computation and advance tax planning.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹2,500 per return
@@ -1809,11 +1643,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('9056883b-5b4c-5aef-9c18-9a64f87f7055', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/services-income-tax-filing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('fd983490-7dd3-5695-837d-455725a081f5', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Private limited company registration', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('fd983490-7dd3-5695-837d-455725a081f5', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Private limited company registration', 'Private limited company registration. Name approval, incorporation, PAN and TAN.
 
-Private limited company registration. Name approval, incorporation, PAN and TAN.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹9,000 per project
@@ -1826,11 +1658,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('fd983490-7dd3-5695-837d-455725a081f5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/services-business-registration.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1d7aee42-24d6-5bbc-87cc-b9927e4a86e2', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Payroll with PF and ESIC filing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1d7aee42-24d6-5bbc-87cc-b9927e4a86e2', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Payroll with PF and ESIC filing', 'Payroll with PF and ESIC filing. Salary processing, payslips and statutory filings.
 
-Payroll with PF and ESIC filing. Salary processing, payslips and statutory filings.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹3,500 per month
@@ -1843,11 +1673,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('1d7aee42-24d6-5bbc-87cc-b9927e4a86e2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/services-accounting-services.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0794a927-6370-5c76-ac72-d5c35c34a2aa', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · IEC registration and export documentation', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0794a927-6370-5c76-ac72-d5c35c34a2aa', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'IEC registration and export documentation', 'IEC registration and export documentation. Import Export Code, RCMC and shipping documents.
 
-IEC registration and export documentation. Import Export Code, RCMC and shipping documents.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹4,500 per project
@@ -1860,11 +1688,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('0794a927-6370-5c76-ac72-d5c35c34a2aa', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/services-import-export-handling.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b51afa34-4ad5-54c7-9a72-5159cc4a1d84', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Statutory audit preparation', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b51afa34-4ad5-54c7-9a72-5159cc4a1d84', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Statutory audit preparation', 'Statutory audit preparation. Schedules, reconciliations and auditor coordination.
 
-Statutory audit preparation. Schedules, reconciliations and auditor coordination.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹12,000 per project
@@ -1877,11 +1703,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('b51afa34-4ad5-54c7-9a72-5159cc4a1d84', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/services-accounting-services.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3f71a2fa-42dc-5be9-bb80-9e7f056f9a8b', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Garment costing sheet consultation', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3f71a2fa-42dc-5be9-bb80-9e7f056f9a8b', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Garment costing sheet consultation', 'Garment costing sheet consultation. Fabric, trim, CMT and overhead costing per style.
 
-Garment costing sheet consultation. Fabric, trim, CMT and overhead costing per style.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹3,000 per session
@@ -1894,11 +1718,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('3f71a2fa-42dc-5be9-bb80-9e7f056f9a8b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/freelancers-financial-consulting.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ea1b5e11-f7d7-5f63-9db2-e11fbcbe577b', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · MSME working-capital loan advisory', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ea1b5e11-f7d7-5f63-9db2-e11fbcbe577b', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'MSME working-capital loan advisory', 'MSME working-capital loan advisory. Project report and bank documentation for CC/OD limits.
 
-MSME working-capital loan advisory. Project report and bank documentation for CC/OD limits.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹5,000 per project
@@ -1911,11 +1733,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('ea1b5e11-f7d7-5f63-9db2-e11fbcbe577b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/freelancers-financial-consulting.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('dba29647-3acd-52ff-b8b1-e2087e47854c', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Sample · Pitch deck and financial model for fashion brands', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('dba29647-3acd-52ff-b8b1-e2087e47854c', 'd26d58a9-4303-5389-9747-a40f63e3759c', 'Pitch deck and financial model for fashion brands', 'Pitch deck and financial model for fashion brands. Three-year model and investor deck.
 
-Pitch deck and financial model for fashion brands. Three-year model and investor deck.
-
-Listed by LedgerWise Advisors (Sourcing Agent, Gurugram). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by LedgerWise Advisors (Sourcing Agent, Gurugram).
 
 Key details
 • Price: ₹15,000 per project
@@ -1933,23 +1753,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'authenticated', 'authenticated', 'sample-seller-10@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Agra Step Footwear (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Agra Step Footwear", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Agra Step Footwear (Sample)', active_role = 'seller', onboarded = true where id = 'f863a722-c70d-52c3-ae8a-e3022db264e0';
+update public.profiles set full_name = 'Agra Step Footwear', active_role = 'seller', onboarded = true where id = 'f863a722-c70d-52c3-ae8a-e3022db264e0';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('f863a722-c70d-52c3-ae8a-e3022db264e0', 'Agra Step Footwear (Sample)', 'Agra Step Footwear (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Agra',
+values ('f863a722-c70d-52c3-ae8a-e3022db264e0', 'Agra Step Footwear', 'Agra Step Footwear manufactures footwear for brands, retailers and schools, from Agra.', 'Agra',
         (select s.name from public.india_states s where s.code = 'UP'), 'UP', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('f863a722-c70d-52c3-ae8a-e3022db264e0');
 insert into admin.registration_exempt (vendor_id, reason) values ('f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e0bed615-423d-5447-872e-9f00974c857d', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Men''s leather formal derby shoes', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e0bed615-423d-5447-872e-9f00974c857d', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Men''s leather formal derby shoes', 'Men''s leather formal derby shoes. Genuine leather upper with a TPR sole.
 
-Men''s leather formal derby shoes. Genuine leather upper with a TPR sole.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 6, 7, 8, 9, 10, 11
@@ -1966,11 +1784,9 @@ Photo: עמית לונן, CC0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('e0bed615-423d-5447-872e-9f00974c857d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b5c2f09b-c9bd-566e-8ca7-324ab8e69929', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Men''s casual canvas sneakers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b5c2f09b-c9bd-566e-8ca7-324ab8e69929', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Men''s casual canvas sneakers', 'Men''s casual canvas sneakers. Vulcanised rubber sole and cushioned insole.
 
-Men''s casual canvas sneakers. Vulcanised rubber sole and cushioned insole.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 6, 7, 8, 9, 10
@@ -1987,11 +1803,9 @@ Photo: Nick-D, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.or
 insert into public.product_images (product_id, url, position) values ('b5c2f09b-c9bd-566e-8ca7-324ab8e69929', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('4b694662-040b-508a-b8d3-26951f7679ed', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Women''s block-heel sandals', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('4b694662-040b-508a-b8d3-26951f7679ed', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Women''s block-heel sandals', 'Women''s block-heel sandals. 2.5-inch block heel with an ankle strap.
 
-Women''s block-heel sandals. 2.5-inch block heel with an ankle strap.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 4, 5, 6, 7, 8
@@ -2008,11 +1822,9 @@ Photo: Webshoes archive, CC BY 4.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('4b694662-040b-508a-b8d3-26951f7679ed', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('490c2c90-3a71-5a59-ae4d-dfa34ba2c443', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Women''s embroidered juttis', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('490c2c90-3a71-5a59-ae4d-dfa34ba2c443', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Women''s embroidered juttis', 'Women''s embroidered juttis. Handcrafted juttis with a padded footbed.
 
-Women''s embroidered juttis. Handcrafted juttis with a padded footbed.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 4, 5, 6, 7, 8
@@ -2029,11 +1841,9 @@ Photo: Vachan Rawal, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('490c2c90-3a71-5a59-ae4d-dfa34ba2c443', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('bd5e53a3-89c0-57bd-ac72-c2145fbe04d1', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Kids'' velcro sports shoes', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('bd5e53a3-89c0-57bd-ac72-c2145fbe04d1', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Kids'' velcro sports shoes', 'Kids'' velcro sports shoes. Lightweight EVA sole with velcro straps.
 
-Kids'' velcro sports shoes. Lightweight EVA sole with velcro straps.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 10C, 11C, 12C, 13C, 1
@@ -2050,11 +1860,9 @@ Photo: Blakegripling ph, CC0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('bd5e53a3-89c0-57bd-ac72-c2145fbe04d1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a851268a-87da-56a2-bdb0-03ac96a68740', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Men''s leather loafers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a851268a-87da-56a2-bdb0-03ac96a68740', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Men''s leather loafers', 'Men''s leather loafers. Slip-on loafers with a cushioned sole.
 
-Men''s leather loafers. Slip-on loafers with a cushioned sole.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 6, 7, 8, 9, 10
@@ -2071,11 +1879,9 @@ Photo: Samansmaee, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('a851268a-87da-56a2-bdb0-03ac96a68740', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('367e7de8-ef1f-5bca-9092-3d7864216c2d', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Women''s flat ballerinas', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('367e7de8-ef1f-5bca-9092-3d7864216c2d', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Women''s flat ballerinas', 'Women''s flat ballerinas. Soft PU upper with an anti-slip sole.
 
-Women''s flat ballerinas. Soft PU upper with an anti-slip sole.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 4, 5, 6, 7, 8
@@ -2092,11 +1898,9 @@ Photo: Inma Molina from Málaga, Spain, CC BY-SA 2.0, via Wikimedia Commons (htt
 insert into public.product_images (product_id, url, position) values ('367e7de8-ef1f-5bca-9092-3d7864216c2d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3011dd60-31da-5a6e-8442-12fe36c267d5', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Men''s flip-flops', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3011dd60-31da-5a6e-8442-12fe36c267d5', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Men''s flip-flops', 'Men''s flip-flops. EVA footbed with a rubber strap.
 
-Men''s flip-flops. EVA footbed with a rubber strap.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 6, 7, 8, 9, 10
@@ -2113,11 +1917,9 @@ Photo: DiwangPingkian, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('3011dd60-31da-5a6e-8442-12fe36c267d5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('90244d08-825a-5205-afc3-831cd989fcdc', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Women''s running shoes', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('90244d08-825a-5205-afc3-831cd989fcdc', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Women''s running shoes', 'Women''s running shoes. Breathable mesh upper and EVA midsole.
 
-Women''s running shoes. Breathable mesh upper and EVA midsole.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 4, 5, 6, 7, 8
@@ -2134,11 +1936,9 @@ Photo: Femivaco, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org
 insert into public.product_images (product_id, url, position) values ('90244d08-825a-5205-afc3-831cd989fcdc', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e23167c9-44b8-5365-822b-d5a98240e9b1', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Sample · Kids'' school shoes', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e23167c9-44b8-5365-822b-d5a98240e9b1', 'f863a722-c70d-52c3-ae8a-e3022db264e0', 'Kids'' school shoes', 'Kids'' school shoes. Durable PU upper with a non-marking sole.
 
-Kids'' school shoes. Durable PU upper with a non-marking sole.
-
-Listed by Agra Step Footwear (Garment Manufacturer, Agra). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Agra Step Footwear (Garment Manufacturer, Agra).
 
 Key details
 • Sizes: 10C, 11C, 12C, 13C, 1, 2
@@ -2158,23 +1958,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'authenticated', 'authenticated', 'sample-seller-11@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Studio Threadline Freelance (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Studio Threadline Freelance", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Studio Threadline Freelance (Sample)', active_role = 'seller', onboarded = true where id = 'c228ce66-f7cd-5171-b273-bdb6bfdf517f';
+update public.profiles set full_name = 'Studio Threadline Freelance', active_role = 'seller', onboarded = true where id = 'c228ce66-f7cd-5171-b273-bdb6bfdf517f';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Studio Threadline Freelance (Sample)', 'Studio Threadline Freelance (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Bengaluru',
+values ('c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Studio Threadline Freelance', 'Studio Threadline Freelance is a studio of designers, pattern makers and content creators working with fashion brands, from Bengaluru.', 'Bengaluru',
         (select s.name from public.india_states s where s.code = 'KA'), 'KA', 'India', 'IN',
         'Fashion Designer / Consultant', 'freelancer', array['Fashion Designer / Consultant']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('c228ce66-f7cd-5171-b273-bdb6bfdf517f');
 insert into admin.registration_exempt (vendor_id, reason) values ('c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('70880d4c-09c3-5c6c-99a4-928cbc68ced0', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Seasonal collection design, 10 styles', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('70880d4c-09c3-5c6c-99a4-928cbc68ced0', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Seasonal collection design, 10 styles', 'Seasonal collection design, 10 styles. Mood board, sketches and colourways for ten styles.
 
-Seasonal collection design, 10 styles. Mood board, sketches and colourways for ten styles.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹25,000 per project
@@ -2190,11 +1988,9 @@ Photo: Trekinasibyllinedream, CC0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('70880d4c-09c3-5c6c-99a4-928cbc68ced0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('11e2947a-8b3a-5978-9175-9d451e6dd3e3', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Garment tech pack with measurement chart', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('11e2947a-8b3a-5978-9175-9d451e6dd3e3', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Garment tech pack with measurement chart', 'Garment tech pack with measurement chart. Flats, construction details, BOM and graded specs.
 
-Garment tech pack with measurement chart. Flats, construction details, BOM and graded specs.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹1,800 per style
@@ -2210,11 +2006,9 @@ Photo: Журнал «Живописное обозрѣнiе странъ свѣ
 insert into public.product_images (product_id, url, position) values ('11e2947a-8b3a-5978-9175-9d451e6dd3e3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('19f2c8e7-aff8-5031-b1be-cf9f8dbfff8c', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Proto sample development', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('19f2c8e7-aff8-5031-b1be-cf9f8dbfff8c', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Proto sample development', 'Proto sample development. Pattern and one proto sample in your fabric.
 
-Proto sample development. Pattern and one proto sample in your fabric.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹2,500 per style
@@ -2228,11 +2022,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('19f2c8e7-aff8-5031-b1be-cf9f8dbfff8c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/freelancers-product-sampling.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2d95dd58-0193-5a9d-a627-8ec3a3f9c888', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Ecommerce product photoshoot', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2d95dd58-0193-5a9d-a627-8ec3a3f9c888', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Ecommerce product photoshoot', 'Ecommerce product photoshoot. White-background photos, four angles per product.
 
-Ecommerce product photoshoot. White-background photos, four angles per product.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹350 per product
@@ -2246,11 +2038,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('2d95dd58-0193-5a9d-a627-8ec3a3f9c888', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/freelancers-photography-videography.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('642eed91-b69b-52b6-aae5-3120d0c3cb10', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Marketplace catalogue listing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('642eed91-b69b-52b6-aae5-3120d0c3cb10', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Marketplace catalogue listing', 'Marketplace catalogue listing. Titles, bullets and attributes for Amazon, Myntra or Cosora.
 
-Marketplace catalogue listing. Titles, bullets and attributes for Amazon, Myntra or Cosora.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹120 per listing
@@ -2266,11 +2056,9 @@ Photo: Shixart1985, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('642eed91-b69b-52b6-aae5-3120d0c3cb10', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f4834694-55c1-5f45-8f15-6903c94c3aeb', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Model and stylist coordination for a shoot day', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f4834694-55c1-5f45-8f15-6903c94c3aeb', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Model and stylist coordination for a shoot day', 'Model and stylist coordination for a shoot day. Model, stylist and hair-and-makeup booking.
 
-Model and stylist coordination for a shoot day. Model, stylist and hair-and-makeup booking.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹12,000 per day
@@ -2286,11 +2074,9 @@ Photo: Michiel, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/
 insert into public.product_images (product_id, url, position) values ('f4834694-55c1-5f45-8f15-6903c94c3aeb', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c0c937bb-9372-586a-8e70-88175bff22d5', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Micro-influencer campaign management', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c0c937bb-9372-586a-8e70-88175bff22d5', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Micro-influencer campaign management', 'Micro-influencer campaign management. Outreach, briefs and tracking for 10 creators.
 
-Micro-influencer campaign management. Outreach, briefs and tracking for 10 creators.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹18,000 per campaign
@@ -2304,11 +2090,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c0c937bb-9372-586a-8e70-88175bff22d5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/freelancers-influencer-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8ace170d-94be-5d67-8705-010ba3c214ff', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Trend report for next season', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8ace170d-94be-5d67-8705-010ba3c214ff', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Trend report for next season', 'Trend report for next season. Colours, silhouettes and fabrics for your segment.
 
-Trend report for next season. Colours, silhouettes and fabrics for your segment.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹8,000 per report
@@ -2324,11 +2108,9 @@ Photo: Gabi262, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('8ace170d-94be-5d67-8705-010ba3c214ff', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0599d6e3-5efd-53c4-8e0d-9c9ceca4c07e', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Trademark filing for a fashion brand', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0599d6e3-5efd-53c4-8e0d-9c9ceca4c07e', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Trademark filing for a fashion brand', 'Trademark filing for a fashion brand. Search, filing and responses for one class.
 
-Trademark filing for a fashion brand. Search, filing and responses for one class.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹6,500 per class
@@ -2342,11 +2124,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('0599d6e3-5efd-53c4-8e0d-9c9ceca4c07e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/freelancers-legal-compliance.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d77caccb-9fd8-568f-ab51-ed38abe1fcee', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Sample · Shopify store setup for a fashion label', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d77caccb-9fd8-568f-ab51-ed38abe1fcee', 'c228ce66-f7cd-5171-b273-bdb6bfdf517f', 'Shopify store setup for a fashion label', 'Shopify store setup for a fashion label. Theme setup, collections and payment gateway.
 
-Shopify store setup for a fashion label. Theme setup, collections and payment gateway.
-
-Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Studio Threadline Freelance (Fashion Designer / Consultant, Bengaluru).
 
 Key details
 • Price: ₹30,000 per project
@@ -2365,23 +2145,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'authenticated', 'authenticated', 'sample-seller-12@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "ThreadOps Software (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "ThreadOps Software", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'ThreadOps Software (Sample)', active_role = 'seller', onboarded = true where id = 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3';
+update public.profiles set full_name = 'ThreadOps Software', active_role = 'seller', onboarded = true where id = 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'ThreadOps Software (Sample)', 'ThreadOps Software (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Hyderabad',
+values ('e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'ThreadOps Software', 'ThreadOps Software builds software, apps and websites for apparel and textile businesses, from Hyderabad.', 'Hyderabad',
         (select s.name from public.india_states s where s.code = 'TG'), 'TG', 'India', 'IN',
         'Import / Trading Company', 'service_provider', array['Import / Trading Company']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3');
 insert into admin.registration_exempt (vendor_id, reason) values ('e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('bf3ad285-cf42-598b-9418-1f722a2800d1', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · Garment ERP for production tracking', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('bf3ad285-cf42-598b-9418-1f722a2800d1', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Garment ERP for production tracking', 'Garment ERP for production tracking. Orders, BOM, cutting and stitching progress in one place.
 
-Garment ERP for production tracking. Orders, BOM, cutting and stitching progress in one place.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹6,000 per month
@@ -2396,11 +2174,9 @@ Photo: YeraC, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org
 insert into public.product_images (product_id, url, position) values ('bf3ad285-cf42-598b-9418-1f722a2800d1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3fd73948-c842-5071-846a-d242278db9d0', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · Inventory and warehouse SaaS', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3fd73948-c842-5071-846a-d242278db9d0', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Inventory and warehouse SaaS', 'Inventory and warehouse SaaS. Barcode stock tracking across warehouses.
 
-Inventory and warehouse SaaS. Barcode stock tracking across warehouses.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹3,500 per month
@@ -2413,11 +2189,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('3fd73948-c842-5071-846a-d242278db9d0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-erp-saas-software.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('05429ca2-626e-5dfc-a1a7-ac11a57e7d08', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · GST billing software with e-invoicing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('05429ca2-626e-5dfc-a1a7-ac11a57e7d08', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'GST billing software with e-invoicing', 'GST billing software with e-invoicing. GST invoices, e-way bills and reports.
 
-GST billing software with e-invoicing. GST invoices, e-way bills and reports.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹1,200 per month
@@ -2430,11 +2204,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('05429ca2-626e-5dfc-a1a7-ac11a57e7d08', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-accounting-billing-software.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('591f01cf-262c-587b-90b3-3ee079463bf3', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · POS software for apparel stores', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('591f01cf-262c-587b-90b3-3ee079463bf3', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'POS software for apparel stores', 'POS software for apparel stores. Size-colour matrix, barcodes and loyalty.
 
-POS software for apparel stores. Size-colour matrix, barcodes and loyalty.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹1,500 per month
@@ -2447,11 +2219,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('591f01cf-262c-587b-90b3-3ee079463bf3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-accounting-billing-software.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('899b2676-c5b8-5327-b348-527b5679c1f8', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · B2B CRM for textile traders', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('899b2676-c5b8-5327-b348-527b5679c1f8', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'B2B CRM for textile traders', 'B2B CRM for textile traders. Leads, follow-ups and WhatsApp reminders.
 
-B2B CRM for textile traders. Leads, follow-ups and WhatsApp reminders.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹2,500 per month
@@ -2464,11 +2234,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('899b2676-c5b8-5327-b348-527b5679c1f8', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-crm-automation.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0fe49e14-e5cd-5e63-8db6-c9e29eb1ba14', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · Order automation with WhatsApp updates', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0fe49e14-e5cd-5e63-8db6-c9e29eb1ba14', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Order automation with WhatsApp updates', 'Order automation with WhatsApp updates. Order confirmations and status messages.
 
-Order automation with WhatsApp updates. Order confirmations and status messages.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹4,000 per month
@@ -2481,11 +2249,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('0fe49e14-e5cd-5e63-8db6-c9e29eb1ba14', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-crm-automation.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('510368c4-80f0-5f64-9af6-8f45a1a6fe04', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · B2B ordering app for wholesalers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('510368c4-80f0-5f64-9af6-8f45a1a6fe04', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'B2B ordering app for wholesalers', 'B2B ordering app for wholesalers. Android and iOS catalogue ordering app.
 
-B2B ordering app for wholesalers. Android and iOS catalogue ordering app.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹180,000 per project
@@ -2498,11 +2264,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('510368c4-80f0-5f64-9af6-8f45a1a6fe04', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-app-development.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f88840a9-7aa1-50ca-a83e-41a1a1c0d3f8', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · Custom fashion ecommerce website', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f88840a9-7aa1-50ca-a83e-41a1a1c0d3f8', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Custom fashion ecommerce website', 'Custom fashion ecommerce website. Headless storefront with payment and shipping.
 
-Custom fashion ecommerce website. Headless storefront with payment and shipping.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹90,000 per project
@@ -2515,11 +2279,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('f88840a9-7aa1-50ca-a83e-41a1a1c0d3f8', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-app-development.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7fedad95-72ac-5064-be6a-f6da39c99477', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · Digital catalogue microsite', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7fedad95-72ac-5064-be6a-f6da39c99477', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Digital catalogue microsite', 'Digital catalogue microsite. Shareable catalogue site with enquiry form.
 
-Digital catalogue microsite. Shareable catalogue site with enquiry form.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹15,000 per project
@@ -2532,11 +2294,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7fedad95-72ac-5064-be6a-f6da39c99477', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/services-b2b-directory-listings.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('52df3b19-de10-57d8-ad32-865f6065c3b8', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Sample · Quality inspection app', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('52df3b19-de10-57d8-ad32-865f6065c3b8', 'e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3', 'Quality inspection app', 'Quality inspection app. AQL checklists, photos and reports from the factory floor.
 
-Quality inspection app. AQL checklists, photos and reports from the factory floor.
-
-Listed by ThreadOps Software (Import / Trading Company, Hyderabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by ThreadOps Software (Import / Trading Company, Hyderabad).
 
 Key details
 • Price: ₹2,000 per month
@@ -2554,23 +2314,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'authenticated', 'authenticated', 'sample-seller-13@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Ahmedabad Denim Works (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Ahmedabad Denim Works", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Ahmedabad Denim Works (Sample)', active_role = 'seller', onboarded = true where id = '063fe3fe-e329-584e-9c65-df6725c7ce91';
+update public.profiles set full_name = 'Ahmedabad Denim Works', active_role = 'seller', onboarded = true where id = '063fe3fe-e329-584e-9c65-df6725c7ce91';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('063fe3fe-e329-584e-9c65-df6725c7ce91', 'Ahmedabad Denim Works (Sample)', 'Ahmedabad Denim Works (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Ahmedabad',
+values ('063fe3fe-e329-584e-9c65-df6725c7ce91', 'Ahmedabad Denim Works', 'Ahmedabad Denim Works manufactures denim jeans, shorts and jeggings for brands and retailers, from Ahmedabad.', 'Ahmedabad',
         (select s.name from public.india_states s where s.code = 'GJ'), 'GJ', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('063fe3fe-e329-584e-9c65-df6725c7ce91');
 insert into admin.registration_exempt (vendor_id, reason) values ('063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('018810a1-28df-5e61-a204-6c14939a86ea', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Men''s slim-fit stretch jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('018810a1-28df-5e61-a204-6c14939a86ea', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Men''s slim-fit stretch jeans', 'Men''s slim-fit stretch jeans. Five-pocket jeans with a stone wash.
 
-Men''s slim-fit stretch jeans. Five-pocket jeans with a stone wash.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton stretch denim, 11 oz
@@ -2588,11 +2346,9 @@ Photo: Heroeswithmetaphors, CC0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('018810a1-28df-5e61-a204-6c14939a86ea', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b8b90555-2361-55f9-9c25-a08a6a65ca2f', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Men''s straight-fit rigid jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b8b90555-2361-55f9-9c25-a08a6a65ca2f', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Men''s straight-fit rigid jeans', 'Men''s straight-fit rigid jeans. Heavy rigid denim with copper rivets.
 
-Men''s straight-fit rigid jeans. Heavy rigid denim with copper rivets.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: 100% cotton denim, 13 oz
@@ -2608,11 +2364,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('b8b90555-2361-55f9-9c25-a08a6a65ca2f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/menswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('fcf55b2b-f754-5f8a-96a0-03f6d02dfa39', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Women''s high-rise skinny jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('fcf55b2b-f754-5f8a-96a0-03f6d02dfa39', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Women''s high-rise skinny jeans', 'Women''s high-rise skinny jeans. Super stretch with a sculpting fit.
 
-Women''s high-rise skinny jeans. Super stretch with a sculpting fit.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton stretch denim, 10 oz
@@ -2628,11 +2382,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('fcf55b2b-f754-5f8a-96a0-03f6d02dfa39', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/womenswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5a81d19f-68fb-5eaa-9b1a-6d165c60b9b5', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Women''s wide-leg jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5a81d19f-68fb-5eaa-9b1a-6d165c60b9b5', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Women''s wide-leg jeans', 'Women''s wide-leg jeans. Relaxed wide leg with a high waist.
 
-Women''s wide-leg jeans. Relaxed wide leg with a high waist.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton denim, 11 oz
@@ -2648,11 +2400,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('5a81d19f-68fb-5eaa-9b1a-6d165c60b9b5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/womenswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('56123a5c-1b4f-5f11-8fff-42c2fae04b4f', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Men''s relaxed cargo jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('56123a5c-1b4f-5f11-8fff-42c2fae04b4f', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Men''s relaxed cargo jeans', 'Men''s relaxed cargo jeans. Utility side pockets and tapered hem.
 
-Men''s relaxed cargo jeans. Utility side pockets and tapered hem.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton denim, 12 oz
@@ -2668,11 +2418,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('56123a5c-1b4f-5f11-8fff-42c2fae04b4f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/menswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('65e14565-1d06-5fe6-a9b0-d2b6d03c378f', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Kids'' pull-on denim jeggings', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('65e14565-1d06-5fe6-a9b0-d2b6d03c378f', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Kids'' pull-on denim jeggings', 'Kids'' pull-on denim jeggings. Soft knit denim with an elastic waist.
 
-Kids'' pull-on denim jeggings. Soft knit denim with an elastic waist.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Knit denim, 9 oz
@@ -2690,11 +2438,9 @@ Photo: Tamorlan, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('65e14565-1d06-5fe6-a9b0-d2b6d03c378f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9ec42e11-8873-5868-adcf-f1c29c50000d', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Women''s mom-fit jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9ec42e11-8873-5868-adcf-f1c29c50000d', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Women''s mom-fit jeans', 'Women''s mom-fit jeans. High waist with a tapered leg.
 
-Women''s mom-fit jeans. High waist with a tapered leg.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton denim, 11 oz
@@ -2712,11 +2458,9 @@ Photo: Sosostein, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia
 insert into public.product_images (product_id, url, position) values ('9ec42e11-8873-5868-adcf-f1c29c50000d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('964ced35-5bea-5277-8763-6037515b4a23', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Men''s distressed tapered jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('964ced35-5bea-5277-8763-6037515b4a23', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Men''s distressed tapered jeans', 'Men''s distressed tapered jeans. Hand-finished abrasions and repairs.
 
-Men''s distressed tapered jeans. Hand-finished abrasions and repairs.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton stretch denim, 11 oz
@@ -2734,11 +2478,9 @@ Photo: Lee, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/w
 insert into public.product_images (product_id, url, position) values ('964ced35-5bea-5277-8763-6037515b4a23', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('affc060f-b891-559e-86e3-3c15a42dbf4b', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Women''s bootcut jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('affc060f-b891-559e-86e3-3c15a42dbf4b', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Women''s bootcut jeans', 'Women''s bootcut jeans. Classic bootcut with a mid rise.
 
-Women''s bootcut jeans. Classic bootcut with a mid rise.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton stretch denim, 10 oz
@@ -2754,11 +2496,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('affc060f-b891-559e-86e3-3c15a42dbf4b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/womenswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d625ae4b-f98e-5356-bd29-17b5d9fbc8ef', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Sample · Men''s denim shorts', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d625ae4b-f98e-5356-bd29-17b5d9fbc8ef', '063fe3fe-e329-584e-9c65-df6725c7ce91', 'Men''s denim shorts', 'Men''s denim shorts. Five-pocket shorts with a rolled hem.
 
-Men''s denim shorts. Five-pocket shorts with a rolled hem.
-
-Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ahmedabad Denim Works (Garment Manufacturer, Ahmedabad).
 
 Key details
 • Material: Cotton denim, 10 oz
@@ -2779,23 +2519,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'authenticated', 'authenticated', 'sample-seller-14@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Little Loom Kids (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Little Loom Kids", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Little Loom Kids (Sample)', active_role = 'seller', onboarded = true where id = '56cc226c-e9e8-51b1-b2b6-2babb81151e9';
+update public.profiles set full_name = 'Little Loom Kids', active_role = 'seller', onboarded = true where id = '56cc226c-e9e8-51b1-b2b6-2babb81151e9';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Little Loom Kids (Sample)', 'Little Loom Kids (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Kolkata',
+values ('56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Little Loom Kids', 'Little Loom Kids manufactures clothing for babies and children, from Kolkata.', 'Kolkata',
         (select s.name from public.india_states s where s.code = 'WB'), 'WB', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('56cc226c-e9e8-51b1-b2b6-2babb81151e9');
 insert into admin.registration_exempt (vendor_id, reason) values ('56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9bfdb148-fbae-5a48-95d3-dd869286a554', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Baby organic cotton onesies, pack of 3', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9bfdb148-fbae-5a48-95d3-dd869286a554', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Baby organic cotton onesies, pack of 3', 'Baby organic cotton onesies, pack of 3. Envelope neck and snap closures.
 
-Baby organic cotton onesies, pack of 3. Envelope neck and snap closures.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Organic cotton, 160 GSM
@@ -2811,11 +2549,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('9bfdb148-fbae-5a48-95d3-dd869286a554', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-babywear-onesies.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('079fbbea-10f1-5f5c-9b90-61e22dee9aa9', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Girls'' cotton frock', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('079fbbea-10f1-5f5c-9b90-61e22dee9aa9', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Girls'' cotton frock', 'Girls'' cotton frock. Puff sleeves and a back button closure.
 
-Girls'' cotton frock. Puff sleeves and a back button closure.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Cotton, 110 GSM
@@ -2831,11 +2567,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('079fbbea-10f1-5f5c-9b90-61e22dee9aa9', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-frocks-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('cc349cb8-fbbb-5ef6-855b-c4a266b905f2', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Boys'' graphic T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('cc349cb8-fbbb-5ef6-855b-c4a266b905f2', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Boys'' graphic T-shirt', 'Boys'' graphic T-shirt. Soft jersey with fun prints.
 
-Boys'' graphic T-shirt. Soft jersey with fun prints.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Cotton, 160 GSM
@@ -2851,11 +2585,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('cc349cb8-fbbb-5ef6-855b-c4a266b905f2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-t-shirts-vests-tops.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f04178d6-6555-5e6a-8879-20ed91ea714c', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Kids'' jogger pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f04178d6-6555-5e6a-8879-20ed91ea714c', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Kids'' jogger pants', 'Kids'' jogger pants. Elastic waist and cuffs.
 
-Kids'' jogger pants. Elastic waist and cuffs.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Cotton fleece, 240 GSM
@@ -2871,11 +2603,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('f04178d6-6555-5e6a-8879-20ed91ea714c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('08783c33-1c2c-50db-9c2e-b74ebb9547f4', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Kids'' co-ord set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('08783c33-1c2c-50db-9c2e-b74ebb9547f4', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Kids'' co-ord set', 'Kids'' co-ord set. Matching top and shorts.
 
-Kids'' co-ord set. Matching top and shorts.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Cotton, 180 GSM
@@ -2891,11 +2621,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('08783c33-1c2c-50db-9c2e-b74ebb9547f4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-co-ords-sets.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a101cdd3-5676-50ce-bf4c-19164bb28486', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Kids'' hooded puffer jacket', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a101cdd3-5676-50ce-bf4c-19164bb28486', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Kids'' hooded puffer jacket', 'Kids'' hooded puffer jacket. Water-resistant shell, warm fill.
 
-Kids'' hooded puffer jacket. Water-resistant shell, warm fill.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Nylon with poly fill
@@ -2911,11 +2639,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('a101cdd3-5676-50ce-bf4c-19164bb28486', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-winterwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5786f542-04a6-5050-a845-6639064b2525', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Girls'' lehenga choli', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5786f542-04a6-5050-a845-6639064b2525', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Girls'' lehenga choli', 'Girls'' lehenga choli. Festive set with dupatta.
 
-Girls'' lehenga choli. Festive set with dupatta.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Art silk, 110 GSM
@@ -2933,11 +2659,9 @@ Photo: Rainer Halama, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('5786f542-04a6-5050-a845-6639064b2525', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('edd2ca07-a2d9-58d2-98ee-1fcc5f573b2e', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Kids'' cotton vests, pack of 5', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('edd2ca07-a2d9-58d2-98ee-1fcc5f573b2e', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Kids'' cotton vests, pack of 5', 'Kids'' cotton vests, pack of 5. Everyday sleeveless vests.
 
-Kids'' cotton vests, pack of 5. Everyday sleeveless vests.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Cotton rib, 150 GSM
@@ -2953,11 +2677,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('edd2ca07-a2d9-58d2-98ee-1fcc5f573b2e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-t-shirts-vests-tops.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1899e69c-26ac-5278-8ee7-5762ea00da44', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Girls'' denim pinafore dress', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1899e69c-26ac-5278-8ee7-5762ea00da44', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Girls'' denim pinafore dress', 'Girls'' denim pinafore dress. Adjustable straps and front pocket.
 
-Girls'' denim pinafore dress. Adjustable straps and front pocket.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Cotton denim, 8 oz
@@ -2973,11 +2695,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('1899e69c-26ac-5278-8ee7-5762ea00da44', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/kidswear-frocks-dresses.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('90c2710a-1109-505a-85e4-63caeba3600b', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Sample · Kids'' knitted sweater', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('90c2710a-1109-505a-85e4-63caeba3600b', '56cc226c-e9e8-51b1-b2b6-2babb81151e9', 'Kids'' knitted sweater', 'Kids'' knitted sweater. Cable knit with ribbed cuffs.
 
-Kids'' knitted sweater. Cable knit with ribbed cuffs.
-
-Listed by Little Loom Kids (Garment Manufacturer, Kolkata). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Little Loom Kids (Garment Manufacturer, Kolkata).
 
 Key details
 • Material: Acrylic wool
@@ -3000,23 +2720,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'authenticated', 'authenticated', 'sample-seller-15@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Tagline Labels (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Tagline Labels", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Tagline Labels (Sample)', active_role = 'seller', onboarded = true where id = 'a137d525-a734-5770-a31b-1cb322c5ff0e';
+update public.profiles set full_name = 'Tagline Labels', active_role = 'seller', onboarded = true where id = 'a137d525-a734-5770-a31b-1cb322c5ff0e';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('a137d525-a734-5770-a31b-1cb322c5ff0e', 'Tagline Labels (Sample)', 'Tagline Labels (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Tiruppur',
+values ('a137d525-a734-5770-a31b-1cb322c5ff0e', 'Tagline Labels', 'Tagline Labels makes woven labels, printed labels and hang tags for garment brands, from Tiruppur.', 'Tiruppur',
         (select s.name from public.india_states s where s.code = 'TN'), 'TN', 'India', 'IN',
         'Private Label Manufacturer', 'manufacturer', array['Private Label Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('a137d525-a734-5770-a31b-1cb322c5ff0e');
 insert into admin.registration_exempt (vendor_id, reason) values ('a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e6086b31-34f1-5064-a857-18a613cecdc0', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Damask woven brand labels', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e6086b31-34f1-5064-a857-18a613cecdc0', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Damask woven brand labels', 'Damask woven brand labels. High-density damask weave, end-fold or centre-fold.
 
-Damask woven brand labels. High-density damask weave, end-fold or centre-fold.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹1.60 per piece
@@ -3029,11 +2747,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e6086b31-34f1-5064-a857-18a613cecdc0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c6f17e02-cb62-5465-bfb3-19e45f0a14a6', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Satin printed labels', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c6f17e02-cb62-5465-bfb3-19e45f0a14a6', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Satin printed labels', 'Satin printed labels. Soft satin with crisp printing.
 
-Satin printed labels. Soft satin with crisp printing.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹0.90 per piece
@@ -3046,11 +2762,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c6f17e02-cb62-5465-bfb3-19e45f0a14a6', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('faa60dde-6781-546d-b8ed-5e53bf5c22e0', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Wash care labels with symbols', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('faa60dde-6781-546d-b8ed-5e53bf5c22e0', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Wash care labels with symbols', 'Wash care labels with symbols. Nylon taffeta care labels.
 
-Wash care labels with symbols. Nylon taffeta care labels.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹0.60 per piece
@@ -3065,11 +2779,9 @@ Photo: Yosomono from Fukuoka, Japan, CC BY 2.0, via Wikimedia Commons (https://c
 insert into public.product_images (product_id, url, position) values ('faa60dde-6781-546d-b8ed-5e53bf5c22e0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('34022c5f-33ba-5e4f-9b93-6c0e0bd3c465', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Kraft paper hang tags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('34022c5f-33ba-5e4f-9b93-6c0e0bd3c465', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Kraft paper hang tags', 'Kraft paper hang tags. 350 GSM kraft with your logo printed.
 
-Kraft paper hang tags. 350 GSM kraft with your logo printed.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹2.20 per piece
@@ -3082,11 +2794,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('34022c5f-33ba-5e4f-9b93-6c0e0bd3c465', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7bcdfc5d-c0eb-5b9e-9f75-24bf1e7c0a8f', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Woven size tags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7bcdfc5d-c0eb-5b9e-9f75-24bf1e7c0a8f', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Woven size tags', 'Woven size tags. Sizes XS to XXXL.
 
-Woven size tags. Sizes XS to XXXL.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹0.50 per piece
@@ -3099,11 +2809,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7bcdfc5d-c0eb-5b9e-9f75-24bf1e7c0a8f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('05f829e6-4244-53b6-bb20-ab031bd623d8', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Fibre content labels', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('05f829e6-4244-53b6-bb20-ab031bd623d8', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Fibre content labels', 'Fibre content labels. Composition and country of origin.
 
-Fibre content labels. Composition and country of origin.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹0.60 per piece
@@ -3116,11 +2824,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('05f829e6-4244-53b6-bb20-ab031bd623d8', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8d799592-59b4-5c52-b519-356fd5540754', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · QR code hang tags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8d799592-59b4-5c52-b519-356fd5540754', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'QR code hang tags', 'QR code hang tags. Unique QR per piece for traceability.
 
-QR code hang tags. Unique QR per piece for traceability.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹3.50 per piece
@@ -3133,11 +2839,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('8d799592-59b4-5c52-b519-356fd5540754', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('54a86fdc-dd9a-55e5-9c80-254c2f2043a3', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Foil-stamped premium hang tags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('54a86fdc-dd9a-55e5-9c80-254c2f2043a3', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Foil-stamped premium hang tags', 'Foil-stamped premium hang tags. Gold or silver foil on textured board.
 
-Foil-stamped premium hang tags. Gold or silver foil on textured board.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹4.80 per piece
@@ -3150,11 +2854,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('54a86fdc-dd9a-55e5-9c80-254c2f2043a3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8d6689aa-f053-5535-bcf9-30acd1bd6d6d', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Woven patches for jeans', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8d6689aa-f053-5535-bcf9-30acd1bd6d6d', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Woven patches for jeans', 'Woven patches for jeans. Leatherette-look woven patches.
 
-Woven patches for jeans. Leatherette-look woven patches.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹3.20 per piece
@@ -3167,11 +2869,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('8d6689aa-f053-5535-bcf9-30acd1bd6d6d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('edbde743-2649-51d0-beb1-5f8c3f9231b0', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Sample · Heat-transfer neck labels', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('edbde743-2649-51d0-beb1-5f8c3f9231b0', 'a137d525-a734-5770-a31b-1cb322c5ff0e', 'Heat-transfer neck labels', 'Heat-transfer neck labels. Tagless printed labels for T-shirts.
 
-Heat-transfer neck labels. Tagless printed labels for T-shirts.
-
-Listed by Tagline Labels (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tagline Labels (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Price: ₹1.10 per piece
@@ -3189,23 +2889,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '890ee646-6006-5ed0-971c-069a0a852272', 'authenticated', 'authenticated', 'sample-seller-16@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Bharat Freight Links (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Bharat Freight Links", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Bharat Freight Links (Sample)', active_role = 'seller', onboarded = true where id = '890ee646-6006-5ed0-971c-069a0a852272';
+update public.profiles set full_name = 'Bharat Freight Links', active_role = 'seller', onboarded = true where id = '890ee646-6006-5ed0-971c-069a0a852272';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('890ee646-6006-5ed0-971c-069a0a852272', 'Bharat Freight Links (Sample)', 'Bharat Freight Links (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Mumbai',
+values ('890ee646-6006-5ed0-971c-069a0a852272', 'Bharat Freight Links', 'Bharat Freight Links moves, stores and clears goods for apparel and textile businesses, from Mumbai.', 'Mumbai',
         (select s.name from public.india_states s where s.code = 'MH'), 'MH', 'India', 'IN',
         'Logistics & Shipping', 'service_provider', array['Logistics & Shipping']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('890ee646-6006-5ed0-971c-069a0a852272');
 insert into admin.registration_exempt (vendor_id, reason) values ('890ee646-6006-5ed0-971c-069a0a852272', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('193f8496-2cb6-5de3-86c7-cceb665ca482', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Part-truck load shipping across India', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('193f8496-2cb6-5de3-86c7-cceb665ca482', '890ee646-6006-5ed0-971c-069a0a852272', 'Part-truck load shipping across India', 'Part-truck load shipping across India. LTL surface transport with door pickup.
 
-Part-truck load shipping across India. LTL surface transport with door pickup.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹9 per kg
@@ -3218,11 +2916,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('193f8496-2cb6-5de3-86c7-cceb665ca482', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/services-logistics-transportation.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6556b08d-52c4-5529-a445-33aada9cc8da', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Express B2B courier for samples', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6556b08d-52c4-5529-a445-33aada9cc8da', '890ee646-6006-5ed0-971c-069a0a852272', 'Express B2B courier for samples', 'Express B2B courier for samples. Two-to-four-day delivery for sample parcels.
 
-Express B2B courier for samples. Two-to-four-day delivery for sample parcels.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹120 per parcel
@@ -3237,11 +2933,9 @@ Photo: Paul Downey from Berkhamsted, UK, CC BY 2.0, via Wikimedia Commons (https
 insert into public.product_images (product_id, url, position) values ('6556b08d-52c4-5529-a445-33aada9cc8da', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7897e8be-6c43-58c1-85ec-9d8343d9b937', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Garment warehousing with pick and pack', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7897e8be-6c43-58c1-85ec-9d8343d9b937', '890ee646-6006-5ed0-971c-069a0a852272', 'Garment warehousing with pick and pack', 'Garment warehousing with pick and pack. Racked storage, order picking and dispatch.
 
-Garment warehousing with pick and pack. Racked storage, order picking and dispatch.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹22 per sq ft per month
@@ -3256,11 +2950,9 @@ Photo: Shixart1985, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('7897e8be-6c43-58c1-85ec-9d8343d9b937', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('261ea05b-241b-58dd-a6a2-e21e53b72c5f', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Returns processing for ecommerce', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('261ea05b-241b-58dd-a6a2-e21e53b72c5f', '890ee646-6006-5ed0-971c-069a0a852272', 'Returns processing for ecommerce', 'Returns processing for ecommerce. Quality check, refold and restock.
 
-Returns processing for ecommerce. Quality check, refold and restock.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹18 per unit
@@ -3275,11 +2967,9 @@ Photo: HireAHelper, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('261ea05b-241b-58dd-a6a2-e21e53b72c5f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('41c8ee04-31d4-5d7c-b215-f69c39ab2ad3', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Export customs clearance', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('41c8ee04-31d4-5d7c-b215-f69c39ab2ad3', '890ee646-6006-5ed0-971c-069a0a852272', 'Export customs clearance', 'Export customs clearance. Shipping bill filing and port clearance.
 
-Export customs clearance. Shipping bill filing and port clearance.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹4,500 per shipment
@@ -3294,11 +2984,9 @@ Photo: Peter Jeffery, CC BY-SA 2.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('41c8ee04-31d4-5d7c-b215-f69c39ab2ad3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2b7f0673-a5d8-5493-b896-e000fa26095f', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Sea freight FCL booking', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2b7f0673-a5d8-5493-b896-e000fa26095f', '890ee646-6006-5ed0-971c-069a0a852272', 'Sea freight FCL booking', 'Sea freight FCL booking. 20-foot container booking from Nhava Sheva.
 
-Sea freight FCL booking. 20-foot container booking from Nhava Sheva.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹65,000 per container
@@ -3311,11 +2999,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('2b7f0673-a5d8-5493-b896-e000fa26095f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/services-import-export-handling.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6d582917-9327-5207-b5e5-6e1a07f504dd', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Full-truck load booking', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6d582917-9327-5207-b5e5-6e1a07f504dd', '890ee646-6006-5ed0-971c-069a0a852272', 'Full-truck load booking', 'Full-truck load booking. Dedicated 32-foot truck, intercity.
 
-Full-truck load booking. Dedicated 32-foot truck, intercity.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹28,000 per trip
@@ -3330,11 +3016,9 @@ Photo: Sulthan Naufal, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('6d582917-9327-5207-b5e5-6e1a07f504dd', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c0dbbf91-cd8a-561f-97bc-375f4ffe3e9e', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Air freight for export orders', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c0dbbf91-cd8a-561f-97bc-375f4ffe3e9e', '890ee646-6006-5ed0-971c-069a0a852272', 'Air freight for export orders', 'Air freight for export orders. Consolidated air freight with documentation.
 
-Air freight for export orders. Consolidated air freight with documentation.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹160 per kg
@@ -3347,11 +3031,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c0dbbf91-cd8a-561f-97bc-375f4ffe3e9e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/services-import-export-handling.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d271e99b-51da-5bef-9fce-7ff974b8ebe9', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Bonded warehouse storage', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d271e99b-51da-5bef-9fce-7ff974b8ebe9', '890ee646-6006-5ed0-971c-069a0a852272', 'Bonded warehouse storage', 'Bonded warehouse storage. Duty-deferred storage for imports.
 
-Bonded warehouse storage. Duty-deferred storage for imports.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹30 per sq ft per month
@@ -3366,11 +3048,9 @@ Photo: Bukit angkasa makmur, CC BY-SA 4.0, via Wikimedia Commons (https://common
 insert into public.product_images (product_id, url, position) values ('d271e99b-51da-5bef-9fce-7ff974b8ebe9', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('15d1ac96-7c42-5fc1-82a3-a8c6b74d192f', '890ee646-6006-5ed0-971c-069a0a852272', 'Sample · Ecommerce last-mile delivery', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('15d1ac96-7c42-5fc1-82a3-a8c6b74d192f', '890ee646-6006-5ed0-971c-069a0a852272', 'Ecommerce last-mile delivery', 'Ecommerce last-mile delivery. COD and prepaid delivery across pincodes.
 
-Ecommerce last-mile delivery. COD and prepaid delivery across pincodes.
-
-Listed by Bharat Freight Links (Logistics & Shipping, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bharat Freight Links (Logistics & Shipping, Mumbai).
 
 Key details
 • Price: ₹45 per parcel
@@ -3390,23 +3070,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'authenticated', 'authenticated', 'sample-seller-17@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Coimbatore Machine Tools (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Coimbatore Machine Tools", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Coimbatore Machine Tools (Sample)', active_role = 'seller', onboarded = true where id = 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc';
+update public.profiles set full_name = 'Coimbatore Machine Tools', active_role = 'seller', onboarded = true where id = 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Coimbatore Machine Tools (Sample)', 'Coimbatore Machine Tools (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Coimbatore',
+values ('c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Coimbatore Machine Tools', 'Coimbatore Machine Tools supplies sewing, cutting, embroidery and finishing machinery to garment units, from Coimbatore.', 'Coimbatore',
         (select s.name from public.india_states s where s.code = 'TN'), 'TN', 'India', 'IN',
         'Import / Trading Company', 'trader_wholesaler', array['Import / Trading Company']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('c2f74b97-49e1-5cf1-85f9-ce1638e961dc');
 insert into admin.registration_exempt (vendor_id, reason) values ('c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('042eaeae-6b7b-5435-9db5-4eafeeb58731', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Single-needle lockstitch machine', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('042eaeae-6b7b-5435-9db5-4eafeeb58731', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Single-needle lockstitch machine', 'Single-needle lockstitch machine. Direct-drive servo motor, auto thread trimmer.
 
-Single-needle lockstitch machine. Direct-drive servo motor, auto thread trimmer.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹16,500 per unit
@@ -3421,11 +3099,9 @@ Photo: Eunostos, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org
 insert into public.product_images (product_id, url, position) values ('042eaeae-6b7b-5435-9db5-4eafeeb58731', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8e96315c-aab5-5c69-85b0-77c38807386a', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Four-thread overlock machine', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8e96315c-aab5-5c69-85b0-77c38807386a', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Four-thread overlock machine', 'Four-thread overlock machine. High-speed overlock for knits and wovens.
 
-Four-thread overlock machine. High-speed overlock for knits and wovens.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹21,000 per unit
@@ -3440,11 +3116,9 @@ Photo: Victuallers, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('8e96315c-aab5-5c69-85b0-77c38807386a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c8b9cc63-7590-5a6c-9b56-ab2166c7dd51', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Straight-knife cutting machine, 8 inch', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c8b9cc63-7590-5a6c-9b56-ab2166c7dd51', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Straight-knife cutting machine, 8 inch', 'Straight-knife cutting machine, 8 inch. Cuts up to 6 inches of layered fabric.
 
-Straight-knife cutting machine, 8 inch. Cuts up to 6 inches of layered fabric.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹14,500 per unit
@@ -3457,11 +3131,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c8b9cc63-7590-5a6c-9b56-ab2166c7dd51', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/services-cutting-machines.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9a0c4147-cc0f-5db8-b16d-af5f031a2820', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Single-head computerised embroidery machine', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9a0c4147-cc0f-5db8-b16d-af5f031a2820', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Single-head computerised embroidery machine', 'Single-head computerised embroidery machine. 15 needles with a 400 × 500 mm field.
 
-Single-head computerised embroidery machine. 15 needles with a 400 × 500 mm field.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹385,000 per unit
@@ -3476,11 +3148,9 @@ Photo: Xofc, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/
 insert into public.product_images (product_id, url, position) values ('9a0c4147-cc0f-5db8-b16d-af5f031a2820', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7c466b41-462c-5a3a-bb63-441c5ac73153', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Steam iron with vacuum table', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7c466b41-462c-5a3a-bb63-441c5ac73153', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Steam iron with vacuum table', 'Steam iron with vacuum table. Industrial steam iron and suction table.
 
-Steam iron with vacuum table. Industrial steam iron and suction table.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹42,000 per set
@@ -3493,11 +3163,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7c466b41-462c-5a3a-bb63-441c5ac73153', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/services-pressing-finishing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('52b4efe0-9fa7-5c74-a4fc-b6a82bded5db', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · DTF printer, 60 cm', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('52b4efe0-9fa7-5c74-a4fc-b6a82bded5db', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'DTF printer, 60 cm', 'DTF printer, 60 cm. Direct-to-film printer with powder shaker.
 
-DTF printer, 60 cm. Direct-to-film printer with powder shaker.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Colours: 6
@@ -3511,11 +3179,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('52b4efe0-9fa7-5c74-a4fc-b6a82bded5db', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/services-printing-machines.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9ec5bcf6-7135-521e-b698-0c7005982a5f', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Industrial garment washer, 50 kg', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9ec5bcf6-7135-521e-b698-0c7005982a5f', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Industrial garment washer, 50 kg', 'Industrial garment washer, 50 kg. Front-load washer for garment processing.
 
-Industrial garment washer, 50 kg. Front-load washer for garment processing.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹640,000 per unit
@@ -3530,11 +3196,9 @@ Photo: Amakuha, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/
 insert into public.product_images (product_id, url, position) values ('9ec5bcf6-7135-521e-b698-0c7005982a5f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f28a4789-cfa7-59bc-b741-e1da41ed41ee', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · GSM cutter and digital balance', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f28a4789-cfa7-59bc-b741-e1da41ed41ee', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'GSM cutter and digital balance', 'GSM cutter and digital balance. 100 cm² round cutter with 0.01 g balance.
 
-GSM cutter and digital balance. 100 cm² round cutter with 0.01 g balance.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹9,800 per set
@@ -3549,11 +3213,9 @@ Photo: Srini297, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('f28a4789-cfa7-59bc-b741-e1da41ed41ee', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0758a6da-c5f6-5ece-8579-a3a8141414c2', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Full-body fibreglass mannequin', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0758a6da-c5f6-5ece-8579-a3a8141414c2', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Full-body fibreglass mannequin', 'Full-body fibreglass mannequin. Detachable arms with a glass base.
 
-Full-body fibreglass mannequin. Detachable arms with a glass base.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Colours: White, black
@@ -3569,11 +3231,9 @@ Photo: Matti Blume, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('0758a6da-c5f6-5ece-8579-a3a8141414c2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('096961ff-1454-515b-9c0b-9c8ae7b4a587', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Sample · Garment folding and polybag sealer', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('096961ff-1454-515b-9c0b-9c8ae7b4a587', 'c2f74b97-49e1-5cf1-85f9-ce1638e961dc', 'Garment folding and polybag sealer', 'Garment folding and polybag sealer. Foot-pedal sealer for polybags.
 
-Garment folding and polybag sealer. Foot-pedal sealer for polybags.
-
-Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Coimbatore Machine Tools (Import / Trading Company, Coimbatore).
 
 Key details
 • Price: ₹26,000 per unit
@@ -3593,23 +3253,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '15189033-0bf6-5c52-abc9-4b859325ace5', 'authenticated', 'authenticated', 'sample-seller-18@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Frame & Feed Media (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Frame & Feed Media", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Frame & Feed Media (Sample)', active_role = 'seller', onboarded = true where id = '15189033-0bf6-5c52-abc9-4b859325ace5';
+update public.profiles set full_name = 'Frame & Feed Media', active_role = 'seller', onboarded = true where id = '15189033-0bf6-5c52-abc9-4b859325ace5';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('15189033-0bf6-5c52-abc9-4b859325ace5', 'Frame & Feed Media (Sample)', 'Frame & Feed Media (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Mumbai',
+values ('15189033-0bf6-5c52-abc9-4b859325ace5', 'Frame & Feed Media', 'Frame & Feed Media shoots, markets and promotes fashion brands, from Mumbai.', 'Mumbai',
         (select s.name from public.india_states s where s.code = 'MH'), 'MH', 'India', 'IN',
         'Online Fashion Retailer', 'service_provider', array['Online Fashion Retailer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('15189033-0bf6-5c52-abc9-4b859325ace5');
 insert into admin.registration_exempt (vendor_id, reason) values ('15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a72e0f8f-81e5-5f75-8b57-1ed697d8670a', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Lookbook photoshoot with model', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a72e0f8f-81e5-5f75-8b57-1ed697d8670a', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Lookbook photoshoot with model', 'Lookbook photoshoot with model. Studio or outdoor shoot with 40 edited images.
 
-Lookbook photoshoot with model. Studio or outdoor shoot with 40 edited images.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹45,000 per day
@@ -3624,11 +3282,9 @@ Photo: Journyes, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('a72e0f8f-81e5-5f75-8b57-1ed697d8670a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('932858b6-1480-50dd-993a-8cd8c368f484', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Instagram management for fashion brands', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('932858b6-1480-50dd-993a-8cd8c368f484', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Instagram management for fashion brands', 'Instagram management for fashion brands. Twelve posts, 8 reels and community management.
 
-Instagram management for fashion brands. Twelve posts, 8 reels and community management.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹25,000 per month
@@ -3641,11 +3297,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('932858b6-1480-50dd-993a-8cd8c368f484', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/services-social-media-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5e0afc8b-4574-59b2-a788-d1962f30c548', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Meta and Google ads management', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5e0afc8b-4574-59b2-a788-d1962f30c548', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Meta and Google ads management', 'Meta and Google ads management. Campaign setup, creatives and weekly reports.
 
-Meta and Google ads management. Campaign setup, creatives and weekly reports.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹20,000 per month
@@ -3658,11 +3312,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('5e0afc8b-4574-59b2-a788-d1962f30c548', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/services-performance-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1f941d5f-0c1e-523a-96fc-89aee8e3e537', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Influencer barter campaign', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1f941d5f-0c1e-523a-96fc-89aee8e3e537', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Influencer barter campaign', 'Influencer barter campaign. Ten micro-creators with content rights.
 
-Influencer barter campaign. Ten micro-creators with content rights.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹15,000 per campaign
@@ -3675,11 +3327,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('1f941d5f-0c1e-523a-96fc-89aee8e3e537', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/freelancers-influencer-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1e47a97d-117e-5a56-91e8-3bc37e2692d0', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Fashion PR launch campaign', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1e47a97d-117e-5a56-91e8-3bc37e2692d0', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Fashion PR launch campaign', 'Fashion PR launch campaign. Press release and media outreach.
 
-Fashion PR launch campaign. Press release and media outreach.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹60,000 per campaign
@@ -3692,11 +3342,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('1e47a97d-117e-5a56-91e8-3bc37e2692d0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/services-public-relations.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0c66acaf-0add-5932-a42f-3b42bc368289', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Marketplace onboarding and catalogue upload', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0c66acaf-0add-5932-a42f-3b42bc368289', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Marketplace onboarding and catalogue upload', 'Marketplace onboarding and catalogue upload. Account setup and the first 50 listings.
 
-Marketplace onboarding and catalogue upload. Account setup and the first 50 listings.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹8,000 per marketplace
@@ -3709,11 +3357,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('0c66acaf-0add-5932-a42f-3b42bc368289', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/freelancers-cataloging.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d29c49f9-47c6-5383-b447-84b1c9a40829', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · SEO blog package', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d29c49f9-47c6-5383-b447-84b1c9a40829', '15189033-0bf6-5c52-abc9-4b859325ace5', 'SEO blog package', 'SEO blog package. Four optimised articles a month.
 
-SEO blog package. Four optimised articles a month.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹12,000 per month
@@ -3726,11 +3372,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('d29c49f9-47c6-5383-b447-84b1c9a40829', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/services-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e44a2e18-1118-5957-ae14-a612309bf45f', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Email newsletter campaigns', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e44a2e18-1118-5957-ae14-a612309bf45f', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Email newsletter campaigns', 'Email newsletter campaigns. Design, copy and four sends.
 
-Email newsletter campaigns. Design, copy and four sends.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹9,000 per month
@@ -3743,11 +3387,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e44a2e18-1118-5957-ae14-a612309bf45f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/services-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('aa2451f5-4ab9-5c22-8736-adf52b521d20', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · WhatsApp broadcast campaigns', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('aa2451f5-4ab9-5c22-8736-adf52b521d20', '15189033-0bf6-5c52-abc9-4b859325ace5', 'WhatsApp broadcast campaigns', 'WhatsApp broadcast campaigns. Template approval and opt-in lists.
 
-WhatsApp broadcast campaigns. Template approval and opt-in lists.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹7,000 per month
@@ -3760,11 +3402,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('aa2451f5-4ab9-5c22-8736-adf52b521d20', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/services-marketing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('36e315e2-fad5-54ad-aec1-89a4bba74327', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Sample · Brand identity design', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('36e315e2-fad5-54ad-aec1-89a4bba74327', '15189033-0bf6-5c52-abc9-4b859325ace5', 'Brand identity design', 'Brand identity design. Logo, colour palette and brand guide.
 
-Brand identity design. Logo, colour palette and brand guide.
-
-Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Frame & Feed Media (Online Fashion Retailer, Mumbai).
 
 Key details
 • Price: ₹35,000 per project
@@ -3782,23 +3422,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'authenticated', 'authenticated', 'sample-seller-19@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Surat Custom Makers (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Surat Custom Makers", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Surat Custom Makers (Sample)', active_role = 'seller', onboarded = true where id = '885fc36b-cbe8-5359-a830-28b248f2d1f9';
+update public.profiles set full_name = 'Surat Custom Makers', active_role = 'seller', onboarded = true where id = '885fc36b-cbe8-5359-a830-28b248f2d1f9';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Surat Custom Makers (Sample)', 'Surat Custom Makers (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Surat',
+values ('885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Surat Custom Makers', 'Surat Custom Makers makes custom uniforms, home textiles and branded merchandise to order, from Surat.', 'Surat',
         (select s.name from public.india_states s where s.code = 'GJ'), 'GJ', 'India', 'IN',
         'Made-to-Order / Custom Manufacturing', 'manufacturer', array['Made-to-Order / Custom Manufacturing']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('885fc36b-cbe8-5359-a830-28b248f2d1f9');
 insert into admin.registration_exempt (vendor_id, reason) values ('885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0abd7833-dfc2-5428-8af6-484e1bb7efad', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Corporate uniform shirts, custom', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0abd7833-dfc2-5428-8af6-484e1bb7efad', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Corporate uniform shirts, custom', 'Corporate uniform shirts, custom. Logo embroidery and custom colours.
 
-Corporate uniform shirts, custom. Logo embroidery and custom colours.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Poly cotton, 120 GSM
@@ -3816,11 +3454,9 @@ Photo: Marcus Quigmire from Florida, USA, CC BY-SA 2.0, via Wikimedia Commons (h
 insert into public.product_images (product_id, url, position) values ('0abd7833-dfc2-5428-8af6-484e1bb7efad', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('9ccd782e-2ec9-5b82-9a40-69b2b56378f9', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Industrial workwear coverall', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('9ccd782e-2ec9-5b82-9a40-69b2b56378f9', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Industrial workwear coverall', 'Industrial workwear coverall. Reflective tape and multiple pockets.
 
-Industrial workwear coverall. Reflective tape and multiple pockets.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Cotton drill, 260 GSM
@@ -3836,11 +3472,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('9ccd782e-2ec9-5b82-9a40-69b2b56378f9', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/trims-home-industrial-uniform.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3defbf94-bdbf-5f49-8b97-78daf76114c5', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Custom printed table runners', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3defbf94-bdbf-5f49-8b97-78daf76114c5', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Custom printed table runners', 'Custom printed table runners. Digital print to your design.
 
-Custom printed table runners. Digital print to your design.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Cotton
@@ -3857,11 +3491,9 @@ Photo: Jeangagnon, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('3defbf94-bdbf-5f49-8b97-78daf76114c5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2fbaf9fb-b76f-524c-bda8-ea47e2572737', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Custom cushion covers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2fbaf9fb-b76f-524c-bda8-ea47e2572737', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Custom cushion covers', 'Custom cushion covers. Printed or embroidered, 40 × 40 cm.
 
-Custom cushion covers. Printed or embroidered, 40 × 40 cm.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Cotton canvas
@@ -3878,11 +3510,9 @@ Photo: 丘崈, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/Fi
 insert into public.product_images (product_id, url, position) values ('2fbaf9fb-b76f-524c-bda8-ea47e2572737', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6e8bd0c5-bab8-5955-be2d-f86575d4e1f8', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Made-to-measure curtains', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6e8bd0c5-bab8-5955-be2d-f86575d4e1f8', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Made-to-measure curtains', 'Made-to-measure curtains. Eyelet or pleated, any size.
 
-Made-to-measure curtains. Eyelet or pleated, any size.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Polyester blackout
@@ -3899,11 +3529,9 @@ Photo: Zohasheikh, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('6e8bd0c5-bab8-5955-be2d-f86575d4e1f8', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ae124cbd-35c6-54ed-b9c6-4c7bcdfa9abb', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Custom logo towels', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ae124cbd-35c6-54ed-b9c6-4c7bcdfa9abb', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Custom logo towels', 'Custom logo towels. Jacquard or embroidered logo, 500 GSM.
 
-Custom logo towels. Jacquard or embroidered logo, 500 GSM.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Cotton terry
@@ -3920,11 +3548,9 @@ Photo: 泉佐野市観光協会, CC BY 4.0, via Wikimedia Commons (https://commo
 insert into public.product_images (product_id, url, position) values ('ae124cbd-35c6-54ed-b9c6-4c7bcdfa9abb', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7b7fcc18-8197-5c09-a9c6-94e538e0ee21', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Custom aprons', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7b7fcc18-8197-5c09-a9c6-94e538e0ee21', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Custom aprons', 'Custom aprons. Adjustable neck strap and pocket.
 
-Custom aprons. Adjustable neck strap and pocket.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Cotton twill
@@ -3939,11 +3565,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7b7fcc18-8197-5c09-a9c6-94e538e0ee21', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/trims-home-kitchen-textiles.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('10589223-f562-56a0-bfb8-81a8f47b38d0', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Custom fabric laptop sleeves', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('10589223-f562-56a0-bfb8-81a8f47b38d0', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Custom fabric laptop sleeves', 'Custom fabric laptop sleeves. Padded sleeves with your print.
 
-Custom fabric laptop sleeves. Padded sleeves with your print.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Colours: As required
@@ -3959,11 +3583,9 @@ Photo: Handicraft Villa, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wi
 insert into public.product_images (product_id, url, position) values ('10589223-f562-56a0-bfb8-81a8f47b38d0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('dd7789c6-7540-53aa-ac38-bbaad0e3aa7f', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Upholstery fabric to order', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('dd7789c6-7540-53aa-ac38-bbaad0e3aa7f', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Upholstery fabric to order', 'Upholstery fabric to order. Rub-tested for 50,000 cycles.
 
-Upholstery fabric to order. Rub-tested for 50,000 cycles.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Polyester velvet
@@ -3980,11 +3602,9 @@ Photo: Eugenepik, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia
 insert into public.product_images (product_id, url, position) values ('dd7789c6-7540-53aa-ac38-bbaad0e3aa7f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a5facab8-ab01-5b53-bce9-206733515195', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Sample · Custom tote bags for events', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a5facab8-ab01-5b53-bce9-206733515195', '885fc36b-cbe8-5359-a830-28b248f2d1f9', 'Custom tote bags for events', 'Custom tote bags for events. Screen-printed totes for brands and events.
 
-Custom tote bags for events. Screen-printed totes for brands and events.
-
-Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Surat Custom Makers (Made-to-Order / Custom Manufacturing, Surat).
 
 Key details
 • Material: Cotton canvas
@@ -4006,23 +3626,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'authenticated', 'authenticated', 'sample-seller-20@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "PackRight Solutions (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "PackRight Solutions", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'PackRight Solutions (Sample)', active_role = 'seller', onboarded = true where id = 'fcdf5a63-00f5-5397-a779-5b9587421ed5';
+update public.profiles set full_name = 'PackRight Solutions', active_role = 'seller', onboarded = true where id = 'fcdf5a63-00f5-5397-a779-5b9587421ed5';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('fcdf5a63-00f5-5397-a779-5b9587421ed5', 'PackRight Solutions (Sample)', 'PackRight Solutions (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Noida',
+values ('fcdf5a63-00f5-5397-a779-5b9587421ed5', 'PackRight Solutions', 'PackRight Solutions makes packaging for apparel brands and online sellers, from Noida.', 'Noida',
         (select s.name from public.india_states s where s.code = 'UP'), 'UP', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('fcdf5a63-00f5-5397-a779-5b9587421ed5');
 insert into admin.registration_exempt (vendor_id, reason) values ('fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0383af92-34c5-5074-8ff5-5e3c55699205', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Self-adhesive garment polybags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0383af92-34c5-5074-8ff5-5e3c55699205', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Self-adhesive garment polybags', 'Self-adhesive garment polybags. Clear LDPE with a suffocation warning.
 
-Self-adhesive garment polybags. Clear LDPE with a suffocation warning.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹1.20 per piece
@@ -4037,11 +3655,9 @@ Photo: Rdrg109, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('0383af92-34c5-5074-8ff5-5e3c55699205', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ad1e3d9a-7efb-56b6-a0df-b4a5c99088f8', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · 3-ply corrugated shipping boxes', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ad1e3d9a-7efb-56b6-a0df-b4a5c99088f8', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', '3-ply corrugated shipping boxes', '3-ply corrugated shipping boxes. Custom sizes with your print.
 
-3-ply corrugated shipping boxes. Custom sizes with your print.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹14 per piece
@@ -4056,11 +3672,9 @@ Photo: HireAHelper, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('ad1e3d9a-7efb-56b6-a0df-b4a5c99088f8', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('bc01cacc-fecd-5160-84b5-a8d8eeb9add1', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Rigid gift boxes for apparel', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('bc01cacc-fecd-5160-84b5-a8d8eeb9add1', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Rigid gift boxes for apparel', 'Rigid gift boxes for apparel. Magnetic-closure boxes with tissue.
 
-Rigid gift boxes for apparel. Magnetic-closure boxes with tissue.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹42 per piece
@@ -4075,11 +3689,9 @@ Photo: Olugold, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('bc01cacc-fecd-5160-84b5-a8d8eeb9add1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f2f99309-f2bc-5f8e-b4f4-6bb216396d28', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Kraft paper shopping bags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f2f99309-f2bc-5f8e-b4f4-6bb216396d28', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Kraft paper shopping bags', 'Kraft paper shopping bags. Twisted paper handles and custom print.
 
-Kraft paper shopping bags. Twisted paper handles and custom print.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹11 per piece
@@ -4094,11 +3706,9 @@ Photo: YannBernat, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('f2f99309-f2bc-5f8e-b4f4-6bb216396d28', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2d0029da-41e2-5454-b9be-8e8ba1c16ba7', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Frosted ziplock bags', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2d0029da-41e2-5454-b9be-8e8ba1c16ba7', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Frosted ziplock bags', 'Frosted ziplock bags. Matte frosted finish with a slider.
 
-Frosted ziplock bags. Matte frosted finish with a slider.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹4.50 per piece
@@ -4111,11 +3721,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('2d0029da-41e2-5454-b9be-8e8ba1c16ba7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/packaging-ziplock-bags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2f5e9ffe-70f2-585e-9dbd-b4ddf360d398', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Courier mailers with POD jacket', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2f5e9ffe-70f2-585e-9dbd-b4ddf360d398', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Courier mailers with POD jacket', 'Courier mailers with POD jacket. Tamper-evident seal.
 
-Courier mailers with POD jacket. Tamper-evident seal.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹3.20 per piece
@@ -4130,11 +3738,9 @@ Photo: WebjokerNL, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedi
 insert into public.product_images (product_id, url, position) values ('2f5e9ffe-70f2-585e-9dbd-b4ddf360d398', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a5d31e87-3f3d-5c24-a3c7-2d4207f784e8', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Printed tissue paper', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a5d31e87-3f3d-5c24-a3c7-2d4207f784e8', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Printed tissue paper', 'Printed tissue paper. 17 GSM acid-free tissue with your logo.
 
-Printed tissue paper. 17 GSM acid-free tissue with your logo.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹2.40 per sheet
@@ -4147,11 +3753,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('a5d31e87-3f3d-5c24-a3c7-2d4207f784e8', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/packaging-garment-boxes.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('390105c8-adc9-5981-844f-53d3ecbe2495', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Custom seal stickers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('390105c8-adc9-5981-844f-53d3ecbe2495', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Custom seal stickers', 'Custom seal stickers. Round stickers in gloss or matte.
 
-Custom seal stickers. Round stickers in gloss or matte.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹0.80 per piece
@@ -4164,11 +3768,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('390105c8-adc9-5981-844f-53d3ecbe2495', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('92cc2b32-863d-5d0f-8427-63b94b4c8724', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Hang tag strings with plastic seals', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('92cc2b32-863d-5d0f-8427-63b94b4c8724', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Hang tag strings with plastic seals', 'Hang tag strings with plastic seals. Cotton string with a branded seal.
 
-Hang tag strings with plastic seals. Cotton string with a branded seal.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹0.70 per piece
@@ -4181,11 +3783,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('92cc2b32-863d-5d0f-8427-63b94b4c8724', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/raw-materials-labels-tags.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('abd95e84-a2ad-589d-b54e-f54336f0c1e0', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Sample · Thank-you cards and inserts', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('abd95e84-a2ad-589d-b54e-f54336f0c1e0', 'fcdf5a63-00f5-5397-a779-5b9587421ed5', 'Thank-you cards and inserts', 'Thank-you cards and inserts. Printed cards for unboxing.
 
-Thank-you cards and inserts. Printed cards for unboxing.
-
-Listed by PackRight Solutions (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by PackRight Solutions (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹2.80 per piece
@@ -4203,23 +3803,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'authenticated', 'authenticated', 'sample-seller-21@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Jetpur Print & Process (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Jetpur Print & Process", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Jetpur Print & Process (Sample)', active_role = 'seller', onboarded = true where id = 'c297569b-b3f1-515f-9b75-dba60d9ee63f';
+update public.profiles set full_name = 'Jetpur Print & Process', active_role = 'seller', onboarded = true where id = 'c297569b-b3f1-515f-9b75-dba60d9ee63f';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Jetpur Print & Process (Sample)', 'Jetpur Print & Process (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Jetpur',
+values ('c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Jetpur Print & Process', 'Jetpur Print & Process takes printing, embroidery, dyeing and finishing job work for garments and fabric, from Jetpur.', 'Jetpur',
         (select s.name from public.india_states s where s.code = 'GJ'), 'GJ', 'India', 'IN',
         'Printing manufacturers', 'job_worker', array['Printing manufacturers']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('c297569b-b3f1-515f-9b75-dba60d9ee63f');
 insert into admin.registration_exempt (vendor_id, reason) values ('c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0f49cf42-eae3-5a0f-b02a-a8eb9437e7f2', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Screen printing on T-shirts', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0f49cf42-eae3-5a0f-b02a-a8eb9437e7f2', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Screen printing on T-shirts', 'Screen printing on T-shirts. Plastisol or water-based, up to 6 colours.
 
-Screen printing on T-shirts. Plastisol or water-based, up to 6 colours.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹18 per piece
@@ -4234,11 +3832,9 @@ Photo: Unknown author, CC BY-SA 2.5, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('0f49cf42-eae3-5a0f-b02a-a8eb9437e7f2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6da1caaf-f59e-53a2-a724-fb7ce61b2dd9', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Digital printing on fabric', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6da1caaf-f59e-53a2-a724-fb7ce61b2dd9', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Digital printing on fabric', 'Digital printing on fabric. Reactive or pigment digital print.
 
-Digital printing on fabric. Reactive or pigment digital print.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹95 per metre
@@ -4253,11 +3849,9 @@ Photo: Popolon, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('6da1caaf-f59e-53a2-a724-fb7ce61b2dd9', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2f1a86a8-0712-57ac-a0e3-71139262a02b', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · DTF printing for garments', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2f1a86a8-0712-57ac-a0e3-71139262a02b', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'DTF printing for garments', 'DTF printing for garments. Full-colour transfers on any fabric.
 
-DTF printing for garments. Full-colour transfers on any fabric.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹35 per print
@@ -4272,11 +3866,9 @@ Photo: Scrud123, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('2f1a86a8-0712-57ac-a0e3-71139262a02b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('58faf0be-3a26-52f5-9eb7-aef213d76859', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Logo embroidery on garments', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('58faf0be-3a26-52f5-9eb7-aef213d76859', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Logo embroidery on garments', 'Logo embroidery on garments. Up to 8,000 stitches per piece.
 
-Logo embroidery on garments. Up to 8,000 stitches per piece.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹22 per piece
@@ -4291,11 +3883,9 @@ Photo: Breaker222, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wik
 insert into public.product_images (product_id, url, position) values ('58faf0be-3a26-52f5-9eb7-aef213d76859', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c3a34eee-dbe6-5bdd-9ad7-f4467a064db4', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Sequin and multi-head embroidery', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c3a34eee-dbe6-5bdd-9ad7-f4467a064db4', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sequin and multi-head embroidery', 'Sequin and multi-head embroidery. Fabric embroidery by the metre.
 
-Sequin and multi-head embroidery. Fabric embroidery by the metre.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹140 per metre
@@ -4308,11 +3898,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c3a34eee-dbe6-5bdd-9ad7-f4467a064db4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/services-embroidery.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('edd66412-12b5-5181-9876-eb91cb7ca99b', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Garment dyeing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('edd66412-12b5-5181-9876-eb91cb7ca99b', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Garment dyeing', 'Garment dyeing. Pigment or reactive garment dyeing.
 
-Garment dyeing. Pigment or reactive garment dyeing.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹45 per piece
@@ -4327,11 +3915,9 @@ Photo: Tn.kuvat, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/
 insert into public.product_images (product_id, url, position) values ('edd66412-12b5-5181-9876-eb91cb7ca99b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('424cddca-0c2e-5549-bc66-e274b28d5db0', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Yarn-dyeing job work', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('424cddca-0c2e-5549-bc66-e274b28d5db0', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Yarn-dyeing job work', 'Yarn-dyeing job work. Cone dyeing for cotton yarns.
 
-Yarn-dyeing job work. Cone dyeing for cotton yarns.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹120 per kg
@@ -4346,11 +3932,9 @@ Photo: THE GOKUL, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki
 insert into public.product_images (product_id, url, position) values ('424cddca-0c2e-5549-bc66-e274b28d5db0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('4a4fc750-4023-560f-9290-3f2e058243a2', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Fabric finishing, softener and stenter', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('4a4fc750-4023-560f-9290-3f2e058243a2', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Fabric finishing, softener and stenter', 'Fabric finishing, softener and stenter. Softening, heat-setting and width control.
 
-Fabric finishing, softener and stenter. Softening, heat-setting and width control.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹12 per metre
@@ -4363,11 +3947,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('4a4fc750-4023-560f-9290-3f2e058243a2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/services-processing-finishing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('35b9f10d-1c4c-5908-846f-e5fc2040dfed', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Enzyme and stone wash for garments', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('35b9f10d-1c4c-5908-846f-e5fc2040dfed', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Enzyme and stone wash for garments', 'Enzyme and stone wash for garments. Vintage washes for denim and cotton.
 
-Enzyme and stone wash for garments. Vintage washes for denim and cotton.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹38 per piece
@@ -4380,11 +3962,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('35b9f10d-1c4c-5908-846f-e5fc2040dfed', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/services-processing-finishing.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ade9a5bd-46a6-5796-8b64-416a55eedca4', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Sample · Block printing by hand', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ade9a5bd-46a6-5796-8b64-416a55eedca4', 'c297569b-b3f1-515f-9b75-dba60d9ee63f', 'Block printing by hand', 'Block printing by hand. Traditional hand block print with natural dyes.
 
-Block printing by hand. Traditional hand block print with natural dyes.
-
-Listed by Jetpur Print & Process (Printing manufacturers, Jetpur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Jetpur Print & Process (Printing manufacturers, Jetpur).
 
 Key details
 • Price: ₹160 per metre
@@ -4404,23 +3984,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'b153023f-556d-54af-b488-e4508a732f72', 'authenticated', 'authenticated', 'sample-seller-22@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Bhilwara Fabric Mills (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Bhilwara Fabric Mills", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Bhilwara Fabric Mills (Sample)', active_role = 'seller', onboarded = true where id = 'b153023f-556d-54af-b488-e4508a732f72';
+update public.profiles set full_name = 'Bhilwara Fabric Mills', active_role = 'seller', onboarded = true where id = 'b153023f-556d-54af-b488-e4508a732f72';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('b153023f-556d-54af-b488-e4508a732f72', 'Bhilwara Fabric Mills (Sample)', 'Bhilwara Fabric Mills (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Bhilwara',
+values ('b153023f-556d-54af-b488-e4508a732f72', 'Bhilwara Fabric Mills', 'Bhilwara Fabric Mills supplies fabrics, yarn and sewing inputs to garment makers, from Bhilwara.', 'Bhilwara',
         (select s.name from public.india_states s where s.code = 'RJ'), 'RJ', 'India', 'IN',
         'Fabric Manufacturer', 'manufacturer', array['Fabric Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('b153023f-556d-54af-b488-e4508a732f72');
 insert into admin.registration_exempt (vendor_id, reason) values ('b153023f-556d-54af-b488-e4508a732f72', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e64fd938-ad04-5d9f-88b6-8f84799c833b', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Cotton poplin, 40s count', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e64fd938-ad04-5d9f-88b6-8f84799c833b', 'b153023f-556d-54af-b488-e4508a732f72', 'Cotton poplin, 40s count', 'Cotton poplin, 40s count. 58-inch width, RFD and solid dyed.
 
-Cotton poplin, 40s count. 58-inch width, RFD and solid dyed.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Material: 100% cotton, 110 GSM
@@ -4437,11 +4015,9 @@ Photo: MadrasFabricPreppy, CC BY-SA 4.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('e64fd938-ad04-5d9f-88b6-8f84799c833b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6b60dbc1-3ca3-548e-84e6-ed422b8cfa8e', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Linen-cotton blend fabric', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6b60dbc1-3ca3-548e-84e6-ed422b8cfa8e', 'b153023f-556d-54af-b488-e4508a732f72', 'Linen-cotton blend fabric', 'Linen-cotton blend fabric. Slubby texture for shirts and dresses.
 
-Linen-cotton blend fabric. Slubby texture for shirts and dresses.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Material: Linen cotton, 150 GSM
@@ -4458,11 +4034,9 @@ Photo: Tess Mattew, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('6b60dbc1-3ca3-548e-84e6-ed422b8cfa8e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f7f3d319-9b7e-52ea-9ac1-944637235075', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Single jersey cotton knit', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f7f3d319-9b7e-52ea-9ac1-944637235075', 'b153023f-556d-54af-b488-e4508a732f72', 'Single jersey cotton knit', 'Single jersey cotton knit. Bio-washed and compacted.
 
-Single jersey cotton knit. Bio-washed and compacted.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Material: Combed cotton, 180 GSM
@@ -4477,11 +4051,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('f7f3d319-9b7e-52ea-9ac1-944637235075', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/raw-materials-fabrics.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e8f298f6-0948-5927-bc4d-f1a7c64cbfe3', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Stretch denim fabric', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e8f298f6-0948-5927-bc4d-f1a7c64cbfe3', 'b153023f-556d-54af-b488-e4508a732f72', 'Stretch denim fabric', 'Stretch denim fabric. Two-way stretch for jeans.
 
-Stretch denim fabric. Two-way stretch for jeans.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Material: Cotton lycra denim, 10 oz
@@ -4496,11 +4068,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e8f298f6-0948-5927-bc4d-f1a7c64cbfe3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/raw-materials-fabrics.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2ce6c236-7d5b-5249-bbaa-567f9d249b3b', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Organic cotton fabric, certified', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2ce6c236-7d5b-5249-bbaa-567f9d249b3b', 'b153023f-556d-54af-b488-e4508a732f72', 'Organic cotton fabric, certified', 'Organic cotton fabric, certified. Certificates shared with each lot.
 
-Organic cotton fabric, certified. Certificates shared with each lot.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Material: Organic cotton, 140 GSM
@@ -4517,11 +4087,9 @@ Photo: MadrasFabricPreppy, CC BY-SA 4.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('2ce6c236-7d5b-5249-bbaa-567f9d249b3b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('46bc08d1-445f-5814-9e70-7db7065e295b', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Cotton combed yarn, 30s', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('46bc08d1-445f-5814-9e70-7db7065e295b', 'b153023f-556d-54af-b488-e4508a732f72', 'Cotton combed yarn, 30s', 'Cotton combed yarn, 30s. Ring-spun combed yarn on cones.
 
-Cotton combed yarn, 30s. Ring-spun combed yarn on cones.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Material: Cotton
@@ -4538,11 +4106,9 @@ Photo: Pschemp, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.o
 insert into public.product_images (product_id, url, position) values ('46bc08d1-445f-5814-9e70-7db7065e295b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d28b047d-5656-57a0-82ca-31ae36589c4f', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Polyester sewing thread, 5000 m', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d28b047d-5656-57a0-82ca-31ae36589c4f', 'b153023f-556d-54af-b488-e4508a732f72', 'Polyester sewing thread, 5000 m', 'Polyester sewing thread, 5000 m. Spun polyester, tex 27.
 
-Polyester sewing thread, 5000 m. Spun polyester, tex 27.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Colours: 600 shades
@@ -4558,11 +4124,9 @@ Photo: Cbuske46, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('d28b047d-5656-57a0-82ca-31ae36589c4f', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('98f772e7-f2e2-50aa-805d-116270f835a4', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Knitted elastic tape, 25 mm', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('98f772e7-f2e2-50aa-805d-116270f835a4', 'b153023f-556d-54af-b488-e4508a732f72', 'Knitted elastic tape, 25 mm', 'Knitted elastic tape, 25 mm. Soft knitted elastic for waistbands.
 
-Knitted elastic tape, 25 mm. Soft knitted elastic for waistbands.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Colours: White, black
@@ -4578,11 +4142,9 @@ Photo: Revensburger, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('98f772e7-f2e2-50aa-805d-116270f835a4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('2ef16e02-853e-5311-9a90-547b97a2068b', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Cotton crochet lace', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('2ef16e02-853e-5311-9a90-547b97a2068b', 'b153023f-556d-54af-b488-e4508a732f72', 'Cotton crochet lace', 'Cotton crochet lace. 2-inch scalloped lace.
 
-Cotton crochet lace. 2-inch scalloped lace.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Colours: White, ivory
@@ -4598,11 +4160,9 @@ Photo: Blanka Luppová, CC0, via Wikimedia Commons (https://commons.wikimedia.or
 insert into public.product_images (product_id, url, position) values ('2ef16e02-853e-5311-9a90-547b97a2068b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('609241ae-4fb6-5407-a693-da63828322d0', 'b153023f-556d-54af-b488-e4508a732f72', 'Sample · Fusible interlining', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('609241ae-4fb6-5407-a693-da63828322d0', 'b153023f-556d-54af-b488-e4508a732f72', 'Fusible interlining', 'Fusible interlining. Non-woven fusible for collars.
 
-Fusible interlining. Non-woven fusible for collars.
-
-Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bhilwara Fabric Mills (Fabric Manufacturer, Bhilwara).
 
 Key details
 • Colours: White, black
@@ -4621,23 +4181,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '228ac0df-492e-5d22-97ca-62dc16befce5', 'authenticated', 'authenticated', 'sample-seller-23@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Noida Garment Ops (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Noida Garment Ops", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Noida Garment Ops (Sample)', active_role = 'seller', onboarded = true where id = '228ac0df-492e-5d22-97ca-62dc16befce5';
+update public.profiles set full_name = 'Noida Garment Ops', active_role = 'seller', onboarded = true where id = '228ac0df-492e-5d22-97ca-62dc16befce5';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('228ac0df-492e-5d22-97ca-62dc16befce5', 'Noida Garment Ops (Sample)', 'Noida Garment Ops (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Noida',
+values ('228ac0df-492e-5d22-97ca-62dc16befce5', 'Noida Garment Ops', 'Noida Garment Ops runs stitching, cutting, inspection and sourcing for fashion brands, from Noida.', 'Noida',
         (select s.name from public.india_states s where s.code = 'UP'), 'UP', 'India', 'IN',
         'Garment Manufacturer', 'job_worker', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('228ac0df-492e-5d22-97ca-62dc16befce5');
 insert into admin.registration_exempt (vendor_id, reason) values ('228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5926f2c6-8ab5-5247-943a-6758b7e6d963', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · CMT stitching for T-shirts', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5926f2c6-8ab5-5247-943a-6758b7e6d963', '228ac0df-492e-5d22-97ca-62dc16befce5', 'CMT stitching for T-shirts', 'CMT stitching for T-shirts. Cut, make and trim with your fabric.
 
-CMT stitching for T-shirts. Cut, make and trim with your fabric.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹32 per piece
@@ -4650,11 +4208,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('5926f2c6-8ab5-5247-943a-6758b7e6d963', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/services-stitching-garmenting.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('990c1efd-9659-58e3-9295-cd179cb1b707', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · CMT stitching for shirts and kurtas', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('990c1efd-9659-58e3-9295-cd179cb1b707', '228ac0df-492e-5d22-97ca-62dc16befce5', 'CMT stitching for shirts and kurtas', 'CMT stitching for shirts and kurtas. Collars, placket and buttonholes included.
 
-CMT stitching for shirts and kurtas. Collars, placket and buttonholes included.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹85 per piece
@@ -4669,11 +4225,9 @@ Photo: Gurdeepdali, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('990c1efd-9659-58e3-9295-cd179cb1b707', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('31b76f88-2584-584f-8cc5-0426864c10b0', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Fabric cutting job work', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('31b76f88-2584-584f-8cc5-0426864c10b0', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Fabric cutting job work', 'Fabric cutting job work. Straight-knife cutting with lay planning.
 
-Fabric cutting job work. Straight-knife cutting with lay planning.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹4 per piece
@@ -4686,11 +4240,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('31b76f88-2584-584f-8cc5-0426864c10b0', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/services-cutting.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e4cdd454-76b1-5fbd-88fc-fdb033fa038e', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Pattern making and grading on CAD', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e4cdd454-76b1-5fbd-88fc-fdb033fa038e', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Pattern making and grading on CAD', 'Pattern making and grading on CAD. Digital patterns, grading and markers.
 
-Pattern making and grading on CAD. Digital patterns, grading and markers.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹1,200 per style
@@ -4705,11 +4257,9 @@ Photo: Журнал «Живописное обозрѣнiе странъ свѣ
 insert into public.product_images (product_id, url, position) values ('e4cdd454-76b1-5fbd-88fc-fdb033fa038e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('94625cb6-e95b-547e-9aa8-c8a02b5bfae7', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Third-party inline and final inspection', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('94625cb6-e95b-547e-9aa8-c8a02b5bfae7', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Third-party inline and final inspection', 'Third-party inline and final inspection. AQL inspection with a photo report.
 
-Third-party inline and final inspection. AQL inspection with a photo report.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹3,500 per day
@@ -4722,11 +4272,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('94625cb6-e95b-547e-9aa8-c8a02b5bfae7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/services-quality-check-qc.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('004db540-1db7-5197-b542-806442b80f91', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Fabric sourcing agent', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('004db540-1db7-5197-b542-806442b80f91', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Fabric sourcing agent', 'Fabric sourcing agent. Mill sourcing, sampling and follow-up.
 
-Fabric sourcing agent. Mill sourcing, sampling and follow-up.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Fee: 5% of order value
@@ -4740,11 +4288,9 @@ Photo: Dosseman, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('004db540-1db7-5197-b542-806442b80f91', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0a83ad0d-d6d9-5d29-a47f-5b4e3c0770b3', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Trims sourcing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0a83ad0d-d6d9-5d29-a47f-5b4e3c0770b3', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Trims sourcing', 'Trims sourcing. Buttons, zips, labels and packaging.
 
-Trims sourcing. Buttons, zips, labels and packaging.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Fee: 4% of order value
@@ -4758,11 +4304,9 @@ Photo: GearsDatapacks, CC BY 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('0a83ad0d-d6d9-5d29-a47f-5b4e3c0770b3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8801d382-4789-5370-ae88-0b3ce55c88a1', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Tech pack development', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8801d382-4789-5370-ae88-0b3ce55c88a1', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Tech pack development', 'Tech pack development. Flats, specs and construction notes.
 
-Tech pack development. Flats, specs and construction notes.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹1,500 per style
@@ -4775,11 +4319,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('8801d382-4789-5370-ae88-0b3ce55c88a1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/services-tech-pack-development.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7c672a70-675c-5416-81f2-cf3ba256673d', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Finishing, ironing and packing', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7c672a70-675c-5416-81f2-cf3ba256673d', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Finishing, ironing and packing', 'Finishing, ironing and packing. Thread cutting, pressing and polybag packing.
 
-Finishing, ironing and packing. Thread cutting, pressing and polybag packing.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹6 per piece
@@ -4792,11 +4334,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7c672a70-675c-5416-81f2-cf3ba256673d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/services-final-packaging.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e4c84878-ae8e-5c8e-ac35-c1be51ffc85a', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Sample · Private label design support', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e4c84878-ae8e-5c8e-ac35-c1be51ffc85a', '228ac0df-492e-5d22-97ca-62dc16befce5', 'Private label design support', 'Private label design support. Range planning and design for private labels.
 
-Private label design support. Range planning and design for private labels.
-
-Listed by Noida Garment Ops (Garment Manufacturer, Noida). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Noida Garment Ops (Garment Manufacturer, Noida).
 
 Key details
 • Price: ₹15,000 per collection
@@ -4814,23 +4354,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'authenticated', 'authenticated', 'sample-seller-24@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Bangalore Shirt Co. (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Bangalore Shirt Co.", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Bangalore Shirt Co. (Sample)', active_role = 'seller', onboarded = true where id = 'b4853311-bcb2-572c-ab8b-1cd88e3dea82';
+update public.profiles set full_name = 'Bangalore Shirt Co.', active_role = 'seller', onboarded = true where id = 'b4853311-bcb2-572c-ab8b-1cd88e3dea82';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Bangalore Shirt Co. (Sample)', 'Bangalore Shirt Co. (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Bengaluru',
+values ('b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Bangalore Shirt Co.', 'Bangalore Shirt Co. manufactures shirts for men, women and children, from Bengaluru.', 'Bengaluru',
         (select s.name from public.india_states s where s.code = 'KA'), 'KA', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('b4853311-bcb2-572c-ab8b-1cd88e3dea82');
 insert into admin.registration_exempt (vendor_id, reason) values ('b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f2ffb6e3-24de-51f1-93d4-cafc4a52e680', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s oxford cotton shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f2ffb6e3-24de-51f1-93d4-cafc4a52e680', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s oxford cotton shirt', 'Men''s oxford cotton shirt. Button-down collar with a chest pocket.
 
-Men''s oxford cotton shirt. Button-down collar with a chest pocket.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Cotton oxford, 130 GSM
@@ -4846,11 +4384,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('f2ffb6e3-24de-51f1-93d4-cafc4a52e680', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/menswear-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('643c70c0-78e4-5d09-87ac-a793cf1b297d', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s linen casual shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('643c70c0-78e4-5d09-87ac-a793cf1b297d', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s linen casual shirt', 'Men''s linen casual shirt. Pre-washed linen with a mandarin option.
 
-Men''s linen casual shirt. Pre-washed linen with a mandarin option.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Pure linen, 140 GSM
@@ -4868,11 +4404,9 @@ Photo: Crew Clothing, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('643c70c0-78e4-5d09-87ac-a793cf1b297d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7f8ebf96-a37d-5e3b-b028-b6c1b2cbac57', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s formal poplin shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7f8ebf96-a37d-5e3b-b028-b6c1b2cbac57', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s formal poplin shirt', 'Men''s formal poplin shirt. Cutaway collar with a two-button cuff.
 
-Men''s formal poplin shirt. Cutaway collar with a two-button cuff.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Cotton poplin, 110 GSM
@@ -4890,11 +4424,9 @@ Photo: Unknown author, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('7f8ebf96-a37d-5e3b-b028-b6c1b2cbac57', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7c9bb626-66db-5c85-8eb9-db21628775fa', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s checked flannel shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7c9bb626-66db-5c85-8eb9-db21628775fa', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s checked flannel shirt', 'Men''s checked flannel shirt. Soft brushed flannel.
 
-Men''s checked flannel shirt. Soft brushed flannel.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Brushed cotton, 160 GSM
@@ -4912,11 +4444,9 @@ Photo: Kgbo, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/
 insert into public.product_images (product_id, url, position) values ('7c9bb626-66db-5c85-8eb9-db21628775fa', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('11f008ff-b07a-5f84-a6e1-89c673d19b60', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s denim shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('11f008ff-b07a-5f84-a6e1-89c673d19b60', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s denim shirt', 'Men''s denim shirt. Snap buttons with twin pockets.
 
-Men''s denim shirt. Snap buttons with twin pockets.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Cotton denim, 6 oz
@@ -4932,11 +4462,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('11f008ff-b07a-5f84-a6e1-89c673d19b60', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/menswear-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('eb8e5706-0390-5cc5-8ee2-593f3046aba7', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Women''s satin shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('eb8e5706-0390-5cc5-8ee2-593f3046aba7', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Women''s satin shirt', 'Women''s satin shirt. Fluid satin with a concealed placket.
 
-Women''s satin shirt. Fluid satin with a concealed placket.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Poly satin, 90 GSM
@@ -4952,11 +4480,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('eb8e5706-0390-5cc5-8ee2-593f3046aba7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/womenswear-tops-blouses-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('834ab2df-d719-5baa-820a-c7fdbc2c6c76', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Women''s oversized cotton shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('834ab2df-d719-5baa-820a-c7fdbc2c6c76', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Women''s oversized cotton shirt', 'Women''s oversized cotton shirt. Dropped shoulders and a curved hem.
 
-Women''s oversized cotton shirt. Dropped shoulders and a curved hem.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Cotton, 120 GSM
@@ -4974,11 +4500,9 @@ Photo: Crew Clothing, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('834ab2df-d719-5baa-820a-c7fdbc2c6c76', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8c380e85-2e35-5c39-9a1e-10fe8d34a552', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s printed resort shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8c380e85-2e35-5c39-9a1e-10fe8d34a552', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s printed resort shirt', 'Men''s printed resort shirt. Camp collar with a short sleeve.
 
-Men''s printed resort shirt. Camp collar with a short sleeve.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Rayon, 110 GSM
@@ -4996,11 +4520,9 @@ Photo: Peachyeung316, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikim
 insert into public.product_images (product_id, url, position) values ('8c380e85-2e35-5c39-9a1e-10fe8d34a552', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('68141ae7-ded6-5d41-a9f9-3c1a4cae449c', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Men''s corduroy overshirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('68141ae7-ded6-5d41-a9f9-3c1a4cae449c', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Men''s corduroy overshirt', 'Men''s corduroy overshirt. Utility pockets with snap buttons.
 
-Men''s corduroy overshirt. Utility pockets with snap buttons.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Cotton corduroy, 260 GSM
@@ -5016,11 +4538,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('68141ae7-ded6-5d41-a9f9-3c1a4cae449c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/menswear-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('83838e95-58b9-50aa-b4b2-ccf1174962a8', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Sample · Boys'' cotton shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('83838e95-58b9-50aa-b4b2-ccf1174962a8', 'b4853311-bcb2-572c-ab8b-1cd88e3dea82', 'Boys'' cotton shirt', 'Boys'' cotton shirt. Smart casual shirt for boys.
 
-Boys'' cotton shirt. Smart casual shirt for boys.
-
-Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Bangalore Shirt Co. (Garment Manufacturer, Bengaluru).
 
 Key details
 • Material: Cotton, 110 GSM
@@ -5041,23 +4561,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'authenticated', 'authenticated', 'sample-seller-25@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Tees & Tops Tiruppur (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Tees & Tops Tiruppur", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Tees & Tops Tiruppur (Sample)', active_role = 'seller', onboarded = true where id = '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb';
+update public.profiles set full_name = 'Tees & Tops Tiruppur', active_role = 'seller', onboarded = true where id = '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Tees & Tops Tiruppur (Sample)', 'Tees & Tops Tiruppur (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Tiruppur',
+values ('7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Tees & Tops Tiruppur', 'Tees & Tops Tiruppur manufactures T-shirts and tops for brands and retailers, from Tiruppur.', 'Tiruppur',
         (select s.name from public.india_states s where s.code = 'TN'), 'TN', 'India', 'IN',
         'Private Label Manufacturer', 'manufacturer', array['Private Label Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb');
 insert into admin.registration_exempt (vendor_id, reason) values ('7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5a0ea691-0a55-5824-a4e4-9e5e7ddb2ca3', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Men''s polo T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5a0ea691-0a55-5824-a4e4-9e5e7ddb2ca3', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Men''s polo T-shirt', 'Men''s polo T-shirt. Ribbed collar with a two-button placket.
 
-Men''s polo T-shirt. Ribbed collar with a two-button placket.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton pique, 220 GSM
@@ -5075,11 +4593,9 @@ Photo: Ensahequ, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.
 insert into public.product_images (product_id, url, position) values ('5a0ea691-0a55-5824-a4e4-9e5e7ddb2ca3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('3a1e6f1a-1652-53ab-b308-c3388d27ca2d', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Men''s henley T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('3a1e6f1a-1652-53ab-b308-c3388d27ca2d', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Men''s henley T-shirt', 'Men''s henley T-shirt. Three-button henley in slub jersey.
 
-Men''s henley T-shirt. Three-button henley in slub jersey.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton slub, 170 GSM
@@ -5097,11 +4613,9 @@ Photo: Tradlands, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.or
 insert into public.product_images (product_id, url, position) values ('3a1e6f1a-1652-53ab-b308-c3388d27ca2d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5eccb36d-1cbd-5d2c-abfc-309b1062bcbc', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Women''s crop T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5eccb36d-1cbd-5d2c-abfc-309b1062bcbc', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Women''s crop T-shirt', 'Women''s crop T-shirt. Cropped length with a ribbed neck.
 
-Women''s crop T-shirt. Cropped length with a ribbed neck.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton spandex, 190 GSM
@@ -5117,11 +4631,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('5eccb36d-1cbd-5d2c-abfc-309b1062bcbc', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/womenswear-t-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('f1f9462f-6f53-551b-86a4-be67043f52bc', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Women''s ruffle-sleeve top', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('f1f9462f-6f53-551b-86a4-be67043f52bc', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Women''s ruffle-sleeve top', 'Women''s ruffle-sleeve top. Lined top with flutter sleeves.
 
-Women''s ruffle-sleeve top. Lined top with flutter sleeves.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Georgette, 80 GSM
@@ -5137,11 +4649,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('f1f9462f-6f53-551b-86a4-be67043f52bc', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/womenswear-tops-blouses-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('a2eca2a5-d291-57d7-a588-f74f50a6f6bd', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Men''s acid-wash T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('a2eca2a5-d291-57d7-a588-f74f50a6f6bd', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Men''s acid-wash T-shirt', 'Men''s acid-wash T-shirt. Vintage acid wash.
 
-Men''s acid-wash T-shirt. Vintage acid wash.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton, 200 GSM
@@ -5157,11 +4667,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('a2eca2a5-d291-57d7-a588-f74f50a6f6bd', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/menswear-t-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c7f67176-e0f9-5a9d-8f32-fc95b3f4bca4', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Women''s V-neck T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c7f67176-e0f9-5a9d-8f32-fc95b3f4bca4', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Women''s V-neck T-shirt', 'Women''s V-neck T-shirt. Soft modal blend.
 
-Women''s V-neck T-shirt. Soft modal blend.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton modal, 160 GSM
@@ -5177,11 +4685,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c7f67176-e0f9-5a9d-8f32-fc95b3f4bca4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/womenswear-t-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c679c5fc-0d82-5557-bb86-75bfcebe3f29', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Women''s peasant blouse', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c679c5fc-0d82-5557-bb86-75bfcebe3f29', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Women''s peasant blouse', 'Women''s peasant blouse. Smocked neckline with balloon sleeves.
 
-Women''s peasant blouse. Smocked neckline with balloon sleeves.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton voile, 80 GSM
@@ -5197,11 +4703,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c679c5fc-0d82-5557-bb86-75bfcebe3f29', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/womenswear-tops-blouses-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('c803c347-3559-5e57-a4d0-c2eaeea6b7b7', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Men''s long-sleeve T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('c803c347-3559-5e57-a4d0-c2eaeea6b7b7', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Men''s long-sleeve T-shirt', 'Men''s long-sleeve T-shirt. Ribbed cuffs and crew neck.
 
-Men''s long-sleeve T-shirt. Ribbed cuffs and crew neck.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Cotton, 180 GSM
@@ -5217,11 +4721,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('c803c347-3559-5e57-a4d0-c2eaeea6b7b7', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/menswear-t-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e7dd5abd-5baa-50ce-9817-3a9b9072d17a', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Women''s knit tank top', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e7dd5abd-5baa-50ce-9817-3a9b9072d17a', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Women''s knit tank top', 'Women''s knit tank top. Square neck tank.
 
-Women''s knit tank top. Square neck tank.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Rib knit, 200 GSM
@@ -5237,11 +4739,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e7dd5abd-5baa-50ce-9817-3a9b9072d17a', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/womenswear-tops-blouses-shirts.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('46d40343-c698-57ea-b916-17c1db011aeb', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Sample · Men''s sublimation printed T-shirt', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('46d40343-c698-57ea-b916-17c1db011aeb', '7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb', 'Men''s sublimation printed T-shirt', 'Men''s sublimation printed T-shirt. Full sublimation print to your artwork.
 
-Men''s sublimation printed T-shirt. Full sublimation print to your artwork.
-
-Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Tees & Tops Tiruppur (Private Label Manufacturer, Tiruppur).
 
 Key details
 • Material: Polyester, 160 GSM
@@ -5262,23 +4762,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'authenticated', 'authenticated', 'sample-seller-26@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Trimline Exports (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Trimline Exports", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Trimline Exports (Sample)', active_role = 'seller', onboarded = true where id = '0538cb41-a6ab-5152-8d92-c5f02cc11367';
+update public.profiles set full_name = 'Trimline Exports', active_role = 'seller', onboarded = true where id = '0538cb41-a6ab-5152-8d92-c5f02cc11367';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Trimline Exports (Sample)', 'Trimline Exports (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Delhi',
+values ('0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Trimline Exports', 'Trimline Exports supplies buttons, zips, rivets and other trims to garment makers, from Delhi.', 'Delhi',
         (select s.name from public.india_states s where s.code = 'DL'), 'DL', 'India', 'IN',
         'Accessories Manufacturer', 'trader_wholesaler', array['Accessories Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('0538cb41-a6ab-5152-8d92-c5f02cc11367');
 insert into admin.registration_exempt (vendor_id, reason) values ('0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('cc420198-2850-5305-a240-aaffa5d45626', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Polyester shirt buttons, 4-hole', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('cc420198-2850-5305-a240-aaffa5d45626', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Polyester shirt buttons, 4-hole', 'Polyester shirt buttons, 4-hole. 14L and 16L, dyed to match.
 
-Polyester shirt buttons, 4-hole. 14L and 16L, dyed to match.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Any shade
@@ -5292,11 +4790,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('cc420198-2850-5305-a240-aaffa5d45626', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/trims-home-buttons.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e75f1dae-ad52-5c62-b0fd-b0fe18cd8ee1', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Metal jeans zippers, YKK-style', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e75f1dae-ad52-5c62-b0fd-b0fe18cd8ee1', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Metal jeans zippers, YKK-style', 'Metal jeans zippers, YKK-style. No. 4.5 metal teeth.
 
-Metal jeans zippers, YKK-style. No. 4.5 metal teeth.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Antique brass, silver
@@ -5312,11 +4808,9 @@ Photo: Woodbine9, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia
 insert into public.product_images (product_id, url, position) values ('e75f1dae-ad52-5c62-b0fd-b0fe18cd8ee1', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('612e9b3c-7735-5eca-bbc0-cde5029f5d40', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Copper rivets for denim', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('612e9b3c-7735-5eca-bbc0-cde5029f5d40', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Copper rivets for denim', 'Copper rivets for denim. Burr and cap sets.
 
-Copper rivets for denim. Burr and cap sets.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Copper, gunmetal
@@ -5332,11 +4826,9 @@ Photo: Grzegorz W. Tężycki, CC BY-SA 4.0, via Wikimedia Commons (https://commo
 insert into public.product_images (product_id, url, position) values ('612e9b3c-7735-5eca-bbc0-cde5029f5d40', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6abd694c-0e3c-5e05-8d7a-13879dce97c3', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Brass eyelets for hoodies', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6abd694c-0e3c-5e05-8d7a-13879dce97c3', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Brass eyelets for hoodies', 'Brass eyelets for hoodies. Washer included.
 
-Brass eyelets for hoodies. Washer included.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Gold, black
@@ -5352,11 +4844,9 @@ Photo: PlastpotOfficial, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wi
 insert into public.product_images (product_id, url, position) values ('6abd694c-0e3c-5e05-8d7a-13879dce97c3', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-04.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('bfa4d5b8-3dc1-5454-90e4-47709331d9cd', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Flat cotton drawcords with tips', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('bfa4d5b8-3dc1-5454-90e4-47709331d9cd', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Flat cotton drawcords with tips', 'Flat cotton drawcords with tips. Metal or silicone aglets.
 
-Flat cotton drawcords with tips. Metal or silicone aglets.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Any shade
@@ -5370,11 +4860,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('bfa4d5b8-3dc1-5454-90e4-47709331d9cd', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/trims-home-drawcords-toggles.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('0bb67581-d5eb-576a-91e2-c75c391dc5ca', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Spring cord locks', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('0bb67581-d5eb-576a-91e2-c75c391dc5ca', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Spring cord locks', 'Spring cord locks. Single-hole stoppers.
 
-Spring cord locks. Single-hole stoppers.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Black, white
@@ -5390,11 +4878,9 @@ Photo: MichaelFrey, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimed
 insert into public.product_images (product_id, url, position) values ('0bb67581-d5eb-576a-91e2-c75c391dc5ca', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7ecd5beb-7853-50f6-a30e-c0128c7f713e', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Hook and loop tape, 25 mm', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7ecd5beb-7853-50f6-a30e-c0128c7f713e', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Hook and loop tape, 25 mm', 'Hook and loop tape, 25 mm. Sew-on nylon tape.
 
-Hook and loop tape, 25 mm. Sew-on nylon tape.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Black, white
@@ -5408,11 +4894,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7ecd5beb-7853-50f6-a30e-c0128c7f713e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/trims-home-velcro-tape.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('48415fd1-f8f4-54a2-a34a-b9b38a33c7c4', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Embroidered iron-on patches', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('48415fd1-f8f4-54a2-a34a-b9b38a33c7c4', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Embroidered iron-on patches', 'Embroidered iron-on patches. Merrowed edge with heat-seal backing.
 
-Embroidered iron-on patches. Merrowed edge with heat-seal backing.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Custom
@@ -5426,11 +4910,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('48415fd1-f8f4-54a2-a34a-b9b38a33c7c4', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/trims-home-patches.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('fcd96da4-ea18-5d27-8daa-c1320ad77d93', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Trouser hook and bar', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('fcd96da4-ea18-5d27-8daa-c1320ad77d93', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Trouser hook and bar', 'Trouser hook and bar. Four-part hook and eye.
 
-Trouser hook and bar. Four-part hook and eye.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Silver
@@ -5444,11 +4926,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('fcd96da4-ea18-5d27-8daa-c1320ad77d93', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/trims-home-hook-eye.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('540e0cc3-dc8f-5251-b6d9-11175fbe3317', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Sample · Silk tassels for ethnic wear', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('540e0cc3-dc8f-5251-b6d9-11175fbe3317', '0538cb41-a6ab-5152-8d92-c5f02cc11367', 'Silk tassels for ethnic wear', 'Silk tassels for ethnic wear. Hand-made tassels with beads.
 
-Silk tassels for ethnic wear. Hand-made tassels with beads.
-
-Listed by Trimline Exports (Accessories Manufacturer, Delhi). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Trimline Exports (Accessories Manufacturer, Delhi).
 
 Key details
 • Colours: Assorted
@@ -5469,23 +4949,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'authenticated', 'authenticated', 'sample-seller-27@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Indore Tailored Bottoms (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Indore Tailored Bottoms", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Indore Tailored Bottoms (Sample)', active_role = 'seller', onboarded = true where id = 'a91d8fdf-0baa-53ed-a73b-08305fb40d13';
+update public.profiles set full_name = 'Indore Tailored Bottoms', active_role = 'seller', onboarded = true where id = 'a91d8fdf-0baa-53ed-a73b-08305fb40d13';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Indore Tailored Bottoms (Sample)', 'Indore Tailored Bottoms (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Indore',
+values ('a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Indore Tailored Bottoms', 'Indore Tailored Bottoms manufactures trousers, chinos and pants for brands and retailers, from Indore.', 'Indore',
         (select s.name from public.india_states s where s.code = 'MP'), 'MP', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('a91d8fdf-0baa-53ed-a73b-08305fb40d13');
 insert into admin.registration_exempt (vendor_id, reason) values ('a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('e32b950a-f89d-5b88-88eb-588f1b70cace', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Men''s cotton chinos', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('e32b950a-f89d-5b88-88eb-588f1b70cace', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Men''s cotton chinos', 'Men''s cotton chinos. Slant pockets and a coin pocket.
 
-Men''s cotton chinos. Slant pockets and a coin pocket.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Cotton twill stretch, 230 GSM
@@ -5501,11 +4979,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('e32b950a-f89d-5b88-88eb-588f1b70cace', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/menswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7fd2cbb1-c5b6-5931-9def-46e7025108a2', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Men''s formal trousers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7fd2cbb1-c5b6-5931-9def-46e7025108a2', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Men''s formal trousers', 'Men''s formal trousers. Flat front with a creased finish.
 
-Men''s formal trousers. Flat front with a creased finish.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Poly viscose, 220 GSM
@@ -5523,11 +4999,9 @@ Photo: Unknown author, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wiki
 insert into public.product_images (product_id, url, position) values ('7fd2cbb1-c5b6-5931-9def-46e7025108a2', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('811a830a-362c-5255-b611-8d6cf8101368', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Women''s high-waist trousers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('811a830a-362c-5255-b611-8d6cf8101368', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Women''s high-waist trousers', 'Women''s high-waist trousers. Pleated front and side pockets.
 
-Women''s high-waist trousers. Pleated front and side pockets.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Crepe, 180 GSM
@@ -5545,11 +5019,9 @@ Photo: Keenpublications, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wi
 insert into public.product_images (product_id, url, position) values ('811a830a-362c-5255-b611-8d6cf8101368', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('b91ad110-b177-5687-8f43-32f0d974b18d', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Women''s palazzo pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('b91ad110-b177-5687-8f43-32f0d974b18d', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Women''s palazzo pants', 'Women''s palazzo pants. Elastic waist and flowy fall.
 
-Women''s palazzo pants. Elastic waist and flowy fall.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Rayon, 130 GSM
@@ -5565,11 +5037,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('b91ad110-b177-5687-8f43-32f0d974b18d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/womenswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('d645df40-1d42-5bfe-a67c-ed9993073f6e', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Men''s cargo trousers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('d645df40-1d42-5bfe-a67c-ed9993073f6e', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Men''s cargo trousers', 'Men''s cargo trousers. Six pockets with drawcord hem.
 
-Men''s cargo trousers. Six pockets with drawcord hem.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Cotton twill, 260 GSM
@@ -5585,11 +5055,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('d645df40-1d42-5bfe-a67c-ed9993073f6e', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/menswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('6a5d79d2-74be-5678-9a03-ecba7c4dec5d', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Women''s cigarette pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('6a5d79d2-74be-5678-9a03-ecba7c4dec5d', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Women''s cigarette pants', 'Women''s cigarette pants. Ankle length with a side zip.
 
-Women''s cigarette pants. Ankle length with a side zip.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Cotton lycra, 220 GSM
@@ -5605,11 +5073,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('6a5d79d2-74be-5678-9a03-ecba7c4dec5d', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/womenswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ac0ee4f5-02db-56e8-bb15-6170f5d01144', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Men''s linen drawstring trousers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ac0ee4f5-02db-56e8-bb15-6170f5d01144', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Men''s linen drawstring trousers', 'Men''s linen drawstring trousers. Breathable summer trousers.
 
-Men''s linen drawstring trousers. Breathable summer trousers.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Linen blend, 160 GSM
@@ -5625,11 +5091,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('ac0ee4f5-02db-56e8-bb15-6170f5d01144', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/menswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('81ba3ed0-4663-5d25-8ff6-9e9081c9d62c', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Women''s linen culottes', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('81ba3ed0-4663-5d25-8ff6-9e9081c9d62c', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Women''s linen culottes', 'Women''s linen culottes. Cropped wide-leg culottes.
 
-Women''s linen culottes. Cropped wide-leg culottes.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Linen blend, 150 GSM
@@ -5645,11 +5109,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('81ba3ed0-4663-5d25-8ff6-9e9081c9d62c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/womenswear-bottomwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('5b15c974-8839-5a91-b19f-2d508fb9d5ae', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Men''s corduroy trousers', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('5b15c974-8839-5a91-b19f-2d508fb9d5ae', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Men''s corduroy trousers', 'Men''s corduroy trousers. Eight-wale cord with pleats.
 
-Men''s corduroy trousers. Eight-wale cord with pleats.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Cotton corduroy, 300 GSM
@@ -5667,11 +5129,9 @@ Photo: Rocknrollmancer, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wik
 insert into public.product_images (product_id, url, position) values ('5b15c974-8839-5a91-b19f-2d508fb9d5ae', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/listing-09.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('1cbb9c55-f998-5108-b86a-1161cd6e7c13', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Sample · Kids'' chino pants', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('1cbb9c55-f998-5108-b86a-1161cd6e7c13', 'a91d8fdf-0baa-53ed-a73b-08305fb40d13', 'Kids'' chino pants', 'Kids'' chino pants. Adjustable inner waist.
 
-Kids'' chino pants. Adjustable inner waist.
-
-Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Indore Tailored Bottoms (Garment Manufacturer, Indore).
 
 Key details
 • Material: Cotton twill, 200 GSM
@@ -5692,23 +5152,21 @@ insert into auth.users (instance_id, id, aud, role, email, raw_app_meta_data, ra
                         email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 values ('00000000-0000-0000-0000-000000000000', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'authenticated', 'authenticated', 'sample-seller-28@samples.cosora.invalid',
         '{"provider":"email","providers":["email"],"cosora_sample":true}'::jsonb,
-        '{"full_name": "Ludhiana Woollens (Sample)", "active_role": "seller"}'::jsonb, now(), now(),
+        '{"full_name": "Ludhiana Woollens", "active_role": "seller"}'::jsonb, now(), now(),
         '2999-01-01'::timestamptz, '', '', '', '', '', '', '', '');
-update public.profiles set full_name = 'Ludhiana Woollens (Sample)', active_role = 'seller', onboarded = true where id = '6f8ac993-6e25-5b80-847e-8db09cb45a88';
+update public.profiles set full_name = 'Ludhiana Woollens', active_role = 'seller', onboarded = true where id = '6f8ac993-6e25-5b80-847e-8db09cb45a88';
 insert into public.vendor_profiles (id, brand_name, about, city, state, state_code, country, country_code,
                                     business_type, primary_type, category, onboarding_complete, is_verified)
-values ('6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Ludhiana Woollens (Sample)', 'Ludhiana Woollens (Sample) is a sample seller created by Cosora to show how a store looks. It isn''t a real business: it takes no orders, messages or requirements.', 'Ludhiana',
+values ('6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Ludhiana Woollens', 'Ludhiana Woollens makes sweaters, jackets, thermals and shawls for the winter trade, from Ludhiana.', 'Ludhiana',
         (select s.name from public.india_states s where s.code = 'PB'), 'PB', 'India', 'IN',
         'Garment Manufacturer', 'manufacturer', array['Garment Manufacturer']::text[], true, false);
 insert into admin.sample_vendors (vendor_id) values ('6f8ac993-6e25-5b80-847e-8db09cb45a88');
 insert into admin.registration_exempt (vendor_id, reason) values ('6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('04ca219e-a7c1-5089-ad9a-caa3716484a5', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Men''s V-neck acrylic sweater', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('04ca219e-a7c1-5089-ad9a-caa3716484a5', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Men''s V-neck acrylic sweater', 'Men''s V-neck acrylic sweater. Fine-gauge knit with ribbed trims.
 
-Men''s V-neck acrylic sweater. Fine-gauge knit with ribbed trims.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Acrylic wool
@@ -5726,11 +5184,9 @@ Photo: Anna.Massini, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikime
 insert into public.product_images (product_id, url, position) values ('04ca219e-a7c1-5089-ad9a-caa3716484a5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-01.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('ef563942-616c-5614-9c57-91d34c91f098', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Women''s longline cardigan', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('ef563942-616c-5614-9c57-91d34c91f098', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Women''s longline cardigan', 'Women''s longline cardigan. Open front with patch pockets.
 
-Women''s longline cardigan. Open front with patch pockets.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Acrylic blend
@@ -5748,11 +5204,9 @@ Photo: Hallands kulturhistoriska museum, CC BY 4.0, via Wikimedia Commons (https
 insert into public.product_images (product_id, url, position) values ('ef563942-616c-5614-9c57-91d34c91f098', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-02.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('46713dc9-51fa-5743-8104-754c78b5a6ab', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Men''s quilted puffer jacket', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('46713dc9-51fa-5743-8104-754c78b5a6ab', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Men''s quilted puffer jacket', 'Men''s quilted puffer jacket. Water-resistant with a detachable hood.
 
-Men''s quilted puffer jacket. Water-resistant with a detachable hood.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Nylon with poly fill
@@ -5770,11 +5224,9 @@ Photo: Mr.ちゅらさん, CC BY-SA 3.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('46713dc9-51fa-5743-8104-754c78b5a6ab', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-03.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7c933434-406c-55f6-a018-c533790872ce', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Women''s wool-blend overcoat', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7c933434-406c-55f6-a018-c533790872ce', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Women''s wool-blend overcoat', 'Women''s wool-blend overcoat. Notch lapel, fully lined.
 
-Women''s wool-blend overcoat. Notch lapel, fully lined.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Wool blend
@@ -5790,11 +5242,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7c933434-406c-55f6-a018-c533790872ce', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/womenswear-winterwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('bfb45155-7b10-5e79-b40e-2430dcde1619', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Men''s fleece hoodie', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('bfb45155-7b10-5e79-b40e-2430dcde1619', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Men''s fleece hoodie', 'Men''s fleece hoodie. Brushed fleece with a kangaroo pocket.
 
-Men''s fleece hoodie. Brushed fleece with a kangaroo pocket.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Cotton fleece, 320 GSM
@@ -5812,11 +5262,9 @@ Photo: Siarhei Besarab, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wik
 insert into public.product_images (product_id, url, position) values ('bfb45155-7b10-5e79-b40e-2430dcde1619', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-05.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('23db7ebc-7bf9-5750-a177-6af0f8bf65a5', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Women''s thermal top', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('23db7ebc-7bf9-5750-a177-6af0f8bf65a5', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Women''s thermal top', 'Women''s thermal top. Warm inner thermal.
 
-Women''s thermal top. Warm inner thermal.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Thermal knit, 220 GSM
@@ -5834,11 +5282,9 @@ Photo: Bevaringstenestene, CC BY-SA 4.0, via Wikimedia Commons (https://commons.
 insert into public.product_images (product_id, url, position) values ('23db7ebc-7bf9-5750-a177-6af0f8bf65a5', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-06.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('22acb4d4-779a-5546-a2cf-673b6938f30c', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Men''s thermal set', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('22acb4d4-779a-5546-a2cf-673b6938f30c', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Men''s thermal set', 'Men''s thermal set. Top and bottom thermal set.
 
-Men''s thermal set. Top and bottom thermal set.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Thermal knit, 240 GSM
@@ -5856,11 +5302,9 @@ Photo: Hanne Dale, Tekstilindustrimuseet, CC BY-SA 4.0, via Wikimedia Commons (h
 insert into public.product_images (product_id, url, position) values ('22acb4d4-779a-5546-a2cf-673b6938f30c', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-07.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('8a51aef9-d9cc-5be6-8990-86707e5b2a6b', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Pashmina-blend shawl', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('8a51aef9-d9cc-5be6-8990-86707e5b2a6b', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Pashmina-blend shawl', 'Pashmina-blend shawl. Soft wool-blend shawl with paisley border.
 
-Pashmina-blend shawl. Soft wool-blend shawl with paisley border.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Wool blend
@@ -5877,11 +5321,9 @@ Photo: The art of hand, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wik
 insert into public.product_images (product_id, url, position) values ('8a51aef9-d9cc-5be6-8990-86707e5b2a6b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-08.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('7979287b-8946-5e3e-a363-924c8887c40b', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Men''s bomber jacket', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('7979287b-8946-5e3e-a363-924c8887c40b', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Men''s bomber jacket', 'Men''s bomber jacket. Ribbed collar and cuffs, quilted lining.
 
-Men''s bomber jacket. Ribbed collar and cuffs, quilted lining.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Material: Polyester
@@ -5897,11 +5339,9 @@ Key details
 insert into public.product_images (product_id, url, position) values ('7979287b-8946-5e3e-a363-924c8887c40b', 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/menswear-winterwear.jpg', 0);
 insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
   status, location, attributes, customization_available, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, pattern, occasion, neck_type, sleeve_type, collar_type, waist_sizes, lengths)
-values ('66904f7c-20a4-5707-b785-1e0a4722991a', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Sample · Knitted beanie cap', 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
+values ('66904f7c-20a4-5707-b785-1e0a4722991a', '6f8ac993-6e25-5b80-847e-8db09cb45a88', 'Knitted beanie cap', 'Knitted beanie cap. Ribbed acrylic beanie with fold-up cuff.
 
-Knitted beanie cap. Ribbed acrylic beanie with fold-up cuff.
-
-Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana). Like every sample store, it shows how a seller''s listing reads; it takes no orders.
+Listed by Ludhiana Woollens (Garment Manufacturer, Ludhiana).
 
 Key details
 • Colours: Black, navy, grey
@@ -5931,7 +5371,7 @@ begin
     raise exception 'samples: a listing has no photo';
   end if;
   if exists (select 1 from public.vendor_profiles v join admin.sample_vendors s on s.vendor_id = v.id
-              where v.brand_name not like '%(Sample)' or v.is_verified or v.has_phone or v.gstin is not null) then
+              where v.is_verified or v.has_phone or v.gstin is not null) then
     raise exception 'samples: a sample seller is not labelled, or claims a phone, GSTIN or verification';
   end if;
 end

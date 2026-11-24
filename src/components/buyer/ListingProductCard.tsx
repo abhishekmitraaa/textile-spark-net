@@ -11,7 +11,7 @@ import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
-import { useIsSampleVendor } from "@/lib/samples";
+import { useShowsSampleTag } from "@/lib/samples";
 
 // ─────────────────────────────────────────────────────────────
 // Shared compact listing card used across buyer feed pages
@@ -31,7 +31,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   // A sample listing (2026-11-24) carries a tag where Call Now would be: its seller can't be called.
-  const isSample = useIsSampleVendor(product.vendorId);
+  const isSample = useShowsSampleTag(product.vendorId);
   const saved = useSaved();
   const isSaved = Boolean(saved.products[product.id]);
   const [hovered, setHovered] = useState(false);

@@ -766,7 +766,10 @@ undocumented. Deep technical rationale for each lives in
   global limit in the dashboard silently does nothing.
 - **No mock data in production.** Dev-only helpers return `[]` in a production build; an
   empty catalogue is meant to render empty. Do not seed demo rows to "fix" an empty state.
-  **One labelled exception: the sample sellers** (Mitra, 2026-11-24, "option 1"; `documentation/sample-listings-2026-11-24.md`).
+  **One exception, until launch: the sample sellers** (Mitra, 2026-11-24, "option 1"; `documentation/sample-listings-2026-11-24.md`).
+  **Unlabelled since 2026-11-24 for pre-launch testing** (Mitra: "remove the sample listing from all the 280 posts ... the
+  app is not open for customers"; `SAMPLES_LABELLED` / `LABELLED` false): the labels below are off, the contact guard is
+  not. **Every sample is removed before Cosora opens to customers** (ToDo.md, securityflags.md 2026-11-24).
   28 sample stores (one per main category, 10 listings each) show how Cosora looks. They are labelled everywhere
   ("(Sample)" store names, "Sample ·" listing names, a notice on product and store pages, a tag on feed cards), and
   nobody can reach them: `admin.refuse_sample_contact` refuses chats, requirements and reviews, they have no phone,

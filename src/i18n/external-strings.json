@@ -656,7 +656,9 @@
   "Pick listings from your products.",
   "About Us saved. It counts toward your profile score from {0} characters.",
   "This is a sample seller, shown to illustrate Cosora. It can't be contacted.",
-  "This is a sample listing, shown to illustrate Cosora. Its seller can't be contacted or reviewed."
+  "This is a sample listing, shown to illustrate Cosora. Its seller can't be contacted or reviewed.",
+  "Not taking enquiries yet",
+  "This seller isn't taking calls or messages on Cosora yet."
  ],
  "product_moderation_source": "Product moderation (2026-10-07, migration 20261118190000_product_moderation): the notification titles admin_product_remove / _flag / _reinstate pass to notify(), and the messages of the eight seeded admin.product_moderation_reasons, which a vendor reads on My Products and in a notice. A reason added or reworded in Cosora-Admin shows in English until it is added here and translated, as with banners.",
  "product_moderation": [

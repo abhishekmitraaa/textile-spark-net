@@ -45,7 +45,7 @@ import { useStepBack } from "@/hooks/useStepBack";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useSavedVendors, useToggleSavedVendor } from "@/lib/queries/savedVendors";
 import { SampleListingNotice } from "@/components/buyer/SampleProfile";
-import { useIsSampleVendor } from "@/lib/samples";
+import { SAMPLES_LABELLED, SAMPLE_CONTACT_COPY, useIsSampleVendor } from "@/lib/samples";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -237,6 +237,10 @@ const VendorProfile = () => {
   // the CTA is hidden on it rather than offered and refused.
   // A sample store (2026-11-24) takes no chats, calls or reviews: the database refuses them, so the buttons go too.
   const isSample = useIsSampleVendor(vendorId);
+  // Labelled samples hide Chat and Call; unlabelled ones (pre-launch testing, 2026-11-24) show them, and a tap says the
+  // seller isn't taking enquiries: the database refuses any contact either way.
+  const hideContact = isSample && SAMPLES_LABELLED;
+  const sampleContact = () => toast.info(SAMPLE_CONTACT_COPY.title, { description: SAMPLE_CONTACT_COPY.description });
   const canReview = Boolean(vendor?.id) && vendor?.id !== user?.id && !isSample;
   const myReview = reviewList.find((r) => r.buyerId && r.buyerId === user?.id);
   const fmtReviewDate = (iso: string) =>
@@ -481,20 +485,20 @@ const VendorProfile = () => {
               their own (vendor_profiles.whatsapp, collected at onboarding) and
               the same contact gate the Call button obeys allows it. It is a
               click-to-chat link, not the Cloud API — see lib/messaging.ts. */}
-          <div className={cn("bg-white px-3 py-3 grid gap-2", isSample ? "grid-cols-1" : canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
+          <div className={cn("bg-white px-3 py-3 grid gap-2", hideContact ? "grid-cols-1" : canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={toggleFollow}
               className={cn("flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors",
                 following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-brand-buyer/10 text-brand-buyer hover:bg-brand-buyer/15")}>
               {following ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
               {following ? "Unfollow" : "Follow"}
             </motion.button>
-            {!isSample && (
-              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate(chatHref)}
+            {!hideContact && (
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => (isSample ? sampleContact() : navigate(chatHref))}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
                 <MessageCircle className="h-4 w-4" /> Chat
               </motion.button>
             )}
-            {!isSample && (
+            {!hideContact && (
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => callVendor(vendorId, brandName)}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors">
                 <Phone className="h-4 w-4" /> Call Now
@@ -1100,7 +1104,7 @@ const VendorProfile = () => {
                       <span className={cn("font-bold text-gray-700 truncate", gridCols === 2 ? "text-[10px]" : "text-[8px]")}>{product.location}</span>
                     </div>
                     <CardSpecs fabric={product.fabric} gsm={product.gsm} fit={product.fit} className="mt-0.5" lineClassName={cn(gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")} />
-                    {!isSample && <button onClick={() => callVendor(vendorId, product.name)}
+                    {!hideContact && <button onClick={() => callVendor(vendorId, product.name)}
                       className={cn(ABOVE_CARD_LINK, "mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
                       <Phone className={gridCols === 2 ? "h-3 w-3" : "h-2.5 w-2.5"} /> Call Now
                     </button>}

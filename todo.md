@@ -11,6 +11,13 @@ short list of things someone has to *decide*.
 
 ## High priority
 
+- **Remove all 280 sample listings before Cosora opens to customers (added 2026-11-24, Mitra).** 28 invented sellers
+  and their 280 listings are live and, since 2026-11-24, unlabelled, so testers see the site as a customer will
+  (`documentation/sample-listings-2026-11-24.md`, `securityflags.md` 2026-11-24). Nobody can contact them, but to a
+  visitor they look like real businesses. Before launch: run `scripts/samples/remove-sample-listings.sql` (CLI
+  `db query --linked --file`), then delete `product-images/<seller>/samples/` for the 28 sellers it lists, and check
+  `select count(*) from admin.sample_vendors` is 0. Not a launch with them still there, labelled or not.
+
 - **Seller registration go-live steps (added 2026-11-13).** Both switches went on for everyone on 2026-11-17, so
   sellers who haven't finished registering can't add listings, videos, catalogues, ads or quotes. Still open:
   - Review the 10 office photos from 5 existing sellers in Cosora-Admin › Premises photos. They won't show on those

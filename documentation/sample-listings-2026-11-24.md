@@ -6,6 +6,15 @@ declined: real buyers would send requirements and chats to businesses that don't
 company's identity at the time, and internet photos belong to other brands and photographers. Mitra then chose
 **option 1: labelled samples on the live site.**
 
+**Unlabelled for pre-launch testing (Mitra, 2026-11-24):** "remove the sample listing from all the 280 posts ... the
+app is not open for customers so this won't affect and will show how it will actually look for customer for testing".
+The labels described below are switched off (`SAMPLES_LABELLED` in `src/lib/samples.ts`, `LABELLED` in
+`scripts/samples/details.py`): store names lose "(Sample)" and get a plain About line, listing names lose "Sample ·",
+descriptions lose the notice, and the product page, store page and cards show no sample notice or tag. Chat and Call
+show as usual and say "Not taking enquiries yet"; reviews stay hidden. The contact guard is unchanged. **Every sample is
+removed before Cosora opens to customers** (ToDo.md; securityflags.md 2026-11-24). Setting both switches to true and
+applying `update-sample-details.sql` puts the labels back.
+
 ## What is live
 
 - **28 sample sellers, one per main category, 10 listings each (280).** Ten is the Free plan's cap, so none can ever

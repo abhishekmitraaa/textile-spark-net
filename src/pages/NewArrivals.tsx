@@ -68,7 +68,7 @@ import { usePreferences } from "@/lib/preferencesStore";
 import { usePrefCategoryMap } from "@/lib/queries/forYou";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 import { CardPhotos } from "@/components/buyer/CardPhotos";
-import { useIsSampleVendor } from "@/lib/samples";
+import { useShowsSampleTag } from "@/lib/samples";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
 // the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
@@ -111,7 +111,7 @@ function ProductCard({ product }: { product: Product }) {
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   // A sample listing (2026-11-24) carries a tag where Call Now would be.
-  const isSample = useIsSampleVendor(product.vendorId);
+  const isSample = useShowsSampleTag(product.vendorId);
   const savedState = useSaved();
   const saved = Boolean(savedState.products[product.id]);
   const [hovered, setHovered] = useState(false);
@@ -189,7 +189,7 @@ function ProductCard({ product }: { product: Product }) {
 function LookingForCard({ product, className }: { product: Product; className?: string }) {
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
-  const isSample = useIsSampleVendor(product.vendorId);
+  const isSample = useShowsSampleTag(product.vendorId);
   return (
     <div className={cn("relative rounded-lg overflow-hidden border border-gray-100 bg-white flex flex-col", className)}>
       <CardLinkOverlay to={`/product/${product.id}`} />
