@@ -38,6 +38,9 @@ import {
   Ruler, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { attributeSpecs } from "@/lib/attributeSpecs";
+import { useVocabulary } from "@/lib/queries/attributeDefinitions";
+import type { Vocabulary } from "@/data/sellerCategories";
 import trustedSeal from "@/assets/Trustedseal.png";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 import { useOverlayState } from "@/hooks/useBackCloses";
@@ -111,7 +114,7 @@ interface ProductData {
 // link would render "couldn't load" instead of "not found".
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function toViewModel(row: ProductRow): ProductData {
+function toViewModel(row: ProductRow, vocab: Vocabulary): ProductData {
   const brand = row.vendor?.brandName?.trim() || null;
   const moq = row.moq?.trim() || null;
   // Multi-value attributes are stored as text[]; join for display and skip
@@ -154,7 +157,11 @@ function toViewModel(row: ProductRow): ProductData {
       row.colour && { label: "Colour", value: row.colour },
       list(row.waistSizes) && { label: "Waist Sizes", value: list(row.waistSizes) },
       list(row.lengths) && { label: "Length Options", value: list(row.lengths) },
-    ].filter(Boolean) as Spec[],
+      // The rest of the form's answers, with the form's own labels (2026-11-24).
+      ...attributeSpecs(row.attributes, row.categoryName, vocab),
+    ].filter(Boolean).filter((s, i, all) =>
+      // A form answer that repeats a column's row ("Gender: Men" twice) shows once.
+      all.findIndex((o) => o && s && o.label.toLowerCase() === s.label.toLowerCase() && o.value === s.value) === i) as Spec[],
     description: row.description?.trim() || null,
     countryOfOrigin: row.countryOfOrigin,
   };
@@ -369,7 +376,8 @@ const ProductDetail = () => {
   const { data: row, isPending: rowPending, isError, refetch } = useProductById(validId);
   // A disabled query (invalid id) reports "pending" forever; that is not loading.
   const isPending = Boolean(validId) && rowPending;
-  const baseProduct = row ? toViewModel(row) : null;
+  const { vocabulary } = useVocabulary();
+  const baseProduct = row ? toViewModel(row, vocabulary) : null;
   // The listing's own approved videos (Video Closeups tagged to it, e.g. added in the product form) play in its
   // carousel after the photos; its PDFs are listed under the specifications (2026-10-17).
   const { data: listingVideos = [] } = useListingVideos(baseProduct?.id);
@@ -741,8 +749,8 @@ const ProductDetail = () => {
                         <p className="text-xs text-gray-500">Not specified by the vendor.</p>
                       )}
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
-                        {product.specifications.map((s) => (
-                          <div key={s.label}>
+                        {product.specifications.map((s, i) => (
+                          <div key={`${i}-${s.label}`}>
                             <p className="text-[11px] text-gray-400">{s.label}</p>
                             <p className="mt-0.5 text-sm font-medium leading-snug text-gray-900">{s.value}</p>
                           </div>
@@ -790,7 +798,7 @@ const ProductDetail = () => {
                 {/* A "Translate" button with no onClick was here (Master Prompt 8, Phase 6). */}
               </div>
               {product.description
-                ? <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>
+                ? <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">{product.description}</p>
                 : <p className="text-sm text-gray-500">The vendor hasn't added a description.</p>}
             </div>
 

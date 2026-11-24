@@ -20,9 +20,37 @@ company's identity at the time, and internet photos belong to other brands and p
   or its listings (`admin.refuse_sample_contact`, migration `20261124120000`). Sample sellers have no phone, WhatsApp,
   GSTIN, PAN or verified badge, and their auth accounts are banned, so nobody signs in as one. Every Call button
   (`useCallVendor()`) says "Sample listing" and dials nothing; Chat, Call and review buttons are hidden on their pages.
-- **Photos are Cosora's own category pictures** (`src/assets/categories/tiles/…`), uploaded to
-  `product-images/<seller>/samples/`. Several listings share a picture.
+- **Photos: Cosora's category pictures today, each listing's own photo next** (Mitra, 2026-11-24, "get the images
+  from internet"; Pexels issues no keys; in progress, not live). The listings show Cosora's category pictures
+  (`<group>-<slug>.jpg`), several sharing one. The replacements: openly licensed photos from Wikimedia Commons only: public domain, CC0, CC BY or CC BY-SA, never
+  non-commercial or no-derivatives, and not files Commons marks as showing a trademark, insignia or a person's
+  likeness. Each is resized to 1200 px, stored at `product-images/<seller>/samples/listing-<nn>.jpg` and credited at
+  the end of its description (author, licence, source page, "resized"); `scripts/samples/photo-sources.json` keeps
+  the record. `photo_queries.py` holds each listing's searches and the picks made by eye; `fetch_photos.py` searches,
+  draws contact sheets and downloads; every photo is chosen by eye.
 - They were added by Cosora directly, so they skipped product moderation; they are Cosora's own content.
+
+## Every detail filled (Mitra, 2026-11-24)
+
+"Make sure every listing has all the descriptions filled": every question the listing form asks of a listing's
+category (`attribute_definitions`, form 'product': the seller type's base questions, the category's and the
+sub-category's) is answered, 2,180 answers over 280 listings, saved the way the form saves them: a question with a
+column of its own in that column, the rest in `products.attributes`. Garments also get pattern, occasion, neck, sleeve,
+collar, waist sizes and lengths. Each description is the notice, the listing's own text, the store, and a "Key details"
+list (material, sizes, colours, price, minimum order, lead time or turnaround, customisation, where it's made).
+
+- **Credentials are never answered** (certifications, licences, test reports, an INCI list): a sample seller holds none,
+  and an unanswered question shows nothing. A question none of the options fits truthfully is left blank too.
+- Answers come, in order, from: a listing's hand-written answers (`attr_extra.py`, `EXTRA_BY_NAME` then the
+  corrections in `EXTRA_CHECKED`), a category-wide answer where it fits the options, the listing's own fields, the
+  category's rules (`attr_rules.py`), then an option the listing's text names in full (`attr_fill.py`). Every answer
+  was read against its listing on 2026-11-24, and wrong ones were corrected by hand.
+- The questions are a snapshot in `scripts/samples/data/` (read from production 2026-11-24). `details.py` writes
+  `update-sample-details.sql` (by fixed id, sample sellers only), and `build.py` puts the same into the seed; on the
+  local stack the two gave identical rows for all 280.
+- The product page now shows a listing's `attributes` under Product Specifications with the form's own labels
+  (`src/lib/attributeSpecs.ts`, `useVocabulary()`), for every listing, not only samples; a row repeating a column's row
+  shows once, and the description keeps its line breaks.
 
 ## Files
 

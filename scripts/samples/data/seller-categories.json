@@ -1,0 +1,848 @@
+[
+{
+"id": "fashion-accessories",
+"name": "Fashion Accessories (Unisex)",
+"type": "product",
+"subs": [
+{
+"id": "bags",
+"name": "Bags"
+},
+{
+"id": "belts",
+"name": "Belts"
+},
+{
+"id": "caps-hats",
+"name": "Caps & Hats"
+},
+{
+"id": "scarves-stoles",
+"name": "Scarves & Stoles"
+},
+{
+"id": "sunglasses",
+"name": "Sunglasses"
+},
+{
+"id": "watches",
+"name": "Watches"
+},
+{
+"id": "jewellery",
+"name": "Jewellery"
+},
+{
+"id": "socks",
+"name": "Socks"
+},
+{
+"id": "gloves",
+"name": "Gloves"
+}
+]
+},
+{
+"id": "raw-materials",
+"name": "Raw Materials – Fabrics & Inputs",
+"type": "product",
+"subs": [
+{
+"id": "knitted-fabrics",
+"name": "Knitted Fabrics"
+},
+{
+"id": "woven-fabrics",
+"name": "Woven Fabrics"
+},
+{
+"id": "denim",
+"name": "Denim"
+},
+{
+"id": "terry-fleece",
+"name": "Terry & Fleece"
+},
+{
+"id": "sustainable-fabrics",
+"name": "Sustainable Fabrics"
+},
+{
+"id": "yarns",
+"name": "Yarns"
+},
+{
+"id": "threads",
+"name": "Threads"
+},
+{
+"id": "linings-interlinings",
+"name": "Linings & Interlinings"
+},
+{
+"id": "laces-nets",
+"name": "Laces & Nets"
+},
+{
+"id": "tapes-cords",
+"name": "Tapes & Cords"
+},
+{
+"id": "elastics",
+"name": "Elastics"
+},
+{
+"id": "dyes",
+"name": "Dyes"
+},
+{
+"id": "chemicals",
+"name": "Chemicals"
+},
+{
+"id": "finishes",
+"name": "Finishes"
+}
+]
+},
+{
+"id": "trims-accessories",
+"name": "Trims & Accessories",
+"type": "product",
+"subs": [
+{
+"id": "buttons",
+"name": "Buttons"
+},
+{
+"id": "zippers",
+"name": "Zippers"
+},
+{
+"id": "hook-eye",
+"name": "Hook & Eye"
+},
+{
+"id": "velcro-tape",
+"name": "Velcro Tape"
+},
+{
+"id": "elastic",
+"name": "Elastic"
+},
+{
+"id": "drawcords-toggles",
+"name": "Drawcords & Toggles"
+},
+{
+"id": "eyelets-grommets",
+"name": "Eyelets & Grommets"
+},
+{
+"id": "labels",
+"name": "Labels"
+},
+{
+"id": "lace-tapes",
+"name": "Lace & Tapes"
+},
+{
+"id": "interlining",
+"name": "Interlining"
+},
+{
+"id": "rivets-studs",
+"name": "Rivets & Studs"
+},
+{
+"id": "cord-locks-stoppers",
+"name": "Cord Locks & Stoppers"
+},
+{
+"id": "patches",
+"name": "Patches"
+},
+{
+"id": "tassels-fringes",
+"name": "Tassels & Fringes"
+}
+]
+},
+{
+"id": "labels-tags",
+"name": "Labels & Tags",
+"type": "product",
+"subs": [
+{
+"id": "woven-labels",
+"name": "Woven Labels"
+},
+{
+"id": "printed-labels",
+"name": "Printed Labels"
+},
+{
+"id": "hang-tags",
+"name": "Hang Tags"
+},
+{
+"id": "size-tags",
+"name": "Size Tags"
+},
+{
+"id": "care-labels",
+"name": "Care Labels"
+},
+{
+"id": "content-labels",
+"name": "Content Labels"
+},
+{
+"id": "rfid-qr-labels",
+"name": "RFID / QR Code Labels"
+}
+]
+},
+{
+"id": "packaging",
+"name": "Packaging",
+"type": "product",
+"subs": [
+{
+"id": "polybags",
+"name": "Polybags"
+},
+{
+"id": "paper-bags",
+"name": "Paper Bags"
+},
+{
+"id": "corrugated-boxes",
+"name": "Corrugated Boxes"
+},
+{
+"id": "garment-boxes",
+"name": "Garment Boxes"
+},
+{
+"id": "envelope-packaging",
+"name": "Envelope Packaging"
+},
+{
+"id": "ziplock-bags",
+"name": "Ziplock Bags"
+},
+{
+"id": "hang-tag-string-seal",
+"name": "Hang Tag String & Seal"
+},
+{
+"id": "tissue-paper",
+"name": "Tissue Paper"
+},
+{
+"id": "stickers-labels",
+"name": "Stickers & Labels"
+},
+{
+"id": "packaging-inserts",
+"name": "Packaging Inserts & Accessories"
+}
+]
+},
+{
+"id": "apparel-home",
+"name": "Apparel & Home Categories",
+"type": "product",
+"subs": [
+{
+"id": "mens-tshirts",
+"name": "Men's T-Shirts"
+},
+{
+"id": "unisex-tshirts",
+"name": "Unisex T-Shirts"
+},
+{
+"id": "mens-shirts",
+"name": "Men's Shirts"
+},
+{
+"id": "mens-pants",
+"name": "Men's Pants/Trousers"
+},
+{
+"id": "mens-jeans",
+"name": "Men's Jeans"
+},
+{
+"id": "womens-tops",
+"name": "Women's Tops"
+},
+{
+"id": "womens-pants",
+"name": "Women's Pants/Trousers"
+},
+{
+"id": "womens-dresses",
+"name": "Women's Dresses"
+},
+{
+"id": "womens-ethnic",
+"name": "Women's Ethnic Wear"
+},
+{
+"id": "kids-wear",
+"name": "Kids Wear"
+},
+{
+"id": "footwear",
+"name": "Footwear"
+},
+{
+"id": "home-textiles",
+"name": "Home Textiles"
+},
+{
+"id": "activewear",
+"name": "Activewear"
+},
+{
+"id": "winter-wear",
+"name": "Winter Wear"
+},
+{
+"id": "bras",
+"name": "Bras"
+},
+{
+"id": "briefs-panties",
+"name": "Briefs & Panties"
+},
+{
+"id": "lingerie-sets",
+"name": "Lingerie Sets"
+},
+{
+"id": "shapewear",
+"name": "Shapewear"
+},
+{
+"id": "nightwear-loungewear",
+"name": "Nightwear & Loungewear"
+},
+{
+"id": "sarees",
+"name": "Sarees"
+},
+{
+"id": "lehengas",
+"name": "Lehengas"
+},
+{
+"id": "petticoats",
+"name": "Petticoats"
+},
+{
+"id": "mens-innerwear",
+"name": "Men's Innerwear"
+},
+{
+"id": "mens-ethnic",
+"name": "Men's Ethnic Wear"
+},
+{
+"id": "mens-footwear",
+"name": "Men's Footwear"
+},
+{
+"id": "womens-footwear",
+"name": "Women's Footwear"
+},
+{
+"id": "kids-footwear",
+"name": "Kids' Footwear"
+},
+{
+"id": "ready-made-garments",
+"name": "Other Ready-made Garments"
+}
+]
+},
+{
+"id": "machinery-equipment",
+"name": "Machinery & Equipment",
+"type": "product",
+"subs": [
+{
+"id": "sewing-machines",
+"name": "Sewing Machines"
+},
+{
+"id": "cutting-machines",
+"name": "Cutting Machines"
+},
+{
+"id": "pressing-machines",
+"name": "Pressing & Finishing Machines"
+},
+{
+"id": "embroidery-machines",
+"name": "Embroidery Machines"
+},
+{
+"id": "printing-machines",
+"name": "Printing Machines"
+},
+{
+"id": "washing-machines",
+"name": "Washing & Finishing Machines"
+},
+{
+"id": "packaging-machinery",
+"name": "Packaging Machinery"
+},
+{
+"id": "testing-equipment",
+"name": "Testing & QC Equipment"
+},
+{
+"id": "gym-equipment",
+"name": "Gym Equipment"
+},
+{
+"id": "mannequins",
+"name": "Mannequins & Display"
+},
+{
+"id": "clothing-machinery",
+"name": "Other Clothing Machinery"
+}
+]
+},
+{
+"id": "chemicals-dyes",
+"name": "Chemicals & Dyes",
+"type": "product",
+"subs": [
+{
+"id": "textile-chemicals",
+"name": "Textile Chemicals"
+},
+{
+"id": "dyes",
+"name": "Dyes"
+},
+{
+"id": "washing-finishing-chemicals",
+"name": "Washing & Finishing Chemicals"
+}
+]
+},
+{
+"id": "printing-manufacturing",
+"name": "Printing & Manufacturing Services",
+"type": "service",
+"subs": [
+{
+"id": "printing-services",
+"name": "Printing Services"
+},
+{
+"id": "embroidery-services",
+"name": "Embroidery Services"
+},
+{
+"id": "fabric-dyeing",
+"name": "Fabric Dyeing"
+},
+{
+"id": "processing-finishing",
+"name": "Processing & Finishing"
+}
+]
+},
+{
+"id": "service-providers",
+"name": "Service Providers (Manufacturing & Fashion Ops)",
+"type": "service",
+"subs": [
+{
+"id": "stitching-garmenting",
+"name": "Stitching / Garmenting"
+},
+{
+"id": "cutting",
+"name": "Cutting"
+},
+{
+"id": "packaging",
+"name": "Packaging"
+},
+{
+"id": "quality-check",
+"name": "Quality Check (QC)"
+},
+{
+"id": "pattern-making-cad",
+"name": "Pattern Making / CAD"
+},
+{
+"id": "tech-pack-development",
+"name": "Tech Pack Development"
+},
+{
+"id": "fashion-designing",
+"name": "Fashion Designing"
+},
+{
+"id": "fabric-sourcing",
+"name": "Fabric Sourcing"
+},
+{
+"id": "trims-accessories-sourcing",
+"name": "Trims & Accessories Sourcing"
+}
+]
+},
+{
+"id": "logistics-supply-chain",
+"name": "Logistics & Supply Chain",
+"type": "service",
+"subs": [
+{
+"id": "logistics-transportation",
+"name": "Logistics & Transportation"
+},
+{
+"id": "warehousing",
+"name": "Warehousing"
+},
+{
+"id": "import-export-handling",
+"name": "Import / Export Handling"
+}
+]
+},
+{
+"id": "it-software-saas",
+"name": "IT, Software & SaaS",
+"type": "service",
+"subs": [
+{
+"id": "app-development",
+"name": "App Development"
+},
+{
+"id": "erp-saas-software",
+"name": "ERP / SaaS Software"
+},
+{
+"id": "crm-automation",
+"name": "CRM & Automation"
+},
+{
+"id": "accounting-billing-software",
+"name": "Accounting & Billing Software"
+},
+{
+"id": "b2b-directory-listings",
+"name": "B2B Directory Listings"
+}
+]
+},
+{
+"id": "finance-compliance",
+"name": "Finance & Compliance Services",
+"type": "service",
+"subs": [
+{
+"id": "accounting-services",
+"name": "Accounting Services"
+},
+{
+"id": "gst-filing",
+"name": "GST Filing"
+},
+{
+"id": "income-tax-filing",
+"name": "Income Tax Filing"
+},
+{
+"id": "business-registration",
+"name": "Business Registration"
+},
+{
+"id": "payroll-pf-esic",
+"name": "Payroll & PF / ESIC"
+},
+{
+"id": "budgeting-forecasting",
+"name": "Budgeting & Forecasting"
+},
+{
+"id": "fundraising-support",
+"name": "Fundraising Support"
+},
+{
+"id": "loan-advisory",
+"name": "Loan Advisory"
+},
+{
+"id": "inventory-valuation",
+"name": "Inventory Valuation"
+},
+{
+"id": "import-export-compliance",
+"name": "Import / Export Compliance"
+},
+{
+"id": "costing-consultation",
+"name": "Costing Consultation"
+},
+{
+"id": "audit-support",
+"name": "Audit Support"
+},
+{
+"id": "financial-sop-setup",
+"name": "Financial SOP Setup"
+}
+]
+},
+{
+"id": "marketing-pr-photography",
+"name": "Marketing, PR & Photography",
+"type": "service",
+"subs": [
+{
+"id": "brand-consulting",
+"name": "Brand Consulting"
+},
+{
+"id": "marketing-services",
+"name": "Marketing Services"
+},
+{
+"id": "ecommerce-services",
+"name": "E-commerce Services"
+},
+{
+"id": "marketplace-onboarding",
+"name": "Marketplace Onboarding"
+},
+{
+"id": "brand-store-setup",
+"name": "Brand Store Setup"
+},
+{
+"id": "social-media-marketing",
+"name": "Social Media Marketing"
+},
+{
+"id": "performance-marketing",
+"name": "Performance Marketing"
+},
+{
+"id": "influencer-collaborations",
+"name": "Influencer Collaborations"
+},
+{
+"id": "public-relations",
+"name": "Public Relations (PR)"
+},
+{
+"id": "content-creation",
+"name": "Content Creation"
+},
+{
+"id": "catalogue-listing",
+"name": "Catalogue & Listing"
+},
+{
+"id": "seo-blogging",
+"name": "SEO & Blogging"
+},
+{
+"id": "email-marketing",
+"name": "Email Marketing"
+},
+{
+"id": "sms-whatsapp-campaigns",
+"name": "SMS / WhatsApp Campaigns"
+},
+{
+"id": "photography-videography",
+"name": "Photography & Videography"
+}
+]
+},
+{
+"id": "freelancers-job-workers",
+"name": "Freelancers & Job Workers",
+"type": "freelancer",
+"subs": [
+{
+"id": "fashion-designing",
+"name": "Fashion Designing"
+},
+{
+"id": "tech-pack-creation",
+"name": "Tech Pack Creation"
+},
+{
+"id": "fabric-trim-sourcing",
+"name": "Fabric & Trim Sourcing"
+},
+{
+"id": "marketing-strategy",
+"name": "Marketing Strategy"
+},
+{
+"id": "ecommerce-operations",
+"name": "E-commerce Operations"
+},
+{
+"id": "performance-influencer-marketing",
+"name": "Performance & Influencer Marketing"
+},
+{
+"id": "pr-media",
+"name": "PR & Media"
+},
+{
+"id": "software-crm-support",
+"name": "Software & CRM Support"
+},
+{
+"id": "accounting-bookkeeping",
+"name": "Accounting & Bookkeeping"
+},
+{
+"id": "legal-compliance",
+"name": "Legal & Compliance"
+},
+{
+"id": "packaging-design-procurement",
+"name": "Packaging Design & Procurement"
+},
+{
+"id": "photography-videography",
+"name": "Photography & Videography"
+},
+{
+"id": "content-creation-cataloging",
+"name": "Content Creation & Cataloging"
+},
+{
+"id": "model-coordination-styling",
+"name": "Model Coordination & Styling"
+},
+{
+"id": "reels-campaign-shoots",
+"name": "Reels & Campaign Shoots"
+},
+{
+"id": "warehouse-logistics-management",
+"name": "Warehouse & Logistics Management"
+},
+{
+"id": "label-tag-customisation",
+"name": "Label & Tag Customisation"
+},
+{
+"id": "product-sampling",
+"name": "Product Sampling"
+},
+{
+"id": "trend-forecasting",
+"name": "Trend Forecasting"
+},
+{
+"id": "brand-strategy-consulting",
+"name": "Brand Strategy Consulting"
+},
+{
+"id": "ui-ux-website-development",
+"name": "UI/UX & Website Development"
+},
+{
+"id": "seo-copywriting",
+"name": "SEO & Copywriting"
+},
+{
+"id": "b2b-sales-enablement",
+"name": "B2B Sales Enablement"
+}
+]
+},
+{
+"id": "cosmetics-beauty",
+"name": "Cosmetics & Beauty",
+"type": "product",
+"subs": [
+{
+"id": "skincare",
+"name": "Skincare"
+},
+{
+"id": "makeup-face",
+"name": "Face Makeup"
+},
+{
+"id": "lip-products",
+"name": "Lip Products"
+},
+{
+"id": "eye-products",
+"name": "Eye Makeup"
+},
+{
+"id": "haircare",
+"name": "Haircare"
+},
+{
+"id": "nail-products",
+"name": "Nail Products"
+},
+{
+"id": "fragrances",
+"name": "Fragrances"
+},
+{
+"id": "bath-body",
+"name": "Bath & Body"
+},
+{
+"id": "beauty-tools",
+"name": "Beauty Tools & Accessories"
+},
+{
+"id": "mens-grooming",
+"name": "Men's Grooming"
+},
+{
+"id": "oral-care",
+"name": "Oral Care"
+},
+{
+"id": "baby-kids-care",
+"name": "Baby & Kids Care"
+},
+{
+"id": "essential-oils-aromatherapy",
+"name": "Essential Oils & Aromatherapy"
+},
+{
+"id": "sun-care",
+"name": "Sun Care"
+}
+]
+},
+{
+"id": "others-custom",
+"name": "Others (Custom)",
+"type": "product",
+"subs": []
+}
+]

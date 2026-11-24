@@ -386,6 +386,8 @@ export interface ProductDetail {
   reviewsCount: number;
   /** Real views (2026-10-17). */
   viewsCount: number;
+  /** The listing's other category answers (products.attributes), shown as specifications (2026-11-24). */
+  attributes: Record<string, unknown> | null;
   images: string[];
   vendor: { brandName: string | null; isVerified: boolean; city: string | null; ratingAvg: number; reviewsCount: number } | null;
 }
@@ -398,6 +400,7 @@ interface RawDetail extends RawProduct {
   neck_type: string | null; sleeve_type: string | null; collar_type: string | null;
   country_of_origin: string | null;
   waist_sizes: string[] | null; lengths: string[] | null;
+  attributes: Record<string, unknown> | null;
 }
 
 // A listing's seller, read in the same request as the listing (review M-25 follow-up): products.vendor_id points at
@@ -416,7 +419,7 @@ function embeddedVendor(row: unknown): EmbeddedVendor | null {
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select(`id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, views_count, enquiries_count, categories ( name ), product_images ( url, position ), ${VENDOR_EMBED}`)
+    .select(`id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, views_count, enquiries_count, attributes, categories ( name ), product_images ( url, position ), ${VENDOR_EMBED}`)
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -457,6 +460,7 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
     ratingAvg: Number(row.rating_avg),
     reviewsCount: row.reviews_count,
     viewsCount: row.views_count ?? 0,
+    attributes: row.attributes ?? null,
     images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
     vendor,
   };

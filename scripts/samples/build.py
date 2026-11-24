@@ -14,7 +14,8 @@ import sys
 import uuid
 
 sys.path.insert(0, os.path.dirname(__file__))
-from sample_data import CATEGORIES, NOTICE  # noqa: E402
+from sample_data import CATEGORIES  # noqa: E402
+import details  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -36,8 +37,10 @@ def q(v):
     return "'" + str(v).replace("'", "''") + "'"
 
 
-def main(stage):
+def main(stage, photos=None):
     seed, remove = [], []
+    details.check_hand_tables()
+    defs, cats_by_name = details.fill.load()
     vendors = []
     n_products = 0
     for ci, cat in enumerate(CATEGORIES, 1):
@@ -68,28 +71,32 @@ insert into admin.sample_vendors (vendor_id) values ({q(vid)});
 insert into admin.registration_exempt (vendor_id, reason) values ({q(vid)}, 'Sample seller (2026-11-24): shows how Cosora looks; takes no orders.');""")
         top_id = f"(select c.id from public.categories c where c.parent_id is null and c.name = {q(cat['top'])})"
         for ii, item in enumerate(cat["items"], 1):
-            sub, pic, name, price, moq, unit, extra, detail = item
-            src = os.path.join(TILES, *pic.split("/")) + ".jpg"
-            assert os.path.isfile(src), f"missing picture {pic}"
-            fname = pic.replace("/", "-") + ".jpg"
+            sub, pic, name, price, moq, unit, extra, detail = item[:8]
+            n_listing = n_products + 1
+            if details.PHOTOS:
+                # The listing's own photo (fetch_photos.py final <work>: <work>/final/<n>.jpg), 2026-11-24.
+                assert photos, "photo-sources.json exists: pass the folder of chosen photos (fetch_photos.py final)"
+                src = os.path.join(photos, f"{n_listing:03d}.jpg")
+                fname = os.path.basename(details.photo_object(vid, ii))
+            else:
+                src = os.path.join(TILES, *pic.split("/")) + ".jpg"
+                fname = pic.replace("/", "-") + ".jpg"
+            assert os.path.isfile(src), f"missing picture {src}"
             dest = os.path.join(stage, vid, "samples", fname)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             shutil.copyfile(src, dest)
             pid = str(uuid.uuid5(NS, f"product:{cat['top']}:{ii}"))
             cat_expr = (f"(select c.id from public.categories c where c.name = {q(sub)} and c.parent_id = {top_id})"
                         if sub else top_id)
-            cols = {
-                "fabric": extra.get("fabric"), "gsm": extra.get("gsm"), "colour": extra.get("colour"),
-                "gender": extra.get("gender"), "fit_type": extra.get("fit_type"), "sizes": extra.get("sizes"),
-                "country_of_origin": extra.get("country_of_origin"),
-                "customization_available": extra.get("customization_available", False),
-            }
-            description = f"{NOTICE}\n\n{detail}"
+            # Every detail (the form's answers, the apparel columns, the description): details.py, 2026-11-24.
+            attrs, cols, description, _missing = details.details_for(cat, item, defs, cats_by_name, ii)
+            col_names = ", ".join(details.DETAIL_COLUMNS)
+            col_values = ", ".join(q(cols[c]) for c in details.DETAIL_COLUMNS)
             seed.append(f"""insert into public.products (id, vendor_id, name, description, price_value, currency, moq, unit, category_id,
-  status, location, attributes, fabric, gsm, colour, gender, fit_type, sizes, country_of_origin, customization_available)
+  status, location, attributes, customization_available, {col_names})
 values ({q(pid)}, {q(vid)}, {q('Sample · ' + name)}, {q(description)}, {q(price)}, '₹', {q(moq)}, {q(unit)}, {cat_expr},
-  'live', {q(city)}, '{{}}'::jsonb, {q(cols['fabric'])}, {q(cols['gsm'])}, {q(cols['colour'])}, {q(cols['gender'])},
-  {q(cols['fit_type'])}, {q(cols['sizes']) if cols['sizes'] else 'null'}, {q(cols['country_of_origin'])}, {q(cols['customization_available'])});
+  'live', {q(city)}, {q(json.dumps(attrs, ensure_ascii=False))}::jsonb, {q(extra.get('customization_available', False))},
+  {col_values});
 insert into public.product_images (product_id, url, position) values ({q(pid)}, {q(f'{STORAGE}/{vid}/samples/{fname}')}, 0);""")
             n_products += 1
 
@@ -147,4 +154,4 @@ commit;
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)

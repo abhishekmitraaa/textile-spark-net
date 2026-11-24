@@ -772,8 +772,14 @@ undocumented. Deep technical rationale for each lives in
   nobody can reach them: `admin.refuse_sample_contact` refuses chats, requirements and reviews, they have no phone,
   GSTIN or badge, their accounts are banned, and `useCallVendor()` dials nothing. A new way to contact a seller checks
   `public.is_sample_vendor()` (or the app's `useIsSampleVendor()`); a new card that offers Call shows the sample tag
-  instead. Never add an unlabelled sample, a sample review, or a photo Cosora doesn't own. They all go with
+  instead. Never add an unlabelled sample, a sample review, or a photo whose licence doesn't allow commercial use and
+  changes: a sample photo is Cosora's own, or public domain, CC0, CC BY or CC BY-SA from Wikimedia Commons, stored in Cosora's own
+  Storage and credited on its listing (`scripts/samples/photo-sources.json`; Mitra, 2026-11-24, "get the images from
+  internet"). They all go with
   `scripts/samples/remove-sample-listings.sql`.
+  Every sample listing answers every question its category's form asks, except credentials (Mitra, 2026-11-24, "all
+  the descriptions filled"): edit `scripts/samples/` (sample_data, attr_*) and rebuild, never the generated SQL. The
+  product page shows any listing's `attributes` with the form's labels (`attributeSpecs()`).
 - **A view is monotonic; a like is a toggle. They are modelled differently on purpose.**
   Views go through a SECURITY DEFINER `increment_video_view(uuid)` scoped to
   `status='live'` (mirroring `increment_product_view`) — a buyer owns no video row, so the
