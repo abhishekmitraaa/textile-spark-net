@@ -9311,5 +9311,8 @@
  "Sample listing · not for sale": "नमूना लिस्टिंग · बिक्री के लिए नहीं",
  "This is a sample listing, shown to illustrate Cosora. Its seller can't be contacted.": "यह एक नमूना लिस्टिंग है, जो Cosora को समझाने के लिए दिखाई गई है। इसके विक्रेता से संपर्क नहीं किया जा सकता।",
  "Not taking enquiries yet": "अभी पूछताछ नहीं ले रहे",
- "This seller isn't taking calls or messages on Cosora yet.": "यह विक्रेता अभी Cosora पर कॉल या संदेश नहीं ले रहा है।"
+ "This seller isn't taking calls or messages on Cosora yet.": "यह विक्रेता अभी Cosora पर कॉल या संदेश नहीं ले रहा है।",
+ "You have 3 video uploads waiting to finish. Finish them, or try again in a few hours.": "आपके 3 वीडियो अपलोड पूरे होने बाकी हैं। उन्हें पूरा करें, या कुछ घंटों बाद फिर कोशिश करें।",
+ "You can start 10 video uploads a day. Try again tomorrow.": "आप एक दिन में 10 वीडियो अपलोड शुरू कर सकते हैं। कल फिर कोशिश करें।",
+ "Could not reserve an upload; nothing was created.": "अपलोड आरक्षित नहीं हो सका; कुछ भी नहीं बनाया गया।"
 }

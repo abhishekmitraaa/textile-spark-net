@@ -236,6 +236,34 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ configured: true, probe: true, cdnHostname });
   }
 
+  // ── Reserve a slot (security audit run-2 F-02, 2026-11-25) ────────────────
+  // A vendor_profiles row was all this needed, and any account can make one, so every account could create Bunny
+  // videos without limit at Cosora's cost. bunny_upload_slot_claim() decides: a registered seller, at most 10 slots
+  // a day and 3 not yet used by a video, counted under a lock per seller. Fails CLOSED like the checks above.
+  let slotId = "";
+  try {
+    const sr = await fetch(`${url}/rest/v1/rpc/bunny_upload_slot_claim`, {
+      method: "POST", headers: REST(serviceKey), body: JSON.stringify({ p_vendor: vendorId }),
+    });
+    const slot = sr.ok ? await sr.json() : null;
+    if (!slot || typeof slot !== "object") {
+      return json({ error: "lookup_failed", detail: "Could not reserve an upload; nothing was created." }, 502);
+    }
+    if (slot.reason === "registration_required" || slot.reason === "not_vendor") {
+      return json({ error: "forbidden", detail: "Finish your seller registration first" }, 403);
+    }
+    if (slot.reason === "open_limit") {
+      return json({ error: "slot_limit", detail: "You have 3 video uploads waiting to finish. Finish them, or try again in a few hours." }, 429);
+    }
+    if (slot.reason === "daily_limit") {
+      return json({ error: "slot_limit", detail: "You can start 10 video uploads a day. Try again tomorrow." }, 429);
+    }
+    slotId = typeof slot.slot_id === "string" ? slot.slot_id : "";
+    if (!slotId) return json({ error: "lookup_failed", detail: "Could not reserve an upload; nothing was created." }, 502);
+  } catch {
+    return json({ error: "lookup_failed", detail: "Could not reserve an upload; nothing was created." }, 502);
+  }
+
   // ── Create the Bunny video object ─────────────────────────────────────────
   // This must happen server-side regardless of the signature, because the GUID
   // it returns is an input to the signature. It also means a Bunny asset now
@@ -267,6 +295,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!videoId) {
     return json({ error: "bunny_create_failed", detail: "Bunny returned no video guid." }, 502);
   }
+
+  // Tie the slot to its video, so a slot counts as "open" until a product_videos row uses it. Best-effort: a failed
+  // record only keeps the slot counted as open for its six hours.
+  await fetch(`${url}/rest/v1/rpc/bunny_upload_slot_record`, {
+    method: "POST", headers: REST(serviceKey), body: JSON.stringify({ p_slot: slotId, p_video: videoId }),
+  }).catch(() => undefined);
 
   const expirationTime = Math.floor(Date.now() / 1000) + UPLOAD_WINDOW_SECONDS;
   const signature = await sha256Hex(`${libraryId}${apiKey}${expirationTime}${videoId}`);
