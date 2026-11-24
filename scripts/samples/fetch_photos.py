@@ -30,40 +30,82 @@ LICENCE_OK = re.compile(r"^(Public domain|CC0( 1\.0)?|PDM( 1\.0)?|CC BY(-SA)? \d
 SKIP_RESTRICTIONS = ("trademarked", "insignia", "personality")
 SKIP_TITLES = re.compile(r"logo|map|coat of arms|flag of|diagram|chart of|\.svg|\.tif|\.gif|stamp|banknote|poster",
                          re.I)
+# A photo taken in a named brand's shop, or of its goods, would show another brand's products as a Cosora sample.
+BRAND_TITLES = re.compile(r"uniqlo|zara\b|lululemon|h&m|nike|adidas|puma\b|levi'?s|gap\b|muji|decathlon|ikea|"
+                          r"ray-?ban|tesco|carrefour|walmart|primark|benetton|fidplat|full count|baleno|"
+                          r"tommy hilfiger|ralph lauren|gucci|prada|chanel|louis vuitton|dior|celine", re.I)
+
+
+_last_call = [0.0]
+MIN_GAP = 2.0  # seconds between API calls
 
 
 def curl_json(params):
+    """One API answer. Commons answers 429 with a Retry-After when a client goes too fast: wait what it asks, and
+    keep at least MIN_GAP between calls. Gives up on a query only after 12 refusals."""
     url = API + "?" + urllib.parse.urlencode(params)
-    for attempt in range(3):
-        out = subprocess.run(["curl", "-s", "--max-time", "40", "-A", UA, url], capture_output=True).stdout
+    for _ in range(12):
+        time.sleep(max(0.0, _last_call[0] + MIN_GAP - time.time()))
+        _last_call[0] = time.time()
+        r = subprocess.run(["curl", "-s", "-i", "--max-time", "60", "-A", UA, url], capture_output=True).stdout
+        head, _, body = r.partition(b"\r\n\r\n")
+        status = re.search(rb"^HTTP/\S+ (\d+)", head)
+        if status and status.group(1) == b"429":
+            after = re.search(rb"(?im)^retry-after:\s*(\d+)", head)
+            time.sleep(int(after.group(1)) + 1 if after else 30)
+            continue
         try:
-            return json.loads(out)
+            d = json.loads(body)
         except ValueError:
-            time.sleep(2 + attempt * 3)
+            time.sleep(15)
+            continue
+        if "error" in d:
+            time.sleep(15)
+            continue
+        return d
+    print("  gave up on a query", flush=True)
     return {}
 
 
-# Left out of every search: artworks, statues and crowds rank high on words but show no product.
-NOT_PRODUCTS = ("-painting -statue -sculpture -portrait -concert -festival -protest -march -engraving -drawing "
-                "-museum -illustration -poster -stamp -parade -rally")
+# Left out of every search: artworks, statues, crowds and scanned patents rank high on words but show no product.
+# (Not "-march": it dropped every photo whose description gives a date in March.)
+NOT_PRODUCTS = ("-painting -statue -sculpture -portrait -concert -festival -protest -engraving -drawing "
+                "-museum -illustration -poster -stamp -parade -rally -intitle:patent -intitle:kit")
+
+
+def title_query(query):
+    """Every word of a search in the file's title, photos only: free-text search matched patents' and maps' OCR text."""
+    words = query.split()
+    return " ".join(f'intitle:"{w}"' if "-" in w else f"intitle:{w}" for w in words) +         " filemime:image/jpeg filew:>700"
+
+
 STOP = {"a", "an", "the", "of", "for", "with", "and", "in", "on", "women", "men", "kids", "s"}
+# Never offered: categories or files about nudity or sex (underwear and swimwear searches reach them).
+UNSAFE = re.compile(r"nud|naked|topless|erotic|fetish|sex|porn|nsfw|lingerie model|bottomless|upskirt|crotch|bulge|"
+                    r"wet (white )?t-?shirt|bikini contest|spring break|stripper|burlesque|cleavage|virgin|"
+                    r"pin-?up|glamou?r model|playboy|hentai|ecchi", re.I)
+# Categories of people or of things that only share a word: films, places, ships.
+CATEGORY_SKIP = re.compile(r"wearing|films?\b|people|\bmen\b|women|girls|boys|by country|in art|songs?\b|ships?\b|"
+                           r"albums?\b|\(band\)|tiraha|station|street|road|village|football|logos?\b", re.I)
 
 
 def _words(s):
     return {w for w in re.findall(r"[a-z0-9]+", s.lower()) if w not in STOP and len(w) > 1}
 
 
-def search(query, width=330, limit=30):
-    """Commons files for a query. Thumbnails at 330 px (a standard Wikimedia size, so it's served from cache)."""
-    d = curl_json({"action": "query", "format": "json", "generator": "search", "gsrnamespace": "6",
-                   "gsrsearch": f"{query} filetype:bitmap {NOT_PRODUCTS}", "gsrlimit": str(limit), "prop": "imageinfo",
-                   "iiprop": "url|extmetadata|size|mime", "iiurlwidth": str(width),
-                   "iiextmetadatafilter": "LicenseShortName|LicenseUrl|Artist|Credit|Restrictions|AttributionRequired"})
+IIPARAMS = {"prop": "imageinfo", "iiprop": "url|extmetadata|size|mime",
+            "iiextmetadatafilter": "LicenseShortName|LicenseUrl|Artist|Credit|Restrictions|AttributionRequired"}
+
+
+def _files(d):
+    """Usable files from an imageinfo answer, in the answer's order."""
     pages = sorted(d.get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 0))
     out = []
     for p in pages:
         ii = (p.get("imageinfo") or [{}])[0]
-        m = ii.get("extmetadata", {})
+        m = ii.get("extmetadata") or {}
+        if not isinstance(m, dict):  # a file with no metadata comes back as []
+            continue
         lic = (m.get("LicenseShortName", {}).get("value") or "").strip()
         restr = (m.get("Restrictions", {}).get("value") or "").lower()
         title = p.get("title", "")
@@ -73,7 +115,7 @@ def search(query, width=330, limit=30):
             continue
         if not LICENCE_OK.match(lic) or any(r in restr for r in SKIP_RESTRICTIONS):
             continue
-        if SKIP_TITLES.search(title) or title in REJECT:
+        if SKIP_TITLES.search(title) or UNSAFE.search(title) or BRAND_TITLES.search(title) or title in REJECT:
             continue
         artist = re.sub(r"<[^>]+>", "", html.unescape(m.get("Artist", {}).get("value") or "")).strip()
         artist = re.sub(r"\s+", " ", artist)[:120] or "Unknown author"
@@ -82,6 +124,37 @@ def search(query, width=330, limit=30):
                     "licence": lic, "licence_url": m.get("LicenseUrl", {}).get("value"), "artist": artist,
                     "width": ii.get("width"), "height": ii.get("height")})
     return out
+
+
+def search(query, width=330, limit=30):
+    """Commons files for a query. Thumbnails at 330 px (a standard Wikimedia size, so it's served from cache)."""
+    full = query if "intitle:" in query else f"{query} filetype:bitmap"
+    return _files(curl_json({"action": "query", "format": "json", "generator": "search", "gsrnamespace": "6",
+                             "gsrsearch": f"{full} {NOT_PRODUCTS}", "gsrlimit": str(limit), "iiurlwidth": str(width),
+                             **IIPARAMS}))
+
+
+def categories(query):
+    """Commons categories named for a search's words (Category:Jhumka earrings for "jhumka earrings")."""
+    d = curl_json({"action": "query", "format": "json", "list": "search", "srnamespace": "14", "srlimit": "8",
+                   "srprop": "", "srsearch": query})
+    want = _words(query)
+    out = []
+    for hit in d.get("query", {}).get("search", []):
+        t = hit["title"]
+        name = t.split(":", 1)[1]
+        if UNSAFE.search(name) or CATEGORY_SKIP.search(name):
+            continue
+        if _words(name) & want and len(_words(name) - want) <= 2:
+            out.append(t)
+    return out[:2]
+
+
+def category_files(cat, width=330, limit=40):
+    """Photos filed directly in a category, newest first (newer uploads are mostly better photos)."""
+    return _files(curl_json({"action": "query", "format": "json", "generator": "categorymembers", "gcmtitle": cat,
+                             "gcmtype": "file", "gcmlimit": str(limit), "gcmsort": "timestamp", "gcmdir": "desc",
+                             "iiurlwidth": str(width), **IIPARAMS}))
 
 
 def listings():
@@ -94,21 +167,41 @@ def listings():
     return rows
 
 
-def _candidates(name):
-    """Up to 10 files for a listing, those whose titles share most words with its searches first."""
+def _candidates(name, want=12):
+    """Up to `want` files for a listing: photos in a Commons category named for it first (curated by Commons'
+    editors), then files whose titles carry a search's words, then free-text matches when still short."""
     found, seen = [], set()
-    for rank, q in enumerate(QUERIES[name]):
-        for c in search(q):
-            if c["title"] not in seen:
-                seen.add(c["title"])
-                c["query"] = q
-                c["score"] = 2 * len(_words(q) & _words(c["title"])) - rank
-                found.append(c)
-        if sum(1 for c in found if c["score"] > 0) >= 8:
+
+    def add(files, q, how, cap):
+        n = 0
+        for c in files:
+            if c["title"] in seen or n >= cap:
+                continue
+            seen.add(c["title"])
+            c["query"], c["how"] = q, how
+            found.append(c)
+            n += 1
+
+    # A query written "Category:<name>" names the Commons category itself (set by hand where the words found the
+    # wrong one, e.g. "drums" finding musical drums).
+    named = [q for q in QUERIES[name] if q.startswith("Category:")]
+    words = [q for q in QUERIES[name] if not q.startswith("Category:")]
+    for cat in named:
+        add(category_files(cat, limit=60), cat, "category", 8)
+    for q in words:
+        if len(found) >= 6:
             break
-        time.sleep(0.5)
-    found.sort(key=lambda c: -c["score"])
-    return found[:10]
+        for cat in categories(q):
+            add(category_files(cat), cat, "category", 5)
+    for q in words:
+        if len(found) >= want:
+            break
+        add(search(title_query(q)), q, "title", 4)
+    for q in words:
+        if len(found) >= 4:
+            break
+        add(search(q), q, "text", 3)
+    return found[:want]
 
 
 def cmd_search(work):
@@ -116,7 +209,7 @@ def cmd_search(work):
     cache_path = os.path.join(work, "candidates.json")
     cand = json.load(open(cache_path, encoding="utf-8")) if os.path.exists(cache_path) else {}
     todo = [(n, name) for n, _, _, name in listings() if not cand.get(name)]
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    with ThreadPoolExecutor(max_workers=1) as pool:  # one at a time: three in parallel got throttled
         for (n, name), found in zip(todo, pool.map(lambda t: _candidates(t[1]), todo)):
             cand[name] = found
             print(f"{n:3d} {len(found):2d} {name[:60]}", flush=True)
@@ -145,7 +238,7 @@ def fetch(url, dest):
     for wait in (0, 5, 15, 40):
         time.sleep(wait)
         subprocess.run(["curl", "-s", "-L", "--max-time", "60", "-A", UA, "-o", dest, url])
-        time.sleep(1.0)
+        time.sleep(0.3)
         if _is_image(dest):
             return True
     if os.path.exists(dest):
@@ -181,7 +274,7 @@ def _thumb_for(work, cand_list, title):
     return dest if fetch(c["thumb"], dest) else None
 
 
-def cmd_sheets(work, first=1, last=280, per_listing=5, listings_per_sheet=4):
+def cmd_sheets(work, first=1, last=280, per_listing=6, listings_per_sheet=4):
     """Sheets to choose from: one row per listing, its top candidates labelled "<n>.<k>"."""
     cand = json.load(open(os.path.join(work, "candidates.json"), encoding="utf-8"))
     rows = [(n, name) for n, _, _, name in listings() if first <= n <= last]
@@ -224,6 +317,18 @@ def cmd_alts(work, numbers):
     print("done")
 
 
+def credit_name(artist):
+    """The author as a credit line shows it: Commons' Artist field sometimes holds a museum's licence note or a
+    journal's full bibliographic title."""
+    a = artist
+    if "Credit:" in a:
+        a = a.split("Credit:", 1)[1].split(";")[0].replace("Foto:", "").strip()
+    elif " / " in a:
+        a = a.split(" / ")[0]
+    a = re.sub(r"\s*\[[^\]]*$", "", a).strip(" ,;")
+    return a or "Unknown author"
+
+
 def cmd_final(work):
     from PIL import Image
     cand = json.load(open(os.path.join(work, "candidates.json"), encoding="utf-8"))
@@ -233,18 +338,24 @@ def cmd_final(work):
     sources = {}
     for n, top, ii, name in listings():
         title = picks.get(name)
+        if not title:
+            continue  # nothing fitting on Commons: the listing keeps its Cosora category picture
+        if BRAND_TITLES.search(title) or UNSAFE.search(title):
+            raise SystemExit(f"{n} {name}: {title} names a brand or isn't safe")
         c = next((c for c in cand.get(name, []) if c["title"] == title), None)
         if not c:
-            raise SystemExit(f"{n} {name}: no pick")
-        # 1280 px is a standard Wikimedia thumbnail size; a smaller file is taken as it is.
-        big = re.sub(r"/\d+px-", "/1280px-", c["thumb"]) if c["width"] > 1280 else c["original"]
+            raise SystemExit(f"{n} {name}: picked {title}, not among its candidates")
+        # The largest standard Wikimedia thumbnail width the file has (1280, 960 or 500): thumbnails are served from
+        # cache, while the original-file server answers 429 to a script.
+        size = next(s for s in (1280, 960, 500, 330) if c["width"] >= s)
+        big = re.sub(r"/\d+px-", f"/{size}px-", c["thumb"])
         raw = os.path.join(out_dir, f"raw-{n:03d}")
         if not fetch(big, raw):
             raise SystemExit(f"{n} {name}: download failed")
         im = Image.open(raw).convert("RGB")
         im.thumbnail((1200, 1200))
         im.save(os.path.join(out_dir, f"{n:03d}.jpg"), "JPEG", quality=85, optimize=True, progressive=True)
-        sources[f"{top}:{ii}"] = {"listing": name, "file": title, "page": c["page"], "artist": c["artist"],
+        sources[f"{top}:{ii}"] = {"listing": name, "file": title, "page": c["page"], "artist": credit_name(c["artist"]),
                                   "licence": c["licence"], "licence_url": c["licence_url"],
                                   "source": "Wikimedia Commons", "changes": "resized"}
     json.dump(sources, open(os.path.join(HERE, "photo-sources.json"), "w", encoding="utf-8"), ensure_ascii=False,

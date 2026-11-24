@@ -47,7 +47,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: LeatherGuy9855, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Black_bison_leather_belt.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -64,6 +66,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0feeafb8-3cd9-5d6c-b92a-bc05dafb2342' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-02.jpg'
+where product_id = '0feeafb8-3cd9-5d6c-b92a-bc05dafb2342' and position = 0;
 -- Accessories 3: Block-printed cotton stole
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -109,7 +113,9 @@ Key details
 • Minimum order: 300 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: SpeakingArch, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Silver_Dogri_Jhumka_with_glass,_possibly_late_19th-early_20th_century,_Bilaspur.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -126,6 +132,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '9657553b-a858-5b17-bc79-c5c77a5851e1' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-04.jpg'
+where product_id = '9657553b-a858-5b17-bc79-c5c77a5851e1' and position = 0;
 -- Accessories 5: Embroidered cotton baseball cap
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -140,7 +148,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: Cloud Rise, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Caps_on_a_wire_shelf_photographed_with_Casio_QV-R51.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -157,6 +167,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '69019fce-8c65-562c-a701-933d241afa36' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-05.jpg'
+where product_id = '69019fce-8c65-562c-a701-933d241afa36' and position = 0;
 -- Accessories 6: Velvet scrunchie set of 6
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -171,7 +183,9 @@ Key details
 • Minimum order: 500 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: CharlyBSE, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chouchou-anti-drogue-verre-protege.webp); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -188,6 +202,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'f60e7d0f-09e1-56bb-9ed9-a7d9fad06b9e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-06.jpg'
+where product_id = 'f60e7d0f-09e1-56bb-9ed9-a7d9fad06b9e' and position = 0;
 -- Accessories 7: Combed cotton ankle socks, 3-pair pack
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -202,7 +218,9 @@ Key details
 • Minimum order: 500 packs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: Светагордсерг, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%D0%9D%D0%BE%D1%81%D0%BA%D0%B8.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -219,6 +237,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '96eda7e1-ce4d-551a-bf34-428117ad46b4' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-07.jpg'
+where product_id = '96eda7e1-ce4d-551a-bf34-428117ad46b4' and position = 0;
 -- Accessories 8: Polarised wayfarer sunglasses
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -233,7 +253,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: Yuaaaner, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Glasses_on_desk.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -250,6 +272,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '22197de4-cad7-5af7-9f1a-38984160b97a' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-08.jpg'
+where product_id = '22197de4-cad7-5af7-9f1a-38984160b97a' and position = 0;
 -- Accessories 9: 3-fold windproof umbrella
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -264,7 +288,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: Junyu-K, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:202602_Orange_umbrella_at_the_emergency_stairs.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -281,6 +307,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '279439f8-4b7a-5c71-86ee-6261e11b6fd4' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-09.jpg'
+where product_id = '279439f8-4b7a-5c71-86ee-6261e11b6fd4' and position = 0;
 -- Accessories 10: Minimal analogue wrist watch with mesh strap
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -295,7 +323,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Jaipur, India',
+• Made in: Jaipur, India
+
+Photo: UmekitaQM, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Bracelet-de-montre-cuir-boeud-de-kobe-01.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -312,6 +342,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'd9e84e51-4931-53bf-b22e-0ec91a389ee5' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a71cb5a5-ef71-5ff1-ba72-ff4c7a02e9dc/samples/listing-10.jpg'
+where product_id = 'd9e84e51-4931-53bf-b22e-0ec91a389ee5' and position = 0;
 -- Activewear 1: High-waist women's yoga leggings
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -328,7 +360,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Beyond My Ken, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Stretch_pants_on_display_West_207th_Street_(cropped).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Nylon spandex',
   gsm = '240',
@@ -345,6 +379,8 @@ Key details
   waist_sizes = null,
   lengths = array['Full Length']::text[]
 where id = '4315f0a5-bf16-5549-be3d-f76a68be5ee7' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/listing-01.jpg'
+where product_id = '4315f0a5-bf16-5549-be3d-f76a68be5ee7' and position = 0;
 -- Activewear 2: Medium-support sports bra
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -361,7 +397,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Flame, not lame, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Cream_Colored_Bra_on_Bed.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Polyester spandex',
   gsm = '220',
@@ -378,6 +416,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'dfe07229-854d-5926-aa66-6c8728fa3233' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/listing-02.jpg'
+where product_id = 'dfe07229-854d-5926-aa66-6c8728fa3233' and position = 0;
 -- Activewear 3: Men's dri-fit training T-shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -625,7 +665,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Ingolfson, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Windbreaker_Jacket,_Hood_Outside_Transparency.png); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Polyester spandex',
   gsm = '230',
@@ -642,6 +684,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '711df4c6-d179-52ee-9261-344e372ec83f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9a64708b-9cd0-5155-8211-0b0c8c2036dd/samples/listing-10.jpg'
+where product_id = '711df4c6-d179-52ee-9261-344e372ec83f' and position = 0;
 -- Apparel & Home Categories 1: Men's 180 GSM combed cotton crew-neck T-shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -658,7 +702,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: m:User:Taylor_49, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Worn_T-shirt_white.png); resized.',
   attributes = '{"leadTime": "15-30 days", "apparelGender": ["Men"], "closure": "Pullover", "washCare": ["Machine Wash"]}'::jsonb,
   fabric = '100% combed cotton',
   gsm = '180',
@@ -675,6 +721,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '8732bd58-1292-53e0-80b7-82e87a0faa6b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-01.jpg'
+where product_id = '8732bd58-1292-53e0-80b7-82e87a0faa6b' and position = 0;
 -- Apparel & Home Categories 2: Women's rayon printed peplum top
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -723,7 +771,9 @@ Key details
 • Minimum order: 100 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: רפאל גורי, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:In_the_market.JPG); resized.',
   attributes = '{"leadTime": "15-30 days", "productType": "Bedsheet", "threadCount": "300 TC", "size": "274 × 274 cm (double)", "setContains": "1 flat sheet and 2 pillow covers", "washCare": ["Machine Wash", "Tumble Dry Low"]}'::jsonb,
   fabric = 'Cotton percale',
   gsm = null,
@@ -740,6 +790,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '08b7a844-3cd1-5346-a56c-f7f407c04d8a' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-03.jpg'
+where product_id = '08b7a844-3cd1-5346-a56c-f7f407c04d8a' and position = 0;
 -- Apparel & Home Categories 4: Kids' printed cotton T-shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -855,7 +907,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: 19Tarrestnom65, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Diversas_fotos_de_sujetadores_en_un_mercadillo_14.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "braType": "T-Shirt Bra", "wiring": "Non-Wired", "coverage": "Full", "braClosure": "Back Hook"}'::jsonb,
   fabric = 'Cotton spandex',
   gsm = null,
@@ -872,6 +926,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'e461768d-23f1-5f51-9b67-a013287ea078' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-07.jpg'
+where product_id = 'e461768d-23f1-5f51-9b67-a013287ea078' and position = 0;
 -- Apparel & Home Categories 8: Unisex oversized drop-shoulder T-shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -888,7 +944,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: Marie-Walt, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Tee_shirt_avec_impression_de_croix_huguenote.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "washCare": ["Machine Wash", "Do Not Bleach"]}'::jsonb,
   fabric = '100% cotton',
   gsm = '220',
@@ -905,6 +963,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '88d934fc-57bf-559d-b4ec-b1d1fffbf217' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-08.jpg'
+where product_id = '88d934fc-57bf-559d-b4ec-b1d1fffbf217' and position = 0;
 -- Apparel & Home Categories 9: Women's tiered cotton midi dress
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -954,7 +1014,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: Subornolota, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Border_of_Tangail_sari,from_the_1970s.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "sareeLength": "6.3 m (with blouse piece)", "blouse": "Unstitched blouse piece", "work": ["Woven"]}'::jsonb,
   fabric = 'Cotton silk',
   gsm = null,
@@ -971,6 +1033,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '531b4f95-d6a7-5e43-abb3-8315a295340e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/04d9d594-0bd4-5829-8d4a-c396c2ccf8fd/samples/listing-10.jpg'
+where product_id = '531b4f95-d6a7-5e43-abb3-8315a295340e' and position = 0;
 -- Chemicals & Dyes 1: Reactive dyes for cotton, HE series
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -984,7 +1048,9 @@ Key details
 • Minimum order: 25 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Sunshinehoney10, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Muestras_de_tela_con_t%C3%A9cnica_Shibori.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "dyeClass": "Reactive", "fiberSuitability": ["Cotton"], "shadeRange": "Full shade card on request", "form": "Powder", "fastness": ["Wash Fast"], "packSize": "25 kg HDPE bag"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1001,6 +1067,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '91852feb-39eb-559c-83db-70b10672e6fc' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-01.jpg'
+where product_id = '91852feb-39eb-559c-83db-70b10672e6fc' and position = 0;
 -- Chemicals & Dyes 2: Disperse dyes for polyester
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1014,7 +1082,9 @@ Key details
 • Minimum order: 25 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Junyu-K, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:202510_%E5%A4%A9%E7%84%B6%E7%B4%A1%E7%B9%94%E6%9F%93%E7%9A%84%E7%B4%A0%E6%9D%90%E5%B1%95%E7%A4%BA%E6%AA%AF.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "dyeClass": "Disperse", "fiberSuitability": ["Polyester"], "shadeRange": "Full shade card on request", "form": "Powder", "fastness": ["Wash Fast", "Light Fast"], "packSize": "25 kg HDPE bag"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1031,6 +1101,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2184e3ab-9883-52b2-bea1-e33a60b4695e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-02.jpg'
+where product_id = '2184e3ab-9883-52b2-bea1-e33a60b4695e' and position = 0;
 -- Chemicals & Dyes 3: Acid dyes for nylon and wool
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1044,7 +1116,9 @@ Key details
 • Minimum order: 25 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: OlenkaHaiduk, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%D0%A0%D0%BE%D0%B1%D0%BE%D1%82%D0%B0_%D0%BD%D0%B0%D0%B4_%D0%B3%D1%83%D1%86%D1%83%D0%BB%D1%8C%D1%81%D1%8C%D0%BA%D0%B8%D0%BC_%D0%BB%D1%96%D0%B6%D0%BD%D0%B8%D0%BA%D0%BE%D0%BC,_%D1%81._%D0%A7%D0%BE%D1%80%D0%BD%D0%B0_%D0%A2%D0%B8%D1%81%D0%B0,_%D0%97%D0%B0%D0%BA%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D1%82%D1%8F.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "dyeClass": "Acid", "fiberSuitability": ["Nylon", "Wool"], "shadeRange": "Full shade card on request", "form": "Powder", "fastness": ["Light Fast"], "packSize": "25 kg HDPE bag"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1061,6 +1135,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'a83e3d7d-2a19-5485-9668-703aede2bbb6' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-03.jpg'
+where product_id = 'a83e3d7d-2a19-5485-9668-703aede2bbb6' and position = 0;
 -- Chemicals & Dyes 4: Wetting and scouring agent
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1074,7 +1150,9 @@ Key details
 • Minimum order: 50 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Soddaa, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Recycled-IBC.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "chemicalType": "Scouring Agent", "application": ["Pre-treatment", "Dyeing"], "form": "Liquid", "packSize": "50 kg HDPE drum", "shelfLife": "24", "safetyData": "Yes"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1091,6 +1169,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '7bc4e637-ec8f-5cb7-b47a-57522987d4c5' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-04.jpg'
+where product_id = '7bc4e637-ec8f-5cb7-b47a-57522987d4c5' and position = 0;
 -- Chemicals & Dyes 5: Sequestering agent for hard water
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1104,7 +1184,9 @@ Key details
 • Minimum order: 50 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Ajia4ty, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Market_seller_(Rubber).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "chemicalType": "Pre-treatment", "application": ["Pre-treatment", "Dyeing"], "form": "Liquid", "packSize": "50 kg HDPE drum", "shelfLife": "24", "safetyData": "Yes"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1121,6 +1203,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2bf2fa4c-716a-5109-8f85-26a30c1d49e4' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-05.jpg'
+where product_id = '2bf2fa4c-716a-5109-8f85-26a30c1d49e4' and position = 0;
 -- Chemicals & Dyes 6: Levelling agent for reactive dyeing
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1134,7 +1218,9 @@ Key details
 • Minimum order: 50 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: RAJIVVASUDEV, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Dyeing_machines.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "chemicalType": "Levelling Agent", "application": ["Dyeing"], "form": "Liquid", "packSize": "50 kg HDPE drum", "shelfLife": "24", "safetyData": "Yes"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1151,6 +1237,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '9e0d0ebc-73cf-5edb-8579-faf968f2dbf2' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-06.jpg'
+where product_id = '9e0d0ebc-73cf-5edb-8579-faf968f2dbf2' and position = 0;
 -- Chemicals & Dyes 7: Silicone softener, hydrophilic
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1194,7 +1282,9 @@ Key details
 • Minimum order: 25 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Maurizio Baldi, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Denim_130426.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Enzyme", "finish": ["Soft Hand"], "application": "Neutral cellulase for vintage looks with low back-staining", "packSize": "50 kg HDPE drum", "ecoFriendly": "No"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1211,6 +1301,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '193098e6-8c4f-5c79-b766-33c7f2d28b66' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-08.jpg'
+where product_id = '193098e6-8c4f-5c79-b766-33c7f2d28b66' and position = 0;
 -- Chemicals & Dyes 9: Fixing agent for reactive prints
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1224,7 +1316,9 @@ Key details
 • Minimum order: 50 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Лапоть, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Woodblocks_-_Tver_Museum_of_Everyday_Life.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Neutralizer", "finish": ["Soft Hand"], "application": "Improves wet fastness of reactive and direct dyes", "packSize": "50 kg HDPE drum", "ecoFriendly": "No"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1241,6 +1335,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '8d1327e0-2ebe-5f07-8b36-6fab1bbc4e4e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-09.jpg'
+where product_id = '8d1327e0-2ebe-5f07-8b36-6fab1bbc4e4e' and position = 0;
 -- Chemicals & Dyes 10: Anti-pilling finish for knits
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1254,7 +1350,9 @@ Key details
 • Minimum order: 50 kg
 • Lead time: 15-30 days
 • Customisation: not offered
-• Made in: Vapi, India',
+• Made in: Vapi, India
+
+Photo: Unknown author, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Mai%C3%B4,_Acervo_do_Museu_Paulista_da_USP_(12).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "finish": ["Anti-pilling"], "application": "Reduces pilling on cotton and blended knit fabrics", "packSize": "50 kg HDPE drum", "ecoFriendly": "No"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1271,6 +1369,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'a28a0fed-ddba-5895-8264-9a01188e3601' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/af38d4ac-6825-5bbd-8c1a-87685385fe68/samples/listing-10.jpg'
+where product_id = 'a28a0fed-ddba-5895-8264-9a01188e3601' and position = 0;
 -- Cosmetics & Beauty 1: Vitamin C face serum, 30 ml
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1314,7 +1414,9 @@ Key details
 • Minimum order: 1000 tubes
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Ubkoumbogny, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Oli%C3%A9vera_16.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Tube", "batchSize": "1000 tubes", "sampleAvailable": "Yes (Paid)", "productType": "Moisturizer", "skinType": ["All Skin Types"], "concerns": ["Hydration", "Redness"], "keyIngredients": ["Aloe Vera"], "volume": "100 g", "formulation": "Gel", "fragrance": "Lightly Scented"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1331,6 +1433,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'c12a5795-e9df-5ef6-9b0a-9a0582fe3d6a' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-02.jpg'
+where product_id = 'c12a5795-e9df-5ef6-9b0a-9a0582fe3d6a' and position = 0;
 -- Cosmetics & Beauty 3: Onion and black seed hair oil, 200 ml
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1374,7 +1478,9 @@ Key details
 • Minimum order: 1000 bars
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Cybularny, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Myd%C5%82o_z_Aleppo,_2.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Box", "batchSize": "1000 bars", "sampleAvailable": "Yes (Paid)", "productType": "Soap Bar", "skinType": ["All Skin Types"], "fragrance": "Light herbal", "keyIngredients": ["Glycerin"], "volume": "100 g", "features": ["Handmade"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1391,6 +1497,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '41674982-e6f1-561d-8fea-437e23de383b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-04.jpg'
+where product_id = '41674982-e6f1-561d-8fea-437e23de383b' and position = 0;
 -- Cosmetics & Beauty 5: Tinted lip balm with SPF 15
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1404,7 +1512,9 @@ Key details
 • Minimum order: 1000 pieces
 • Lead time: 7-15 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Rawpixel Ltd, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Various_colorful_lip_balm_sticks_(40821280864).jpg); resized.',
   attributes = '{"leadTime": "7-15 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Stick", "batchSize": "1000 pieces", "sampleAvailable": "Yes (Paid)", "productType": "Lip Balm", "finish": "Sheer", "shadeRange": "6 shades", "longevity": "4-6 Hours", "formulation": "Tube", "volume": "4.5 g", "features": ["Hydrating"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1421,6 +1531,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '9b1f8c8d-b81a-5e48-970b-fd1fa99c6071' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-05.jpg'
+where product_id = '9b1f8c8d-b81a-5e48-970b-fd1fa99c6071' and position = 0;
 -- Cosmetics & Beauty 6: Matte compact powder
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1434,7 +1546,9 @@ Key details
 • Minimum order: 500 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Joe Haupt from USA, CC BY-SA 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Vintage_Stratton_Womens_Powder_Compact,_Colorful_Floral_Design,_Measures_3_Inches_In_Diameter,_Made_In_England_(15559769662).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Compact", "batchSize": "500 pieces", "sampleAvailable": "Yes (Paid)", "productType": "Compact Powder", "finish": "Matte", "coverage": "Medium", "formulation": "Powder", "shadeRange": "4 shades", "skinType": ["All Skin Types"], "volume": "9 g", "longevity": "6-8 Hours"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1451,6 +1565,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'b5c9e2a7-ef30-5d28-a1fb-e704ea7f5d52' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-06.jpg'
+where product_id = 'b5c9e2a7-ef30-5d28-a1fb-e704ea7f5d52' and position = 0;
 -- Cosmetics & Beauty 7: Eau de parfum, 50 ml
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1464,7 +1580,9 @@ Key details
 • Minimum order: 300 bottles
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Retired electrician, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Perfume_flask_with_ground-in_stopper_plug,_13.5_cm_01.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Spray", "batchSize": "300 bottles", "sampleAvailable": "Yes (Paid)", "productType": "Eau de Parfum", "fragranceFamily": "Floral", "topNotes": "Bergamot, pink pepper", "middleNotes": "Jasmine, rose", "baseNotes": "Sandalwood, musk", "volume": "50 ml", "longevity": "6-8 Hours", "sillage": "Moderate", "concentration": "Eau de parfum (15–18%)"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1481,6 +1599,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'e5abdb71-89d2-5fde-9404-5f26d860a210' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-07.jpg'
+where product_id = 'e5abdb71-89d2-5fde-9404-5f26d860a210' and position = 0;
 -- Cosmetics & Beauty 8: Beard oil, 30 ml
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1494,7 +1614,9 @@ Key details
 • Minimum order: 500 bottles
 • Lead time: 30+ days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Tools of Men, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Beard_Oil_and_Brush.jpg); resized.',
   attributes = '{"leadTime": "30+ days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Bottle", "batchSize": "500 bottles", "sampleAvailable": "Yes (Paid)", "productType": "Beard Oil", "skinType": ["All Skin Types"], "keyIngredients": ["Jojoba Oil", "Argan Oil"], "volume": "30 ml", "features": ["Natural", "Paraben-free"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1511,6 +1633,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '20c0a265-0f4c-5b56-a2c3-1cc93a979a55' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-08.jpg'
+where product_id = '20c0a265-0f4c-5b56-a2c3-1cc93a979a55' and position = 0;
 -- Cosmetics & Beauty 9: Quick-dry nail polish, 9 ml
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1524,7 +1648,9 @@ Key details
 • Minimum order: 1000 bottles
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Esmé James @ezy_bezzie, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Nail_painting.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Bottle", "batchSize": "1000 bottles", "sampleAvailable": "Yes (Paid)", "productType": "Nail Polish", "finish": "Glossy", "shadeRange": "24 shades", "dryingTime": "Quick Dry (60s)", "volume": "9 ml", "features": ["Chip-resistant"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1541,6 +1667,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '615668a3-75e7-5751-b78a-3b7614f84674' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-09.jpg'
+where product_id = '615668a3-75e7-5751-b78a-3b7614f84674' and position = 0;
 -- Cosmetics & Beauty 10: Makeup brush set of 10
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1554,7 +1682,9 @@ Key details
 • Minimum order: 300 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Shixart1985, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Various_makeup_brushes_arranged_in_a_container_on_a_wooden_surface_in_a_well-lit_beauty_workspace.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "brandName": "Pure Botanica Labs", "privateLabelAvailable": "Yes", "customFormulation": "Yes", "shelfLife": "24 Months", "packaging": "Pouch", "batchSize": "300 sets", "sampleAvailable": "Yes (Paid)", "productType": "Makeup Brushes", "material": "Synthetic", "setSize": "10-piece", "features": ["Cruelty-free", "Travel-friendly"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -1571,6 +1701,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '1507f146-0de7-560d-8a6a-88187c960132' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/5ea25e88-0b75-56d8-b084-d7d883688538/samples/listing-10.jpg'
+where product_id = '1507f146-0de7-560d-8a6a-88187c960132' and position = 0;
 -- Dress 1: Women's floral wrap midi dress
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1620,7 +1752,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Mumbai, India',
+• Made in: Mumbai, India
+
+Photo: Halston, 1932-1990, Public domain, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Woman%27s_Dusty_Pink_Ultrasuede_Dress_by_Halston_-_DPLA_-_903c0128ec895a2b8f6d689248560fb7_(page_3).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Linen blend',
   gsm = '150',
@@ -1637,6 +1771,8 @@ Key details
   waist_sizes = null,
   lengths = array['Knee Length']::text[]
 where id = '426cd429-2a50-5126-969a-ddf8f9666c76' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-02.jpg'
+where product_id = '426cd429-2a50-5126-969a-ddf8f9666c76' and position = 0;
 -- Dress 3: Women's satin slip dress
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1686,7 +1822,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Mumbai, India',
+• Made in: Mumbai, India
+
+Photo: Shuma Shuam CHENMIEL, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:ZS_%E4%B8%AD%E5%B1%B1%E5%B8%82_Zhongshan_%E5%8F%A4%E9%8E%AE_Guzhen_%E9%8E%AE%E8%88%88%E8%B7%AF_Zhenxing_Road_shop_female_dress_clothing_window_display_morning_May_2023_Px3.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton voile',
   gsm = '80',
@@ -1703,6 +1841,8 @@ Key details
   waist_sizes = null,
   lengths = array['Maxi']::text[]
 where id = '441b9cd4-7a04-50ac-b990-a33438e3178d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-04.jpg'
+where product_id = '441b9cd4-7a04-50ac-b990-a33438e3178d' and position = 0;
 -- Dress 5: Women's belted jumpsuit
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1752,7 +1892,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Mumbai, India',
+• Made in: Mumbai, India
+
+Photo: Daryl Dress Company, Public domain, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Woman%27s_Brown_Wool_Sheath_Dress_Made_by_Daryl_Dress_Company_-_DPLA_-_61ee509c43b2171d929b0ddc4ad90df9_(page_1).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Rib knit',
   gsm = '220',
@@ -1769,6 +1911,8 @@ Key details
   waist_sizes = null,
   lengths = array['Midi']::text[]
 where id = '546b6082-4ae8-5a9a-8dfa-f8b6fa7b212c' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-06.jpg'
+where product_id = '546b6082-4ae8-5a9a-8dfa-f8b6fa7b212c' and position = 0;
 -- Dress 7: Women's A-line denim dress
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1884,7 +2028,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Mumbai, India',
+• Made in: Mumbai, India
+
+Photo: Smithsonian National Museum of African Art, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Moroccan_Kaftan,_National_Museum_of_African_Art_(3).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Rayon',
   gsm = '120',
@@ -1901,6 +2047,8 @@ Key details
   waist_sizes = null,
   lengths = array['Knee Length']::text[]
 where id = '79aa5207-c188-58db-843e-e79b9f09be32' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f7e8a5ca-0160-535c-8c16-8c70f9034e38/samples/listing-10.jpg'
+where product_id = '79aa5207-c188-58db-843e-e79b9f09be32' and position = 0;
 -- Ethnic Wear 1: Women's chikankari cotton kurta
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1917,7 +2065,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Lucknow, India',
+• Made in: Lucknow, India
+
+Photo: Parineetaji123, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chikan_embroidery_pink_and_green.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton',
   gsm = '100',
@@ -1934,6 +2084,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '457bf549-437f-5035-a277-df3c8498329f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-01.jpg'
+where product_id = '457bf549-437f-5035-a277-df3c8498329f' and position = 0;
 -- Ethnic Wear 2: Women's kurta, palazzo and dupatta set
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -1983,7 +2135,9 @@ Key details
 • Minimum order: 100 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Lucknow, India',
+• Made in: Lucknow, India
+
+Photo: Equatorstores, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Brown_Kurta.png); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton',
   gsm = '130',
@@ -2000,6 +2154,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'ab4d08e9-192b-590c-84e0-b37c35fa974b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-03.jpg'
+where product_id = 'ab4d08e9-192b-590c-84e0-b37c35fa974b' and position = 0;
 -- Ethnic Wear 4: Men's Nehru jacket
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2016,7 +2172,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Lucknow, India',
+• Made in: Lucknow, India
+
+Photo: ellenm1, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Yohji_Yamamoto_wool_suit_c_1990.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Poly silk',
   gsm = '180',
@@ -2033,6 +2191,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '1ca613ef-54c2-5aee-8f8d-3c961c499ffb' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-04.jpg'
+where product_id = '1ca613ef-54c2-5aee-8f8d-3c961c499ffb' and position = 0;
 -- Ethnic Wear 5: Women's anarkali gown
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2114,7 +2274,9 @@ Key details
 • Minimum order: 50 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Lucknow, India',
+• Made in: Lucknow, India
+
+Photo: Nishanth Duraisamy, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Pothys.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Chanderi silk',
   gsm = null,
@@ -2131,6 +2293,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'd696ab0d-5f16-5b77-9eda-050ad3601f10' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-07.jpg'
+where product_id = 'd696ab0d-5f16-5b77-9eda-050ad3601f10' and position = 0;
 -- Ethnic Wear 8: Women's straight kurta with pants
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2213,7 +2377,9 @@ Key details
 • Minimum order: 30 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Lucknow, India',
+• Made in: Lucknow, India
+
+Photo: Rainer Halama, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Tamilisches_Stra%C3%9Fenfest_Dortmund_2024-WUS06395.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Georgette',
   gsm = '100',
@@ -2230,6 +2396,8 @@ Key details
   waist_sizes = null,
   lengths = array['Knee Length']::text[]
 where id = 'b49d05e2-fede-55fb-806b-264d6c9c148d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/9d41f29b-9087-5475-821b-65f5f3827da5/samples/listing-10.jpg'
+where product_id = 'b49d05e2-fede-55fb-806b-264d6c9c148d' and position = 0;
 -- Fashion Accessories (Unisex) 1: Canvas laptop backpack
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2244,7 +2412,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 7-15 days
 • Customisation: available
-• Based in: New Delhi, India',
+• Based in: New Delhi, India
+
+Photo: Sir Tragedy, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Wenger_backpack.jpg); resized.',
   attributes = '{"leadTime": "7-15 days", "bagType": "Backpack", "material": "Canvas", "dimensions": "Standard sizes; custom sizes on request", "closure": "Zipper", "compartments": "3"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2261,6 +2431,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6151f0e0-08e8-53fd-a2e4-7bf073d6f21e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-01.jpg'
+where product_id = '6151f0e0-08e8-53fd-a2e4-7bf073d6f21e' and position = 0;
 -- Fashion Accessories (Unisex) 2: Reversible PU belt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2308,7 +2480,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: New Delhi, India',
+• Based in: New Delhi, India
+
+Photo: Panpanchik, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Panama._Chorsu_bazaar002.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Bucket Hat", "material": "Cotton"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2325,6 +2499,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '3d3c20fa-cd88-5f7e-9963-8dae406bfa92' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-03.jpg'
+where product_id = '3d3c20fa-cd88-5f7e-9963-8dae406bfa92' and position = 0;
 -- Fashion Accessories (Unisex) 4: Knit touchscreen winter gloves
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2340,7 +2516,9 @@ Key details
 • Minimum order: 300 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: New Delhi, India',
+• Based in: New Delhi, India
+
+Photo: User:Mateus2019, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Elektr._beheizbare_Handschuhe_%E2%80%9EMacna_Unite_2.0_RTX%E2%80%9C_(Paar)_2026-03-27_Mattes.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "gloveType": "Winter", "material": "Synthetic"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2357,6 +2535,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '394c85d2-7a59-50ae-b3b6-cf6d93e063a0' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-04.jpg'
+where product_id = '394c85d2-7a59-50ae-b3b6-cf6d93e063a0' and position = 0;
 -- Fashion Accessories (Unisex) 5: Stainless steel chain bracelet
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2402,7 +2582,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: New Delhi, India',
+• Based in: New Delhi, India
+
+Photo: Theanday999, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%E1%9E%80%E1%9F%92%E1%9E%9A%E1%9E%8E%E1%9E%B6%E1%9E%8F%E1%9F%8B%E1%9E%87%E1%9E%93%E1%9E%87%E1%9E%B6%E1%9E%8F%E1%9E%B7%E1%9E%8A%E1%9F%81%E1%9E%B8%E1%9E%98%E1%9E%97%E1%9E%B6%E1%9E%82%E1%9E%8F%E1%9E%B7%E1%9E%85.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "material": "Wool", "dimensions": "Standard sizes; custom sizes on request"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2419,6 +2601,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'ac079f1c-1b7f-561e-8d55-e679c8a4bd77' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-06.jpg'
+where product_id = 'ac079f1c-1b7f-561e-8d55-e679c8a4bd77' and position = 0;
 -- Fashion Accessories (Unisex) 7: Sports crew socks, 5-pair pack
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2496,7 +2680,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: New Delhi, India',
+• Based in: New Delhi, India
+
+Photo: Joe Haupt from USA, CC BY-SA 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Vintage_Texas_Instruments_Series_600_Women%27s_Electronic_Digital_Watch,_Red_LED_Display,_Made_In_USA,_Circa_1970s_(26160613560).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "watchType": "Digital", "strapMaterial": "Silicone", "caseDiameter": "42", "waterResistance": "50m"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2513,6 +2699,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0c94fcc0-77a8-561d-8175-13784ad1c497' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-09.jpg'
+where product_id = '0c94fcc0-77a8-561d-8175-13784ad1c497' and position = 0;
 -- Fashion Accessories (Unisex) 10: Faux-leather sling bag
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2527,7 +2715,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: New Delhi, India',
+• Based in: New Delhi, India
+
+Photo: RuinDig/Yuki Uchida, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Healthy-Back-Bag---Urban-Traveler-Grey_002.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "bagType": "Sling", "material": "Faux Leather", "dimensions": "Standard sizes; custom sizes on request", "closure": "Zipper", "compartments": "2"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2544,6 +2734,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'f9dd9933-3127-5943-b7f3-e83a21af2a8d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fd79a4e8-e65d-5f3d-8a92-1b50238a62a1/samples/listing-10.jpg'
+where product_id = 'f9dd9933-3127-5943-b7f3-e83a21af2a8d' and position = 0;
 -- Finance & Compliance Services 1: Monthly GST return filing for apparel businesses
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2587,7 +2779,9 @@ Key details
 • Minimum order: 1 month
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Gurugram, India',
+• Based in: Gurugram, India
+
+Photo: Prouty, Nelson Hindley, Public domain, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Double-entry_example_from_1926.png); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Retainer", "services": ["Bank Reconciliation", "Bookkeeping"], "software": ["Zoho Books", "Tally"], "clientTypes": ["SMEs", "Manufacturers"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2604,6 +2798,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '45806af6-2f2c-5d9a-8b21-fac8322a52fd' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/d26d58a9-4303-5389-9747-a40f63e3759c/samples/listing-02.jpg'
+where product_id = '45806af6-2f2c-5d9a-8b21-fac8322a52fd' and position = 0;
 -- Finance & Compliance Services 3: Income tax return for proprietors and firms
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2859,7 +3055,9 @@ Key details
 • Minimum order: 100 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: עמית לונן, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:DerbyShoes.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2876,6 +3074,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'e0bed615-423d-5447-872e-9f00974c857d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-01.jpg'
+where product_id = 'e0bed615-423d-5447-872e-9f00974c857d' and position = 0;
 -- Footwear 2: Men's casual canvas sneakers
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2891,7 +3091,9 @@ Key details
 • Minimum order: 200 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Nick-D, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Dr_Martens_Delray_shoes.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2908,6 +3110,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'b5c2f09b-c9bd-566e-8ca7-324ab8e69929' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-02.jpg'
+where product_id = 'b5c2f09b-c9bd-566e-8ca7-324ab8e69929' and position = 0;
 -- Footwear 3: Women's block-heel sandals
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2923,7 +3127,9 @@ Key details
 • Minimum order: 150 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Webshoes archive, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Image_of_strappy_sandals.png); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2940,6 +3146,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '4b694662-040b-508a-b8d3-26951f7679ed' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-03.jpg'
+where product_id = '4b694662-040b-508a-b8d3-26951f7679ed' and position = 0;
 -- Footwear 4: Women's embroidered juttis
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2955,7 +3163,9 @@ Key details
 • Minimum order: 150 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Vachan Rawal, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Handmade_Jutties.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -2972,6 +3182,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '490c2c90-3a71-5a59-ae4d-dfa34ba2c443' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-04.jpg'
+where product_id = '490c2c90-3a71-5a59-ae4d-dfa34ba2c443' and position = 0;
 -- Footwear 5: Kids' velcro sports shoes
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -2987,7 +3199,9 @@ Key details
 • Minimum order: 200 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Blakegripling ph, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Clarks_Daisy_Talk_girls_Mary_Jane_shoes.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3004,6 +3218,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'bd5e53a3-89c0-57bd-ac72-c2145fbe04d1' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-05.jpg'
+where product_id = 'bd5e53a3-89c0-57bd-ac72-c2145fbe04d1' and position = 0;
 -- Footwear 6: Men's leather loafers
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3019,7 +3235,9 @@ Key details
 • Minimum order: 100 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Samansmaee, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:946_black.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3036,6 +3254,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'a851268a-87da-56a2-bdb0-03ac96a68740' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-06.jpg'
+where product_id = 'a851268a-87da-56a2-bdb0-03ac96a68740' and position = 0;
 -- Footwear 7: Women's flat ballerinas
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3051,7 +3271,9 @@ Key details
 • Minimum order: 200 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Inma Molina from Málaga, Spain, CC BY-SA 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Proyect_365_-_Day_13,_Like_Girl_with_new_Shoes_-_Flickr_-_Lolo_%5E_Ol%C3%A9%5E_(Inma).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3068,6 +3290,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '367e7de8-ef1f-5bca-9092-3d7864216c2d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-07.jpg'
+where product_id = '367e7de8-ef1f-5bca-9092-3d7864216c2d' and position = 0;
 -- Footwear 8: Men's flip-flops
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3083,7 +3307,9 @@ Key details
 • Minimum order: 500 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: DiwangPingkian, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Flip_flop_(19446).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3100,6 +3326,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '3011dd60-31da-5a6e-8442-12fe36c267d5' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-08.jpg'
+where product_id = '3011dd60-31da-5a6e-8442-12fe36c267d5' and position = 0;
 -- Footwear 9: Women's running shoes
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3115,7 +3343,9 @@ Key details
 • Minimum order: 150 pairs
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Agra, India',
+• Made in: Agra, India
+
+Photo: Femivaco, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Woman_tying_running_shoes_on_front_steps.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3132,6 +3362,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '90244d08-825a-5205-afc3-831cd989fcdc' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/f863a722-c70d-52c3-ae8a-e3022db264e0/samples/listing-09.jpg'
+where product_id = '90244d08-825a-5205-afc3-831cd989fcdc' and position = 0;
 -- Footwear 10: Kids' school shoes
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3178,7 +3410,9 @@ Key details
 • Availability: Project Basis
 • Works: Remote
 • Customisation: available
-• Based in: Bengaluru, India',
+• Based in: Bengaluru, India
+
+Photo: Trekinasibyllinedream, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Arend-Basile_Givenchy_Fashion_Illustration.jpg); resized.',
   attributes = '{"experience": "6", "availability": "Project Basis", "workMode": "Remote", "hourlyRate": "800", "skills": "Mood board, sketches and colourways for ten styles", "portfolio": "Sample profile: no portfolio", "languages": "English, Hindi", "designServices": ["Collection Design", "Print Design", "Embroidery Design"], "categories": ["Womenswear", "Menswear"], "software": ["Adobe Illustrator", "Photoshop", "CLO 3D"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3195,6 +3429,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '70880d4c-09c3-5c6c-99a4-928cbc68ced0' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-01.jpg'
+where product_id = '70880d4c-09c3-5c6c-99a4-928cbc68ced0' and position = 0;
 -- Freelancers & Job Workers 2: Garment tech pack with measurement chart
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3209,7 +3445,9 @@ Key details
 • Availability: Project Basis
 • Works: Remote
 • Customisation: available
-• Based in: Bengaluru, India',
+• Based in: Bengaluru, India
+
+Photo: Журнал «Живописное обозрѣнiе странъ свѣта» (1872—1900,1902—1905), Public domain, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%D0%96%D0%B8%D0%B2%D0%BE%D0%BF%D0%B8%D1%81%D0%BD%D0%BE%D0%B5_%D0%BE%D0%B1%D0%BE%D0%B7%D1%80%D0%B5%D0%BD%D0%B8%D0%B5_1892,_%E2%84%96_35-45_Page_097.jpg); resized.',
   attributes = '{"experience": "6", "availability": "Project Basis", "workMode": "Remote", "hourlyRate": "800", "skills": "Flats, construction details, BOM and graded specs", "portfolio": "Sample profile: no portfolio", "languages": "English, Hindi", "includes": ["Construction Details", "Packaging Specs", "BOM"], "software": ["Techpacker"], "garmentTypes": ["Woven Tops", "Knits", "Dresses"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3226,6 +3464,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '11e2947a-8b3a-5978-9175-9d451e6dd3e3' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-02.jpg'
+where product_id = '11e2947a-8b3a-5978-9175-9d451e6dd3e3' and position = 0;
 -- Freelancers & Job Workers 3: Proto sample development
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3302,7 +3542,9 @@ Key details
 • Availability: Project Basis
 • Works: Remote
 • Customisation: available
-• Based in: Bengaluru, India',
+• Based in: Bengaluru, India
+
+Photo: Shixart1985, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Close-up_of_a_woman_looking_at_a_credit_card_while_working_on_her_laptop.jpg); resized.',
   attributes = '{"experience": "6", "availability": "Project Basis", "workMode": "Remote", "hourlyRate": "800", "skills": "Titles, bullets and attributes for Amazon, Myntra or Cosora", "portfolio": "Sample profile: no portfolio", "languages": "English, Hindi", "services": ["Catalog Copy"], "industries": ["Fashion", "E-commerce"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3319,6 +3561,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '642eed91-b69b-52b6-aae5-3120d0c3cb10' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-05.jpg'
+where product_id = '642eed91-b69b-52b6-aae5-3120d0c3cb10' and position = 0;
 -- Freelancers & Job Workers 6: Model and stylist coordination for a shoot day
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3333,7 +3577,9 @@ Key details
 • Availability: Project Basis
 • Works: Hybrid
 • Customisation: available
-• Based in: Bengaluru, India',
+• Based in: Bengaluru, India
+
+Photo: Michiel, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Catwalk_fashion_week_westergas_2010.jpg); resized.',
   attributes = '{"experience": "6", "availability": "Project Basis", "workMode": "Hybrid", "hourlyRate": "800", "skills": "Model, stylist and hair-and-makeup booking", "portfolio": "Sample profile: no portfolio", "languages": "English, Hindi", "services": ["Hair & Makeup Coordination", "Styling"], "shootTypes": ["E-commerce", "Lookbook"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3350,6 +3596,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'f4834694-55c1-5f45-8f15-6903c94c3aeb' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-06.jpg'
+where product_id = 'f4834694-55c1-5f45-8f15-6903c94c3aeb' and position = 0;
 -- Freelancers & Job Workers 7: Micro-influencer campaign management
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3395,7 +3643,9 @@ Key details
 • Availability: Project Basis
 • Works: Remote
 • Customisation: available
-• Based in: Bengaluru, India',
+• Based in: Bengaluru, India
+
+Photo: Gabi262, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Lauren_Lee_Couture_Swatches.jpg); resized.',
   attributes = '{"experience": "6", "availability": "Project Basis", "workMode": "Remote", "hourlyRate": "800", "skills": "Colours, silhouettes and fabrics for your segment", "portfolio": "Sample profile: no portfolio", "languages": "English, Hindi", "services": ["Color Trends", "Fabric Trends", "Style Trends"], "categories": ["Womenswear", "Menswear"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3412,6 +3662,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '8ace170d-94be-5d67-8705-010ba3c214ff' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c228ce66-f7cd-5171-b273-bdb6bfdf517f/samples/listing-08.jpg'
+where product_id = '8ace170d-94be-5d67-8705-010ba3c214ff' and position = 0;
 -- Freelancers & Job Workers 9: Trademark filing for a fashion brand
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3487,7 +3739,9 @@ Key details
 • Minimum order: 1 month
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Hyderabad, India',
+• Based in: Hyderabad, India
+
+Photo: YeraC, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:BML_Bamailong_factory_workers_1-013.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Retainer", "modules": ["Production Planning"], "deployment": "Cloud", "industry": ["Apparel", "Textile"], "integrations": ["Tally", "Shopify"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -3504,6 +3758,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'bf3ad285-cf42-598b-9418-1f722a2800d1' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/e1085b0e-c1dd-5f28-a93d-4d05b55c9cc3/samples/listing-01.jpg'
+where product_id = 'bf3ad285-cf42-598b-9418-1f722a2800d1' and position = 0;
 -- IT, Software & SaaS 2: Inventory and warehouse SaaS
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3790,7 +4046,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ahmedabad, India',
+• Made in: Ahmedabad, India
+
+Photo: Heroeswithmetaphors, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Kiton_button-fly_jeans.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton stretch denim',
   gsm = '11 oz',
@@ -3807,6 +4065,8 @@ Key details
   waist_sizes = array['28', '30', '32', '34', '36']::text[],
   lengths = array['Full Length']::text[]
 where id = '018810a1-28df-5e61-a204-6c14939a86ea' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-01.jpg'
+where product_id = '018810a1-28df-5e61-a204-6c14939a86ea' and position = 0;
 -- Jeans 2: Men's straight-fit rigid jeans
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3955,7 +4215,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ahmedabad, India',
+• Made in: Ahmedabad, India
+
+Photo: Tamorlan, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Leggins_-_Rastro.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Knit denim',
   gsm = '9 oz',
@@ -3972,6 +4234,8 @@ Key details
   waist_sizes = null,
   lengths = array['Full Length']::text[]
 where id = '65e14565-1d06-5fe6-a9b0-d2b6d03c378f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-06.jpg'
+where product_id = '65e14565-1d06-5fe6-a9b0-d2b6d03c378f' and position = 0;
 -- Jeans 7: Women's mom-fit jeans
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -3988,7 +4252,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ahmedabad, India',
+• Made in: Ahmedabad, India
+
+Photo: Sosostein, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Momjeans.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton denim',
   gsm = '11 oz',
@@ -4005,6 +4271,8 @@ Key details
   waist_sizes = array['26', '28', '30', '32', '34']::text[],
   lengths = array['Full Length']::text[]
 where id = '9ec42e11-8873-5868-adcf-f1c29c50000d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-07.jpg'
+where product_id = '9ec42e11-8873-5868-adcf-f1c29c50000d' and position = 0;
 -- Jeans 8: Men's distressed tapered jeans
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4021,7 +4289,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ahmedabad, India',
+• Made in: Ahmedabad, India
+
+Photo: Lee, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Lichtblauwe_spijkerbroek,_%E2%80%9CLee%E2%80%9D,_objectnr_73061(1).JPG); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton stretch denim',
   gsm = '11 oz',
@@ -4038,6 +4308,8 @@ Key details
   waist_sizes = array['28', '30', '32', '34', '36']::text[],
   lengths = array['Full Length']::text[]
 where id = '964ced35-5bea-5277-8763-6037515b4a23' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/063fe3fe-e329-584e-9c65-df6725c7ce91/samples/listing-08.jpg'
+where product_id = '964ced35-5bea-5277-8763-6037515b4a23' and position = 0;
 -- Jeans 9: Women's bootcut jeans
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4318,7 +4590,9 @@ Key details
 • Minimum order: 100 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Kolkata, India',
+• Made in: Kolkata, India
+
+Photo: Rainer Halama, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Tamilisches_Stra%C3%9Fenfest_Dortmund_2024-WUS06392.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Art silk',
   gsm = '110',
@@ -4335,6 +4609,8 @@ Key details
   waist_sizes = null,
   lengths = array['Knee Length']::text[]
 where id = '5786f542-04a6-5050-a845-6639064b2525' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/listing-07.jpg'
+where product_id = '5786f542-04a6-5050-a845-6639064b2525' and position = 0;
 -- Kidswear 8: Kids' cotton vests, pack of 5
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4417,7 +4693,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Kolkata, India',
+• Made in: Kolkata, India
+
+Photo: Anna.Massini, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Maglioni_fatti_a_mano_ai_ferri.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Acrylic wool',
   gsm = null,
@@ -4434,6 +4712,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '90c2710a-1109-505a-85e4-63caeba3600b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/56cc226c-e9e8-51b1-b2b6-2babb81151e9/samples/listing-10.jpg'
+where product_id = '90c2710a-1109-505a-85e4-63caeba3600b' and position = 0;
 -- Labels & Tags 1: Damask woven brand labels
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4507,7 +4787,9 @@ Key details
 • Minimum order: 5000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: Yosomono from Fukuoka, Japan, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Tokyo_IMG_0873_(6224658901).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "material": "Nylon", "content": ["Care Symbols"], "foldType": "End Fold"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -4524,6 +4806,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'faa60dde-6781-546d-b8ed-5e53bf5c22e0' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a137d525-a734-5770-a31b-1cb322c5ff0e/samples/listing-03.jpg'
+where product_id = 'faa60dde-6781-546d-b8ed-5e53bf5c22e0' and position = 0;
 -- Labels & Tags 4: Kraft paper hang tags
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4777,7 +5061,9 @@ Key details
 • Minimum order: 1 parcel
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: Paul Downey from Berkhamsted, UK, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Ebaying_(3152137).jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "services": ["Express Delivery"], "coverage": ["PAN India"], "vehicleTypes": ["Bike", "Tempo"], "specialHandling": ["Fragile"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -4794,6 +5080,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6556b08d-52c4-5529-a445-33aada9cc8da' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-02.jpg'
+where product_id = '6556b08d-52c4-5529-a445-33aada9cc8da' and position = 0;
 -- Logistics & Supply Chain 3: Garment warehousing with pick and pack
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4807,7 +5095,9 @@ Key details
 • Minimum order: 100 sq ft
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: Shixart1985, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Warehouse_filled_with_stacked_pallets_showcasing_efficient_space_usage_during_daytime_operations.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "services": ["Pick & Pack", "Storage"], "warehouseSize": "40,000 sq ft", "locations": "Mumbai", "features": ["24/7 Security", "CCTV", "Fire Safety"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -4824,6 +5114,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '7897e8be-6c43-58c1-85ec-9d8343d9b937' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-03.jpg'
+where product_id = '7897e8be-6c43-58c1-85ec-9d8343d9b937' and position = 0;
 -- Logistics & Supply Chain 4: Returns processing for ecommerce
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4837,7 +5129,9 @@ Key details
 • Minimum order: 200 units
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: HireAHelper, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Small_Cardboard_Moving_Box_Taped_Closed_(47303024341).jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "services": ["Returns Processing"], "warehouseSize": "40,000 sq ft", "locations": "Mumbai", "features": ["24/7 Security", "CCTV", "Fire Safety"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -4854,6 +5148,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '261ea05b-241b-58dd-a6a2-e21e53b72c5f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-04.jpg'
+where product_id = '261ea05b-241b-58dd-a6a2-e21e53b72c5f' and position = 0;
 -- Logistics & Supply Chain 5: Export customs clearance
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4867,7 +5163,9 @@ Key details
 • Minimum order: 1 shipment
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: Peter Jeffery, CC BY-SA 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Landguard_Fort_-_geograph.org.uk_-_6226892.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "services": ["Custom Clearance"], "tradeLanes": ["Middle East", "EU", "USA"], "shipmentTypes": ["FCL", "LCL", "Air Cargo"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -4884,6 +5182,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '41c8ee04-31d4-5d7c-b215-f69c39ab2ad3' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-05.jpg'
+where product_id = '41c8ee04-31d4-5d7c-b215-f69c39ab2ad3' and position = 0;
 -- Logistics & Supply Chain 6: Sea freight FCL booking
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4927,7 +5227,9 @@ Key details
 • Minimum order: 1 trip
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: Sulthan Naufal, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Mitsubishi_Fuso_The_Great_(B_9896_BY).jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "services": ["Road Transport"], "coverage": ["PAN India"], "vehicleTypes": ["Container", "Trailer"], "specialHandling": ["Fragile"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -4944,6 +5246,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6d582917-9327-5207-b5e5-6e1a07f504dd' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-07.jpg'
+where product_id = '6d582917-9327-5207-b5e5-6e1a07f504dd' and position = 0;
 -- Logistics & Supply Chain 8: Air freight for export orders
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -4987,7 +5291,9 @@ Key details
 • Minimum order: 100 sq ft
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: Bukit angkasa makmur, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Sir20.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "services": ["Storage"], "warehouseSize": "40,000 sq ft", "locations": "Mumbai", "features": ["24/7 Security", "CCTV", "Fire Safety"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5004,6 +5310,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'd271e99b-51da-5bef-9fce-7ff974b8ebe9' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-09.jpg'
+where product_id = 'd271e99b-51da-5bef-9fce-7ff974b8ebe9' and position = 0;
 -- Logistics & Supply Chain 10: Ecommerce last-mile delivery
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5017,7 +5325,9 @@ Key details
 • Minimum order: 100 parcels
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: college.library, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Last_pizza_delivery_of_the_night_(21301214092).jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "services": ["Last Mile"], "coverage": ["PAN India"], "vehicleTypes": ["Bike"], "specialHandling": ["Fragile"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5034,6 +5344,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '15d1ac96-7c42-5fc1-82a3-a8c6b74d192f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/890ee646-6006-5ed0-971c-069a0a852272/samples/listing-10.jpg'
+where product_id = '15d1ac96-7c42-5fc1-82a3-a8c6b74d192f' and position = 0;
 -- Machinery & Equipment 1: Single-needle lockstitch machine
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5047,7 +5359,9 @@ Key details
 • Minimum order: 1 unit
 • Lead time: 15-30 days
 • Customisation: not offered
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: Eunostos, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Atelier_de_confection_textile_avec_machines_%C3%A0_coudre_Singer_-_Mus%C3%A9e_de_la_chemiserie.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "machineType": "Single Needle Lockstitch", "brand": "Other", "model": "Sample model (illustrative)", "speed": "5000", "drive": "Servo Motor", "condition": "New", "warranty": "1 year on parts", "power": "750", "voltage": "220V Single Phase"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5064,6 +5378,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '042eaeae-6b7b-5435-9db5-4eafeeb58731' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-01.jpg'
+where product_id = '042eaeae-6b7b-5435-9db5-4eafeeb58731' and position = 0;
 -- Machinery & Equipment 2: Four-thread overlock machine
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5077,7 +5393,9 @@ Key details
 • Minimum order: 1 unit
 • Lead time: 15-30 days
 • Customisation: not offered
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: Victuallers, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Singer_overlocker.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "machineType": "Overlock", "brand": "Other", "model": "Sample model (illustrative)", "speed": "5000", "drive": "Direct Drive", "condition": "New", "warranty": "1 year on parts", "power": "750", "voltage": "220V Single Phase"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5094,6 +5412,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '8e96315c-aab5-5c69-85b0-77c38807386a' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-02.jpg'
+where product_id = '8e96315c-aab5-5c69-85b0-77c38807386a' and position = 0;
 -- Machinery & Equipment 3: Straight-knife cutting machine, 8 inch
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5137,7 +5457,9 @@ Key details
 • Minimum order: 1 unit
 • Lead time: 7-15 days
 • Customisation: not offered
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: Xofc, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Toyota.Embroidery_machine.510SP.1986.jpg); resized.',
   attributes = '{"leadTime": "7-15 days", "machineType": "Single Head", "brand": "Other", "heads": "1", "needles": "15", "maxSpeed": "1200", "embroideryArea": "400 × 500 mm", "condition": "New"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5154,6 +5476,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '9a0c4147-cc0f-5db8-b16d-af5f031a2820' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-04.jpg'
+where product_id = '9a0c4147-cc0f-5db8-b16d-af5f031a2820' and position = 0;
 -- Machinery & Equipment 5: Steam iron with vacuum table
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5228,7 +5552,9 @@ Key details
 • Minimum order: 1 unit
 • Lead time: 15-30 days
 • Customisation: not offered
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: Amakuha, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Domus_washing_machine.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "machineType": "Industrial Washer", "capacity": "50", "brand": "Unbranded", "condition": "New"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5245,6 +5571,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '9ec5bcf6-7135-521e-b698-0c7005982a5f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-07.jpg'
+where product_id = '9ec5bcf6-7135-521e-b698-0c7005982a5f' and position = 0;
 -- Machinery & Equipment 8: GSM cutter and digital balance
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5258,7 +5586,9 @@ Key details
 • Minimum order: 1 set
 • Lead time: 15-30 days
 • Customisation: not offered
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: Srini297, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Weighing_Balance.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "equipmentType": "GSM Cutter", "brand": "Unbranded", "condition": "New", "calibration": "Calibrated"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5275,6 +5605,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'f28a4789-cfa7-59bc-b741-e1da41ed41ee' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-08.jpg'
+where product_id = 'f28a4789-cfa7-59bc-b741-e1da41ed41ee' and position = 0;
 -- Machinery & Equipment 9: Full-body fibreglass mannequin
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5289,7 +5621,9 @@ Key details
 • Minimum order: 5 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: Matti Blume, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Minerva,_VELO_2025,_Berlin_(P1047050).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Full Body", "material": "Fiberglass", "finish": "Matte", "baseType": "Glass Base"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5306,6 +5640,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0758a6da-c5f6-5ece-8579-a3a8141414c2' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-09.jpg'
+where product_id = '0758a6da-c5f6-5ece-8579-a3a8141414c2' and position = 0;
 -- Machinery & Equipment 10: Garment folding and polybag sealer
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5319,7 +5655,9 @@ Key details
 • Minimum order: 1 unit
 • Lead time: 15-30 days
 • Customisation: not offered
-• Based in: Coimbatore, India',
+• Based in: Coimbatore, India
+
+Photo: ОператороФФ (operatoroff.ru), CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%D0%93-%D0%BE%D0%B1%D1%80%D0%B0%D0%B7%D0%BD%D1%8B%D0%B9_%D0%B7%D0%B0%D0%BF%D0%B0%D0%B9%D1%89%D0%B8%D0%BA_%D1%82%D0%B5%D1%80%D0%BC%D0%BE%D1%83%D1%81%D0%B0%D0%B4%D0%BE%D1%87%D0%BD%D0%BE%D0%B9_%D0%BF%D0%BB%D1%91%D0%BD%D0%BA%D0%B8,_%D1%83%D0%BF%D0%B0%D0%BA%D0%BE%D0%B2%D0%BA%D0%B0_%D0%BA%D0%BE%D1%80%D0%BE%D0%B1%D0%BA%D0%B8.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "machineType": "Folding Machine", "speed": "20", "brand": "Unbranded", "condition": "New"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5336,6 +5674,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '096961ff-1454-515b-9c0b-9c8ae7b4a587' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c2f74b97-49e1-5cf1-85f9-ce1638e961dc/samples/listing-10.jpg'
+where product_id = '096961ff-1454-515b-9c0b-9c8ae7b4a587' and position = 0;
 -- Marketing, PR & Photography 1: Lookbook photoshoot with model
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5349,7 +5689,9 @@ Key details
 • Minimum order: 1 day
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Mumbai, India',
+• Based in: Mumbai, India
+
+Photo: Journyes, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Minimalist_fashion_editorial_of_a_girl.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "portfolio": "Sample store: no portfolio", "clientBrands": "None (sample store)", "photoServices": ["Lookbook"], "videoServices": ["Product Videos", "Reels"], "studio": "Own Studio", "equipment": "Full-frame cameras, strobes, backdrops"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5366,6 +5708,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'a72e0f8f-81e5-5f75-8b57-1ed697d8670a' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/15189033-0bf6-5c52-abc9-4b859325ace5/samples/listing-01.jpg'
+where product_id = 'a72e0f8f-81e5-5f75-8b57-1ed697d8670a' and position = 0;
 -- Marketing, PR & Photography 2: Instagram management for fashion brands
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5652,7 +5996,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: Marcus Quigmire from Florida, USA, CC BY-SA 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Dress_Shirts_(3168545260).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Poly cotton',
   gsm = '120',
@@ -5669,6 +6015,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0abd7833-dfc2-5428-8af6-484e1bb7efad' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-01.jpg'
+where product_id = '0abd7833-dfc2-5428-8af6-484e1bb7efad' and position = 0;
 -- Others (Custom) 2: Industrial workwear coverall
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5717,7 +6065,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: Jeangagnon, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Chemin_de_table_autrichien.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton',
   gsm = null,
@@ -5734,6 +6084,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '3defbf94-bdbf-5f49-8b97-78daf76114c5' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-03.jpg'
+where product_id = '3defbf94-bdbf-5f49-8b97-78daf76114c5' and position = 0;
 -- Others (Custom) 4: Custom cushion covers
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5749,7 +6101,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: 丘崈, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%E9%87%91%E7%93%9C%E7%9F%B3%E5%9B%9B%E9%80%A3%E6%A3%9F%E5%B1%85%E9%96%93.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton canvas',
   gsm = null,
@@ -5766,6 +6120,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2fbaf9fb-b76f-524c-bda8-ea47e2572737' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-04.jpg'
+where product_id = '2fbaf9fb-b76f-524c-bda8-ea47e2572737' and position = 0;
 -- Others (Custom) 5: Made-to-measure curtains
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5781,7 +6137,9 @@ Key details
 • Minimum order: 50 panels
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: Zohasheikh, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Traditional_Indian_Red_Curtains.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Polyester blackout',
   gsm = null,
@@ -5798,6 +6156,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6e8bd0c5-bab8-5955-be2d-f86575d4e1f8' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-05.jpg'
+where product_id = '6e8bd0c5-bab8-5955-be2d-f86575d4e1f8' and position = 0;
 -- Others (Custom) 6: Custom logo towels
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5813,7 +6173,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: 泉佐野市観光協会, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Senshu_taoru.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton terry',
   gsm = null,
@@ -5830,6 +6192,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'ae124cbd-35c6-54ed-b9c6-4c7bcdfa9abb' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-06.jpg'
+where product_id = 'ae124cbd-35c6-54ed-b9c6-4c7bcdfa9abb' and position = 0;
 -- Others (Custom) 7: Custom aprons
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5876,7 +6240,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: Handicraft Villa, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:LEATHER_LAPTOP_BAG_-_HANDICRAFT_VILLA.png); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5893,6 +6259,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '10589223-f562-56a0-bfb8-81a8f47b38d0' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-08.jpg'
+where product_id = '10589223-f562-56a0-bfb8-81a8f47b38d0' and position = 0;
 -- Others (Custom) 9: Upholstery fabric to order
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5908,7 +6276,9 @@ Key details
 • Minimum order: 100 metres
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: Eugenepik, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Leather_chair_upholstery_by_Eugene_Pik_(2022)_02.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Polyester velvet',
   gsm = null,
@@ -5925,6 +6295,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'dd7789c6-7540-53aa-ac38-bbaad0e3aa7f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-09.jpg'
+where product_id = 'dd7789c6-7540-53aa-ac38-bbaad0e3aa7f' and position = 0;
 -- Others (Custom) 10: Custom tote bags for events
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5940,7 +6312,9 @@ Key details
 • Minimum order: 300 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Surat, India',
+• Made in: Surat, India
+
+Photo: Maarten Heerlien from Voorschoten, The Netherlands, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Tokyo_2013_105_3_(9412154018).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton canvas',
   gsm = null,
@@ -5957,6 +6331,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'a5facab8-ab01-5b53-bce9-206733515195' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/885fc36b-cbe8-5359-a830-28b248f2d1f9/samples/listing-10.jpg'
+where product_id = 'a5facab8-ab01-5b53-bce9-206733515195' and position = 0;
 -- Packaging 1: Self-adhesive garment polybags
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -5970,7 +6346,9 @@ Key details
 • Minimum order: 5000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Noida, India',
+• Made in: Noida, India
+
+Photo: Rdrg109, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Harina_en_bolsa_de_pl%C3%A1stico.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "customization": ["Logo Print", "Custom Size"], "material": "LDPE", "micron": "40", "size": "Custom sizes on request", "type": "Self-seal"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -5987,6 +6365,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0383af92-34c5-5074-8ff5-5e3c55699205' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-01.jpg'
+where product_id = '0383af92-34c5-5074-8ff5-5e3c55699205' and position = 0;
 -- Packaging 2: 3-ply corrugated shipping boxes
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6000,7 +6380,9 @@ Key details
 • Minimum order: 1000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Noida, India',
+• Made in: Noida, India
+
+Photo: HireAHelper, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Small_Cardboard_Moving_Box_Taped_Closed_(47303024341).jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "customization": ["Logo Print", "Custom Size"], "flute": "B Flute", "ply": "3 Ply", "burstStrength": "12", "size": "Custom sizes on request"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6017,6 +6399,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'ad1e3d9a-7efb-56b6-a0df-b4a5c99088f8' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-02.jpg'
+where product_id = 'ad1e3d9a-7efb-56b6-a0df-b4a5c99088f8' and position = 0;
 -- Packaging 3: Rigid gift boxes for apparel
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6030,7 +6414,9 @@ Key details
 • Minimum order: 500 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Noida, India',
+• Made in: Noida, India
+
+Photo: Olugold, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Valentine%27s_day_gift_box.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "customization": ["Logo Print", "Custom Size"], "material": "Rigid Board", "style": "Magnetic Closure", "finish": ["Matte Lamination", "Foil"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6047,6 +6433,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'bc01cacc-fecd-5160-84b5-a8d8eeb9add1' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-03.jpg'
+where product_id = 'bc01cacc-fecd-5160-84b5-a8d8eeb9add1' and position = 0;
 -- Packaging 4: Kraft paper shopping bags
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6060,7 +6448,9 @@ Key details
 • Minimum order: 1000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Noida, India',
+• Made in: Noida, India
+
+Photo: YannBernat, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Pr%C3%A9paration_Kit_Delivr%27aide.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "customization": ["Logo Print", "Custom Size"], "paperType": "Kraft", "handle": "Twisted Paper", "size": "Custom sizes on request"}'::jsonb,
   fabric = null,
   gsm = '120',
@@ -6077,6 +6467,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'f2f99309-f2bc-5f8e-b4f4-6bb216396d28' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-04.jpg'
+where product_id = 'f2f99309-f2bc-5f8e-b4f4-6bb216396d28' and position = 0;
 -- Packaging 5: Frosted ziplock bags
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6120,7 +6512,9 @@ Key details
 • Minimum order: 2000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Noida, India',
+• Made in: Noida, India
+
+Photo: WebjokerNL, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Belastingdienst_Belastingbrief_brieven_via_CasinoNieuws.nl_LINK_VEREIST_06.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "customization": ["Logo Print", "Custom Size"], "material": "Poly Mailer", "size": "Custom sizes on request", "closure": "Peel & Seal"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6137,6 +6531,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2f5e9ffe-70f2-585e-9dbd-b4ddf360d398' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/fcdf5a63-00f5-5397-a779-5b9587421ed5/samples/listing-06.jpg'
+where product_id = '2f5e9ffe-70f2-585e-9dbd-b4ddf360d398' and position = 0;
 -- Packaging 7: Printed tissue paper
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6270,7 +6666,9 @@ Key details
 • Minimum order: 200 pieces
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: Unknown author, CC BY-SA 2.5, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Screenprinting-example-obin.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "minOrder": "200 pieces", "samplePolicy": "Paid Samples", "printTypes": ["Screen Print", "Water Base", "Plastisol"], "maxColors": "5-8", "maxPrintSize": "14 × 16 inches", "garmentTypes": ["T-Shirts", "Hoodies", "Cut Pieces"], "dailyCapacity": "2,000 pieces a day"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6287,6 +6685,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0f49cf42-eae3-5a0f-b02a-a8eb9437e7f2' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-01.jpg'
+where product_id = '0f49cf42-eae3-5a0f-b02a-a8eb9437e7f2' and position = 0;
 -- Printing & Manufacturing Services 2: Digital printing on fabric
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6300,7 +6700,9 @@ Key details
 • Minimum order: 100 metres
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: Popolon, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Beijing.China_printing_museum.Han_dynasty.pattern_printing.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "minOrder": "100 metres", "samplePolicy": "Paid Samples", "maxColors": "Unlimited (Digital)", "maxPrintSize": "14 × 16 inches", "garmentTypes": ["Yardage"], "dailyCapacity": "2,000 pieces a day"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6317,6 +6719,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6da1caaf-f59e-53a2-a724-fb7ce61b2dd9' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-02.jpg'
+where product_id = '6da1caaf-f59e-53a2-a724-fb7ce61b2dd9' and position = 0;
 -- Printing & Manufacturing Services 3: DTF printing for garments
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6330,7 +6734,9 @@ Key details
 • Minimum order: 100 prints
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: Scrud123, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Heat_press_for_fabirc_screen_printing.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "minOrder": "100 prints", "samplePolicy": "Paid Samples", "printTypes": ["DTF"], "maxColors": "Unlimited (Digital)", "maxPrintSize": "14 × 16 inches", "garmentTypes": ["T-Shirts", "Hoodies", "Bags", "Caps"], "dailyCapacity": "2,000 pieces a day"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6347,6 +6753,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2f1a86a8-0712-57ac-a0e3-71139262a02b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-03.jpg'
+where product_id = '2f1a86a8-0712-57ac-a0e3-71139262a02b' and position = 0;
 -- Printing & Manufacturing Services 4: Logo embroidery on garments
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6360,7 +6768,9 @@ Key details
 • Minimum order: 100 pieces
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: Breaker222, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:2024-09-21_07_kulturnacht_jugend_hackt_-_rl-cam.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "minOrder": "100 pieces", "samplePolicy": "Paid Samples", "machineHeads": "12", "maxColors": "6", "maxArea": "400 × 500 mm", "stitchTypes": ["Flat", "3D Puff"], "digitizing": "In-house", "dailyCapacity": "2,000 pieces a day"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6377,6 +6787,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '58faf0be-3a26-52f5-9eb7-aef213d76859' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-04.jpg'
+where product_id = '58faf0be-3a26-52f5-9eb7-aef213d76859' and position = 0;
 -- Printing & Manufacturing Services 5: Sequin and multi-head embroidery
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6420,7 +6832,9 @@ Key details
 • Minimum order: 200 pieces
 • Turnaround: 3-7 days
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: Tn.kuvat, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:20251008_dyeing.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "3-7 days", "priceModel": "Fixed Price", "minOrder": "200 pieces", "samplePolicy": "Paid Samples", "dyeTypes": ["Reactive", "Pigment"], "fabricTypes": ["Cotton", "Blends"], "processes": ["Garment Dye"], "dailyCapacity": "2000"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6437,6 +6851,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'edd66412-12b5-5181-9876-eb91cb7ca99b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-06.jpg'
+where product_id = 'edd66412-12b5-5181-9876-eb91cb7ca99b' and position = 0;
 -- Printing & Manufacturing Services 7: Yarn-dyeing job work
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6450,7 +6866,9 @@ Key details
 • Minimum order: 100 kg
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: THE GOKUL, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Yarn_in_weaving_machine.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "minOrder": "100 kg", "samplePolicy": "Paid Samples", "dyeTypes": ["Reactive", "Vat"], "fabricTypes": ["Cotton", "Blends"], "processes": ["Yarn Dye"], "dailyCapacity": "2000"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6467,6 +6885,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '424cddca-0c2e-5549-bc66-e274b28d5db0' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-07.jpg'
+where product_id = '424cddca-0c2e-5549-bc66-e274b28d5db0' and position = 0;
 -- Printing & Manufacturing Services 8: Fabric finishing, softener and stenter
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6540,7 +6960,9 @@ Key details
 • Minimum order: 50 metres
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Jetpur, India',
+• Based in: Jetpur, India
+
+Photo: Journyes, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Master_artist_carves_a_woodblock_for_textile_printing.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "minOrder": "50 metres", "samplePolicy": "Paid Samples", "maxColors": "1-4", "maxPrintSize": "14 × 16 inches", "garmentTypes": ["Yardage"], "dailyCapacity": "2,000 pieces a day"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6557,6 +6979,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'ade9a5bd-46a6-5796-8b64-416a55eedca4' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/c297569b-b3f1-515f-9b75-dba60d9ee63f/samples/listing-10.jpg'
+where product_id = 'ade9a5bd-46a6-5796-8b64-416a55eedca4' and position = 0;
 -- Raw Materials – Fabrics & Inputs 1: Cotton poplin, 40s count
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6572,7 +6996,9 @@ Key details
 • Minimum order: 500 metres
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: MadrasFabricPreppy, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Madras_Plaid_Fabric_20191027_144819.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "weaveType": "Poplin", "composition": "100% cotton", "threadCount": "132", "weight": "140", "width": "58", "construction": "40s × 40s, 132 × 72", "finish": ["Normal", "Sanforized"]}'::jsonb,
   fabric = '100% cotton',
   gsm = '110',
@@ -6589,6 +7015,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'e64fd938-ad04-5d9f-88b6-8f84799c833b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-01.jpg'
+where product_id = 'e64fd938-ad04-5d9f-88b6-8f84799c833b' and position = 0;
 -- Raw Materials – Fabrics & Inputs 2: Linen-cotton blend fabric
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6604,7 +7032,9 @@ Key details
 • Minimum order: 300 metres
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: Tess Mattew, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:2026.02.28_Bundle_of_flax,_Comb_for_flax,_Flax_fiber,_Flax_break.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "weaveType": "Plain", "composition": "Linen cotton", "threadCount": "132", "weight": "140", "width": "58", "construction": "40s × 40s, 132 × 72", "finish": ["Normal", "Sanforized"]}'::jsonb,
   fabric = 'Linen cotton',
   gsm = '150',
@@ -6621,6 +7051,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6b60dbc1-3ca3-548e-84e6-ed422b8cfa8e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-02.jpg'
+where product_id = '6b60dbc1-3ca3-548e-84e6-ed422b8cfa8e' and position = 0;
 -- Raw Materials – Fabrics & Inputs 3: Single jersey cotton knit
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6700,7 +7132,9 @@ Key details
 • Minimum order: 500 metres
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: MadrasFabricPreppy, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Madras_Plaid_Fabric_20191027_144610.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "materialType": "Organic Cotton", "composition": "Organic cotton"}'::jsonb,
   fabric = 'Organic cotton',
   gsm = '140',
@@ -6717,6 +7151,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2ce6c236-7d5b-5249-bbaa-567f9d249b3b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-05.jpg'
+where product_id = '2ce6c236-7d5b-5249-bbaa-567f9d249b3b' and position = 0;
 -- Raw Materials – Fabrics & Inputs 6: Cotton combed yarn, 30s
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6732,7 +7168,9 @@ Key details
 • Minimum order: 100 kg
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: Pschemp, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Yarn_skeins.JPG); resized.',
   attributes = '{"leadTime": "15-30 days", "yarnType": "Ring Spun", "count": "30s Ne", "ply": "Single", "composition": "Cotton", "twist": "Z Twist"}'::jsonb,
   fabric = 'Cotton',
   gsm = null,
@@ -6749,6 +7187,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '46bc08d1-445f-5814-9e70-7db7065e295b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-06.jpg'
+where product_id = '46bc08d1-445f-5814-9e70-7db7065e295b' and position = 0;
 -- Raw Materials – Fabrics & Inputs 7: Polyester sewing thread, 5000 m
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6763,7 +7203,9 @@ Key details
 • Minimum order: 200 cones
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: Cbuske46, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Sewing-big-small.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "threadType": "Spun Polyester", "ticketNo": "120", "cones": "5000"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6780,6 +7222,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'd28b047d-5656-57a0-82ca-31ae36589c4f' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-07.jpg'
+where product_id = 'd28b047d-5656-57a0-82ca-31ae36589c4f' and position = 0;
 -- Raw Materials – Fabrics & Inputs 8: Knitted elastic tape, 25 mm
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6794,7 +7238,9 @@ Key details
 • Minimum order: 1000 metres
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: Revensburger, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Gummilitze_8fadig.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "elasticType": "Knitted", "width": "25", "stretch": "Up to 120%"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6811,6 +7257,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '98f772e7-f2e2-50aa-805d-116270f835a4' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-08.jpg'
+where product_id = '98f772e7-f2e2-50aa-805d-116270f835a4' and position = 0;
 -- Raw Materials – Fabrics & Inputs 9: Cotton crochet lace
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6825,7 +7273,9 @@ Key details
 • Minimum order: 500 metres
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bhilwara, India',
+• Made in: Bhilwara, India
+
+Photo: Blanka Luppová, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Lu%C4%8Denec_-_h%C3%A1%C4%8Dkovan%C3%BD_obr%C3%BAsok_-_01.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Cotton Lace", "width": "2 inches"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6842,6 +7292,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '2ef16e02-853e-5311-9a90-547b97a2068b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b153023f-556d-54af-b488-e4508a732f72/samples/listing-09.jpg'
+where product_id = '2ef16e02-853e-5311-9a90-547b97a2068b' and position = 0;
 -- Raw Materials – Fabrics & Inputs 10: Fusible interlining
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6916,7 +7368,9 @@ Key details
 • Minimum order: 300 pieces
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Noida, India',
+• Based in: Noida, India
+
+Photo: Gurdeepdali, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Bhura_Singh,_Tailor_from_Rampura_Jawaharwala,_Punjab,_India_01.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Fixed Price", "garmentTypes": ["Shirts", "Ethnic Wear"], "monthlyCapacity": "30,000 pieces a month", "machines": "60", "specialOperations": ["Piping", "Pintucks"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6933,6 +7387,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '990c1efd-9659-58e3-9295-cd179cb1b707' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-02.jpg'
+where product_id = '990c1efd-9659-58e3-9295-cd179cb1b707' and position = 0;
 -- Service Providers (Manufacturing & Fashion Ops) 3: Fabric cutting job work
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -6976,7 +7432,9 @@ Key details
 • Minimum order: 1 style
 • Turnaround: 1-3 days
 • Customisation: available
-• Based in: Noida, India',
+• Based in: Noida, India
+
+Photo: Журнал «Живописное обозрѣнiе странъ свѣта» (1872—1900,1902—1905), Public domain, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:%D0%96%D0%B8%D0%B2%D0%BE%D0%BF%D0%B8%D1%81%D0%BD%D0%BE%D0%B5_%D0%BE%D0%B1%D0%BE%D0%B7%D1%80%D0%B5%D0%BD%D0%B8%D0%B5_1892,_%E2%84%96_35-45_Page_229.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-3 days", "priceModel": "Fixed Price", "services": ["CAD Pattern", "Manual Pattern", "Marker Making"], "software": ["Gerber", "CLO 3D"], "garmentTypes": ["Woven Tops", "Knits", "Dresses"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -6993,6 +7451,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'e4cdd454-76b1-5fbd-88fc-fdb033fa038e' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-04.jpg'
+where product_id = 'e4cdd454-76b1-5fbd-88fc-fdb033fa038e' and position = 0;
 -- Service Providers (Manufacturing & Fashion Ops) 5: Third-party inline and final inspection
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7035,7 +7495,9 @@ Key details
 • Fee: 5% of order value
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Noida, India',
+• Based in: Noida, India
+
+Photo: Dosseman, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Damascus_Private_house_and_brocade_shop_8252.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Custom Quote", "fabricTypes": ["Knits", "Wovens", "Denim"], "sourcingRegions": ["India"], "services": ["Mill Sourcing", "Sampling"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -7052,6 +7514,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '004db540-1db7-5197-b542-806442b80f91' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-06.jpg'
+where product_id = '004db540-1db7-5197-b542-806442b80f91' and position = 0;
 -- Service Providers (Manufacturing & Fashion Ops) 7: Trims sourcing
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7064,7 +7528,9 @@ Key details
 • Fee: 4% of order value
 • Turnaround: 1-2 weeks
 • Customisation: available
-• Based in: Noida, India',
+• Based in: Noida, India
+
+Photo: GearsDatapacks, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Djellaba_buttons.jpg); resized.',
   attributes = '{"experience": "6", "turnaround": "1-2 weeks", "priceModel": "Custom Quote", "trimTypes": ["Buttons", "Labels"], "sourcingRegions": ["India", "China"], "services": ["Sampling", "Quality Check"]}'::jsonb,
   fabric = null,
   gsm = null,
@@ -7081,6 +7547,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0a83ad0d-d6d9-5d29-a47f-5b4e3c0770b3' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/228ac0df-492e-5d22-97ca-62dc16befce5/samples/listing-07.jpg'
+where product_id = '0a83ad0d-d6d9-5d29-a47f-5b4e3c0770b3' and position = 0;
 -- Service Providers (Manufacturing & Fashion Ops) 8: Tech pack development
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7220,7 +7688,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Crew Clothing, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:MEB001_MZB001_MEB002_MZB002_SMP_40240.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Pure linen',
   gsm = '140',
@@ -7237,6 +7707,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '643c70c0-78e4-5d09-87ac-a793cf1b297d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-02.jpg'
+where product_id = '643c70c0-78e4-5d09-87ac-a793cf1b297d' and position = 0;
 -- Shirt 3: Men's formal poplin shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7253,7 +7725,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Unknown author, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Arrow_USA_1851_displaysC.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton poplin',
   gsm = '110',
@@ -7270,6 +7744,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '7f8ebf96-a37d-5e3b-b028-b6c1b2cbac57' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-03.jpg'
+where product_id = '7f8ebf96-a37d-5e3b-b028-b6c1b2cbac57' and position = 0;
 -- Shirt 4: Men's checked flannel shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7286,7 +7762,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Kgbo, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Flannel_shirts_in_Longreach,_Queensland,_2024,_01.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Brushed cotton',
   gsm = '160',
@@ -7303,6 +7781,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '7c9bb626-66db-5c85-8eb9-db21628775fa' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-04.jpg'
+where product_id = '7c9bb626-66db-5c85-8eb9-db21628775fa' and position = 0;
 -- Shirt 5: Men's denim shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7385,7 +7865,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Crew Clothing, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:MEB001_MZB001_MEB002_MZB002_SMP_40240.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton',
   gsm = '120',
@@ -7402,6 +7884,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '834ab2df-d719-5baa-820a-c7fdbc2c6c76' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-07.jpg'
+where product_id = '834ab2df-d719-5baa-820a-c7fdbc2c6c76' and position = 0;
 -- Shirt 8: Men's printed resort shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7418,7 +7902,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Bengaluru, India',
+• Made in: Bengaluru, India
+
+Photo: Peachyeung316, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Pink_Coral_Aloha_Shirt_from_HM.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Rayon',
   gsm = '110',
@@ -7435,6 +7921,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '8c380e85-2e35-5c39-9a1e-10fe8d34a552' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/b4853311-bcb2-572c-ab8b-1cd88e3dea82/samples/listing-08.jpg'
+where product_id = '8c380e85-2e35-5c39-9a1e-10fe8d34a552' and position = 0;
 -- Shirt 9: Men's corduroy overshirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7517,7 +8005,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: Ensahequ, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Assortimento_di_polo_in_vari_colori.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton pique',
   gsm = '220',
@@ -7534,6 +8024,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '5a0ea691-0a55-5824-a4e4-9e5e7ddb2ca3' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/listing-01.jpg'
+where product_id = '5a0ea691-0a55-5824-a4e4-9e5e7ddb2ca3' and position = 0;
 -- T-shirts/Tops 2: Men's henley T-shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7550,7 +8042,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Tiruppur, India',
+• Made in: Tiruppur, India
+
+Photo: Tradlands, CC BY 2.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Sawyer_Henley_shirt.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton slub',
   gsm = '170',
@@ -7567,6 +8061,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '3a1e6f1a-1652-53ab-b308-c3388d27ca2d' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/7bce9e94-5c7f-578e-ba0b-b3e2b31f38eb/samples/listing-02.jpg'
+where product_id = '3a1e6f1a-1652-53ab-b308-c3388d27ca2d' and position = 0;
 -- T-shirts/Tops 3: Women's crop T-shirt
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7876,7 +8372,9 @@ Key details
 • Minimum order: 2000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: Delhi, India',
+• Based in: Delhi, India
+
+Photo: Woodbine9, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Novelty_Zippers.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "zipperType": "Metal", "size": "#5", "length": "7 inch", "endType": "Closed End", "sliderType": "Auto Lock"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -7893,6 +8391,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'e75f1dae-ad52-5c62-b0fd-b0fe18cd8ee1' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-02.jpg'
+where product_id = 'e75f1dae-ad52-5c62-b0fd-b0fe18cd8ee1' and position = 0;
 -- Trims & Accessories 3: Copper rivets for denim
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7907,7 +8407,9 @@ Key details
 • Minimum order: 5000 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: Delhi, India',
+• Based in: Delhi, India
+
+Photo: Grzegorz W. Tężycki, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Rivets03.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Cap Rivet", "size": "8", "finish": "Copper"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -7924,6 +8426,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '612e9b3c-7735-5eca-bbc0-cde5029f5d40' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-03.jpg'
+where product_id = '612e9b3c-7735-5eca-bbc0-cde5029f5d40' and position = 0;
 -- Trims & Accessories 4: Brass eyelets for hoodies
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -7938,7 +8442,9 @@ Key details
 • Minimum order: 5000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: Delhi, India',
+• Based in: Delhi, India
+
+Photo: PlastpotOfficial, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Comparison_of_rubber_and_silicone_grommet_plugs_for_drainag.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "size": "16", "material": "Brass", "finish": "Black"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -7955,6 +8461,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '6abd694c-0e3c-5e05-8d7a-13879dce97c3' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-04.jpg'
+where product_id = '6abd694c-0e3c-5e05-8d7a-13879dce97c3' and position = 0;
 -- Trims & Accessories 5: Flat cotton drawcords with tips
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8000,7 +8508,9 @@ Key details
 • Minimum order: 5000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: Delhi, India',
+• Based in: Delhi, India
+
+Photo: MichaelFrey, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Cord_lock-425.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Single Hole", "material": "Plastic"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -8017,6 +8527,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '0bb67581-d5eb-576a-91e2-c75c391dc5ca' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-06.jpg'
+where product_id = '0bb67581-d5eb-576a-91e2-c75c391dc5ca' and position = 0;
 -- Trims & Accessories 7: Hook and loop tape, 25 mm
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8124,7 +8636,9 @@ Key details
 • Minimum order: 1000 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Based in: Delhi, India',
+• Based in: Delhi, India
+
+Photo: Thomas Wolf / Gotha, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Quaste2.jpg); resized.',
   attributes = '{"leadTime": "15-30 days", "type": "Thread Tassel", "length": "3 inch"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -8141,6 +8655,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '540e0cc3-dc8f-5251-b6d9-11175fbe3317' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/0538cb41-a6ab-5152-8d92-c5f02cc11367/samples/listing-10.jpg'
+where product_id = '540e0cc3-dc8f-5251-b6d9-11175fbe3317' and position = 0;
 -- Trousers 1: Men's cotton chinos
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8190,7 +8706,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Indore, India',
+• Made in: Indore, India
+
+Photo: Unknown author, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Cal%C3%A7a,_Acervo_do_Museu_Paulista_da_USP_(11).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Poly viscose',
   gsm = '220',
@@ -8207,6 +8725,8 @@ Key details
   waist_sizes = array['28', '30', '32', '34', '36']::text[],
   lengths = array['Full Length']::text[]
 where id = '7fd2cbb1-c5b6-5931-9def-46e7025108a2' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/listing-02.jpg'
+where product_id = '7fd2cbb1-c5b6-5931-9def-46e7025108a2' and position = 0;
 -- Trousers 3: Women's high-waist trousers
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8223,7 +8743,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Indore, India',
+• Made in: Indore, India
+
+Photo: Keenpublications, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Sansabelt_Exclusive_2_1-2%22_Webbed_Rubber_Inner_Waistband.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Crepe',
   gsm = '180',
@@ -8240,6 +8762,8 @@ Key details
   waist_sizes = array['26', '28', '30', '32', '34']::text[],
   lengths = array['Full Length']::text[]
 where id = '811a830a-362c-5255-b611-8d6cf8101368' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/listing-03.jpg'
+where product_id = '811a830a-362c-5255-b611-8d6cf8101368' and position = 0;
 -- Trousers 4: Women's palazzo pants
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8421,7 +8945,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Indore, India',
+• Made in: Indore, India
+
+Photo: Rocknrollmancer, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Corduroy_comparison_wider_angle.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton corduroy',
   gsm = '300',
@@ -8438,6 +8964,8 @@ Key details
   waist_sizes = array['28', '30', '32', '34', '36']::text[],
   lengths = array['Full Length']::text[]
 where id = '5b15c974-8839-5a91-b19f-2d508fb9d5ae' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/a91d8fdf-0baa-53ed-a73b-08305fb40d13/samples/listing-09.jpg'
+where product_id = '5b15c974-8839-5a91-b19f-2d508fb9d5ae' and position = 0;
 -- Trousers 10: Kids' chino pants
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8487,7 +9015,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Anna.Massini, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Maglioni_fatti_a_mano_ai_ferri.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Acrylic wool',
   gsm = null,
@@ -8504,6 +9034,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '04ca219e-a7c1-5089-ad9a-caa3716484a5' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-01.jpg'
+where product_id = '04ca219e-a7c1-5089-ad9a-caa3716484a5' and position = 0;
 -- Winter Wear 2: Women's longline cardigan
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8520,7 +9052,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Hallands kulturhistoriska museum, CC BY 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Example_of_binge_knitting.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Acrylic blend',
   gsm = null,
@@ -8537,6 +9071,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'ef563942-616c-5614-9c57-91d34c91f098' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-02.jpg'
+where product_id = 'ef563942-616c-5614-9c57-91d34c91f098' and position = 0;
 -- Winter Wear 3: Men's quilted puffer jacket
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8553,7 +9089,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Mr.ちゅらさん, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Nisikawa%C3%97Nano_Universe_Down_Jacket_at_Lalaport_Kadoma.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Nylon with poly fill',
   gsm = null,
@@ -8570,6 +9108,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '46713dc9-51fa-5743-8104-754c78b5a6ab' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-03.jpg'
+where product_id = '46713dc9-51fa-5743-8104-754c78b5a6ab' and position = 0;
 -- Winter Wear 4: Women's wool-blend overcoat
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8619,7 +9159,9 @@ Key details
 • Minimum order: 150 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Siarhei Besarab, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Hoodie_with_a_DIP-8_integrated_circuit_design.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Cotton fleece',
   gsm = '320',
@@ -8636,6 +9178,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = 'bfb45155-7b10-5e79-b40e-2430dcde1619' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-05.jpg'
+where product_id = 'bfb45155-7b10-5e79-b40e-2430dcde1619' and position = 0;
 -- Winter Wear 6: Women's thermal top
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8652,7 +9196,9 @@ Key details
 • Minimum order: 200 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Bevaringstenestene, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Pedek_wool_underwear_(sweater).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Thermal knit',
   gsm = '220',
@@ -8669,6 +9215,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '23db7ebc-7bf9-5750-a177-6af0f8bf65a5' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-06.jpg'
+where product_id = '23db7ebc-7bf9-5750-a177-6af0f8bf65a5' and position = 0;
 -- Winter Wear 7: Men's thermal set
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8685,7 +9233,9 @@ Key details
 • Minimum order: 200 sets
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Hanne Dale, Tekstilindustrimuseet, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:NTMT.00027_1.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Thermal knit',
   gsm = '240',
@@ -8702,6 +9252,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '22acb4d4-779a-5546-a2cf-673b6938f30c' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-07.jpg'
+where product_id = '22acb4d4-779a-5546-a2cf-673b6938f30c' and position = 0;
 -- Winter Wear 8: Pashmina-blend shawl
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8717,7 +9269,9 @@ Key details
 • Minimum order: 100 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: The art of hand, CC BY-SA 3.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:These_two_pieces_of_pashmina_shawls_with_work_(92856).jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = 'Wool blend',
   gsm = null,
@@ -8734,6 +9288,8 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '8a51aef9-d9cc-5be6-8990-86707e5b2a6b' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-08.jpg'
+where product_id = '8a51aef9-d9cc-5be6-8990-86707e5b2a6b' and position = 0;
 -- Winter Wear 9: Men's bomber jacket
 update public.products set
   description = 'Sample listing: this shows how a listing looks on Cosora. It isn''t for sale, and its seller can''t be contacted.
@@ -8781,7 +9337,9 @@ Key details
 • Minimum order: 500 pieces
 • Lead time: 15-30 days
 • Customisation: available
-• Made in: Ludhiana, India',
+• Made in: Ludhiana, India
+
+Photo: Squideewiki, CC BY-SA 4.0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Skate-Beanie.jpg); resized.',
   attributes = '{"leadTime": "15-30 days"}'::jsonb,
   fabric = null,
   gsm = null,
@@ -8798,12 +9356,18 @@ Key details
   waist_sizes = null,
   lengths = null
 where id = '66904f7c-20a4-5707-b785-1e0a4722991a' and vendor_id in (select vendor_id from admin.sample_vendors);
+update public.product_images set url = 'https://vxdhhgdfubqedfpwfyrb.supabase.co/storage/v1/object/public/product-images/6f8ac993-6e25-5b80-847e-8db09cb45a88/samples/listing-10.jpg'
+where product_id = '66904f7c-20a4-5707-b785-1e0a4722991a' and position = 0;
 
 do $check$
 begin
   if (select count(*) from public.products p join admin.sample_vendors s on s.vendor_id = p.vendor_id
        where p.attributes <> '{}'::jsonb and p.description like '%Key details%') <> 280 then
     raise exception 'sample details: not every sample listing was filled';
+  end if;
+  if (select count(*) from public.product_images i join public.products p on p.id = i.product_id
+       join admin.sample_vendors s on s.vendor_id = p.vendor_id where i.url like '%/samples/listing-%') <> 140 then
+    raise exception 'sample details: a chosen listing photo is missing';
   end if;
 end
 $check$;

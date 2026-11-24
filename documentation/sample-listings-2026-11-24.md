@@ -20,14 +20,21 @@ company's identity at the time, and internet photos belong to other brands and p
   or its listings (`admin.refuse_sample_contact`, migration `20261124120000`). Sample sellers have no phone, WhatsApp,
   GSTIN, PAN or verified badge, and their auth accounts are banned, so nobody signs in as one. Every Call button
   (`useCallVendor()`) says "Sample listing" and dials nothing; Chat, Call and review buttons are hidden on their pages.
-- **Photos: Cosora's category pictures today, each listing's own photo next** (Mitra, 2026-11-24, "get the images
-  from internet"; Pexels issues no keys; in progress, not live). The listings show Cosora's category pictures
-  (`<group>-<slug>.jpg`), several sharing one. The replacements: openly licensed photos from Wikimedia Commons only: public domain, CC0, CC BY or CC BY-SA, never
+- **Photos: 140 listings have a photo of their own, the other 140 keep Cosora's category picture** (Mitra,
+  2026-11-24, "get the images from internet"; Pexels issues no keys; ready 2026-11-24, released only on Mitra's go).
+  The photos are openly licensed files from Wikimedia Commons only: public domain, CC0, CC BY or CC BY-SA, never
   non-commercial or no-derivatives, and not files Commons marks as showing a trademark, insignia or a person's
-  likeness. Each is resized to 1200 px, stored at `product-images/<seller>/samples/listing-<nn>.jpg` and credited at
-  the end of its description (author, licence, source page, "resized"); `scripts/samples/photo-sources.json` keeps
-  the record. `photo_queries.py` holds each listing's searches and the picks made by eye; `fetch_photos.py` searches,
-  draws contact sheets and downloads; every photo is chosen by eye.
+  likeness. Each was chosen by eye from contact sheets, and left out when it showed an identifiable model (it reads as
+  an endorsement), another brand's name or shop (`BRAND_TITLES`), or anything suggestive (`UNSAFE`). Each is resized
+  to at most 1200 px, stored at `product-images/<seller>/samples/listing-<nn>.jpg` and credited at the end of its
+  description (author, licence, source page, "resized"); `scripts/samples/photo-sources.json` keeps the record.
+  A listing with nothing fitting on Commons (most services, software, chemicals and many garments) keeps its category
+  picture (`<group>-<slug>.jpg`).
+  - How: `fetch_photos.py` takes each listing's searches (`photo_queries.py`; a "Category:<name>" entry names a
+    Commons category), looks in Commons categories first, then file titles, then free text, draws contact sheets
+    (`sheets`), records picks (`choose n:k`) and downloads them (`final`) as Wikimedia's standard thumbnails (the
+    original-file server refuses scripts with 429). Commons limits an unidentified client to about one call every
+    two seconds and answers 429 with Retry-After beyond that; `curl_json` waits as told.
 - They were added by Cosora directly, so they skipped product moderation; they are Cosora's own content.
 
 ## Every detail filled (Mitra, 2026-11-24)

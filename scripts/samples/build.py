@@ -73,8 +73,9 @@ insert into admin.registration_exempt (vendor_id, reason) values ({q(vid)}, 'Sam
         for ii, item in enumerate(cat["items"], 1):
             sub, pic, name, price, moq, unit, extra, detail = item[:8]
             n_listing = n_products + 1
-            if details.PHOTOS:
-                # The listing's own photo (fetch_photos.py final <work>: <work>/final/<n>.jpg), 2026-11-24.
+            if f"{cat['top']}:{ii}" in details.PHOTOS:
+                # The listing's own photo (fetch_photos.py final <work>: <work>/final/<n>.jpg), 2026-11-24; a listing
+                # with no fitting openly licensed photo keeps its category picture.
                 assert photos, "photo-sources.json exists: pass the folder of chosen photos (fetch_photos.py final)"
                 src = os.path.join(photos, f"{n_listing:03d}.jpg")
                 fname = os.path.basename(details.photo_object(vid, ii))
