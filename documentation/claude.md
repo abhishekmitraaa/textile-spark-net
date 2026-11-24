@@ -1465,7 +1465,9 @@ undocumented. Deep technical rationale for each lives in
   matching anchors that span lines, and test the patch on a CRLF copy.
 - **One Home tab strip** (2026-11-20, review L-02, L-15): `<HomeTabs>` on every Home page; the open tab is marked from
   the address (`homeTabOf()`, which the bottom bar's Home uses too) and a tab tap replaces the history entry. A new Home
-  tab goes in `HOME_TABS` only.
+  tab goes in `HOME_TABS` only. On a phone the strip is a swipeable row (Mitra, 2026-11-25): 14 px tabs that snap, edge
+  to edge, the open tab scrolled into view, a fade on the side with more; centred wherever all the tabs fit. Don't
+  shrink the text to make them fit again.
 - **A product card's rating, specs and Save follow one pattern** (2026-11-20, review L-08, L-12, L-19): `<RatingChip>`
   (nothing without a rating), `<CardSpecs>` (only the specs the listing states), and the Save button beside the photo's
   link, never inside it. A new card uses them.
