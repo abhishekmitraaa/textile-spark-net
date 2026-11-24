@@ -13,6 +13,11 @@ not the sensitive value itself. This file may end up in version control history.
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
 | 2026-11-24 | **280 unlabelled sample listings from 28 invented sellers are live on cosora.in** (Mitra, 2026-11-24: "remove the sample listing from all the 280 posts ... the app is not open for customers ... will show how it will actually look"). The "(Sample)" store names, "Sample ·" listing names, description notices, page notices and card tags are off (`SAMPLES_LABELLED` in `src/lib/samples.ts`, `LABELLED` in `scripts/samples/details.py`), so to anyone visiting they read as real businesses and products. Still in place: nobody can reach them (`admin.refuse_sample_contact` refuses chats, requirements and reviews; no phone, GSTIN, PAN or badge; accounts banned; Call and Chat say "Not taking enquiries yet"), and every photo is openly licensed and credited. Risks while they stay: a visitor, search engine or reviewer (Meta was checking the company's identity on 2026-11-24) takes them for real sellers; the database's refusal text, reached only by an unusual route (a direct requirement), still says "sample seller" | High until removed (misrepresentation to the public; must not survive launch) | `admin.sample_vendors` (28 sellers, 280 products); `scripts/samples/` | **Open: remove every sample before Cosora opens to customers** (ToDo.md, High priority): run `scripts/samples/remove-sample-listings.sql` with the CLI, then delete `product-images/<seller>/samples/` for the 28 sellers it lists. To label them again instead, set both switches to true, rebuild and apply `update-sample-details.sql` |
+| 2026-11-23 | **A seller can still swap the file behind a verified KYC document, by deleting it and uploading again at the same path** (security audit run-2 F-01; residual of AR-H03 below). Production's `business-docs` policies are owner INSERT, SELECT and DELETE (the UPDATE policy is gone), and neither INSERT nor DELETE asks whether a `vendor_documents` row points at the object: `storage_object_in_use()` has no `business-docs` case, unlike product-images, catalogues, product-videos and product-files. Rehearsed in the audit sandbox with production's policy set, as the owning seller, rolled back: the Storage API's delete, then an insert at the same name, both accepted; the row stayed `verified` and the object was the new one | Medium (identity verification integrity) | storage policies `business_docs_owner_insert` / `business_docs_owner_delete`; `public.storage_object_in_use()` | **Fixed & LIVE on production 2026-11-24** (applied via `execute_sql`, `ALTER POLICY` so no gap; not in the migration ledger, per house practice). Migration file `20261124130000_business_docs_no_swap.sql`: a `business-docs` branch in `storage_object_in_use()` (true for a same-owner object that is a **verified** `vendor_documents.file_url` or **any** `vendor_contracts.signature_url` — contracts are append-only evidence), and `not storage_object_in_use(bucket_id, name)` added to both `business_docs_owner_insert` and `business_docs_owner_delete`, matching the insert/update guard the other four buckets already carry. Rehearsed under production's policy set, as the owning seller, rolled back: pre-fix the delete gate allows, post-fix the delete gate blocks and a re-insert at the same path is refused (42501); fresh-path uploads and `replaceVendorDocuments()` (row deleted before object) stay allowed. A replacement is now a new path, a new row and a new review |
+| 2026-11-23 | **`bunny-upload-url` hands out Bunny upload slots without limit** (audit run-2 F-02; run-1 left it "needs validation"). It needs a verified user, a `vendor_profiles` row and an active account; any account can insert its own `vendor_profiles` row (proven in the sandbox), and accounts are free while the dummy sign-in is on. No quota, rate limit, plan video cap or link to a listing; each call creates a video in Cosora's library and returns a signed upload credential | Medium once Bunny works (storage and encoding spend; arbitrary video hosted on Cosora's library until `bunny-reconcile` runs); **latent today** while `BUNNY_API_KEY` is rejected (row 2026-09-22), not re-checked | `supabase/functions/bunny-upload-url/index.ts` | **Open.** Fix before a valid key goes in: a definer RPC that counts the seller's open slots and live/pending videos against the plan's cap (plus a daily slot limit) before Bunny is called, and require `seller_registered()` rather than a bare row |
+| 2026-11-23 | **Every staff role can delete any review, and change categories** (audit run-2 F-04): `reviews_delete_own`, `product_reviews_delete_own`, `service_reviews_delete_own` and `categories_insert/update/delete` admit bare `is_admin()`, so delivery_team or account_manager can hard-delete a review (no `trg_admin_audit` on the review tables, so nothing in the Admin Log) or rename/delete a category. Every staff role also reads all quotes, requirements, calls, listings and ads (bare `is_admin()` read arms) | Low (insider; against the "write arms name their roles" rule) | the policies above | **Open.** Fix: name the roles (reviews: super_admin, support; categories: super_admin, manager), add `trg_admin_audit` to the three review tables, and decide which roles read quotes/requirements |
+| 2026-11-23 | **One person with ~30 addresses can switch image search off for an hour** (audit run-2 F-03): `image_search_rate_check()` allows 10 per IP and 10 per account per 10 minutes and 300 per hour site-wide; accounts are free, so 30 addresses reach the global cap. The per-IP key itself held when tested live (row 2026-09-11) | Low (availability; spend stays capped) | `image_search_rate_check()`, `image-search` | **Open.** Count the global cap per account age or registered sellers, or raise it with a per-account daily cap |
+| 2026-11-23 | **A seller's plan and its end date are public** (`vendor_profiles.plan_id`, `plan_expires_at` granted to anon) and a seller can put any well-formed GSTIN on their plan invoice (`subscription-create-order` stores `gstNumber`; `subscription_fulfil` keeps it if `gstin_is_valid()`, without matching the seller's own) | Info / Low | `vendor_profiles` column grants; `subscription_fulfil` | **Open.** Decide whether the plan is meant to be public; take the invoice GSTIN from `vendor_profiles.gstin` only |
 | 2026-11-22 | **A seller could swap the file behind a verified KYC document** (Cosora-Admin review AR-H03): the `vendor_documents_update` policy let a seller change their own row's `file_url`, `doc_type` or `detail` (the guard checked only the review columns), and `business_docs_owner_update` let them overwrite the stored object at the same path; the row stayed "verified" in Cosora-Admin. Rehearsed on the local stack as the seller (rolled back) | High (identity verification integrity) | `public.vendor_documents` policy, `vendor_documents_guard_review_columns()`, storage policy `business_docs_owner_update` | Fixed and LIVE 2026-11-22: policy dropped and the guard refuses those columns (`20261122100000`); KYC uploads use `upsert: false`; the storage policy is dropped by `20261122100200` AFTER the buyer app is live. Not released |
 | 2026-11-22 | **Staff on a temporary password, even an expired one, could reset other staff's passwords and invite** (AR-H06): `admin-staff` / `admin-invite` decided the caller's role with `admin_status_of()`, which ignores `must_change_password`; with Resend unset the new password came back on screen. The functions also decoded the token instead of asking Auth (AR-L11) | Medium | `cosora-admin/supabase/functions/admin-staff`, `admin-invite`, `admin-refund-payment` | Fixed on branch (admin repo): Supabase Auth confirms the caller and an account on a temporary password is refused everything but changing it. Not deployed |
 | 2026-11-22 | **One short keyword could block ordinary chat for everyone** (AR-H08): `admin_keyword_add` took any term and `check_message_blocklist` matches substrings | Medium (availability of chat) | `public.admin_keyword_add`, `admin.keyword_blocklist` | Fixed on branch: `admin.keyword_breadth_problem()` (3+ characters, not in ordinary business messages). Not released |
@@ -141,6 +146,80 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-11-24 — F-01 fixed & LIVE (KYC / agreement file swap) — Severity: Medium, resolved
+- Migration `supabase/migrations/20261124130000_business_docs_no_swap.sql`. Closes the delete+re-insert half of the
+  `business-docs` swap (the overwrite-via-upsert half was AR-H03, already live): adds a `business-docs` case to
+  `public.storage_object_in_use()` — "in use" for a same-owner object that is a **verified** `vendor_documents.file_url`
+  or **any** `vendor_contracts.signature_url` — and appends `not storage_object_in_use(bucket_id, name)` to both
+  `business_docs_owner_insert` and `business_docs_owner_delete`. Same predicate the other four buckets already use for
+  their insert/update; business-docs needs it on insert **and** delete because it has no UPDATE policy and its files are
+  evidence (verified IDs, append-only contracts).
+- **Verified in the audit sandbox** (`audit_sandbox_db`, production policy set, rolled back), as the owning seller:
+  pre-fix the delete RLS gate evaluates **true** (the hole); post-fix it evaluates **false** (blocked) and a real
+  re-insert at the verified path is refused with 42501. Legitimate flows unaffected: a fresh-path upload inserts, and
+  after the DB row is deleted first (the `replaceVendorDocuments()` order) the stale object deletes cleanly.
+- **Applied to production 2026-11-24** (Mitra's go, auto mode off). The MCP `apply_migration` declined (its usual
+  refusal on `drop policy`/`raise`), so applied via `execute_sql`: `create or replace function` then two gap-free
+  `ALTER POLICY` statements (no drop/create window on a live table). Not recorded in the migration ledger, matching
+  house practice; the migration file stays in the repo as the canonical form (uncommitted).
+- **Verified on production:** both business-docs write policies carry the guard, read policy untouched;
+  `storage_object_in_use('business-docs', …)` = TRUE for the one real verified KYC object and for a real signed
+  agreement, FALSE for an unverified doc and for a fresh path. `scripts/rls-policy-check.sql` = 170 policies, 0 bare
+  calls, 0 multi-policy overlaps. DB-only change; no app deploy.
+
+### 2026-11-23 — Live API / edge probes against production (non-destructive) — Severity: no new finding
+- Unauthenticated, anon-key-only, and bad-signature requests only; each rejected before any side effect (no rows, no
+  Razorpay/OpenAI/Bunny spend).
+- **Edge functions:** no `Authorization` header → gateway 401 on every `verify_jwt=true` function; public anon key with no
+  user token → the function's own `verifiedUser()` returns 401 `unauthenticated` (so the public anon key passes the
+  gateway but can't act as a user); webhooks with missing/bad `x-razorpay-signature` → 400 "invalid signature". Deployed
+  `verify_jwt` is false only for the two webhooks; true for the other 28 (admin-invite/admin-staff/admin-refund-payment
+  included — resolves the earlier "deploy setting unknown"). `account-deletion {status}` shows WhatsApp+email both
+  unconfigured (F-05 latent); `otp-dev-verify {status}` = enabled (the accepted dummy-OTP risk).
+- **PostgREST as anon:** `profiles.phone` / `vendor_profiles.phone` → 401 (columns not granted); `vendor_documents`,
+  `subscription_invoices`, `messages`, `quotes` → `200 []` (RLS empty); `rpc/admin_list_admins` → 401; public reads
+  (live products, vendor public columns) OK. `buyer_profiles.pan` is granted to anon but returns `[]` (dead surface —
+  tighten the grant). **Vercel:** `/sitemap.xml` 200; `/blogs/api/revalidate` without the secret → 401.
+- **Input tampering:** payments re-price from the DB and recheck ownership server-side; orders are inserted only by the
+  service role; forging amount/planId/vendorId in the body changes nothing. No access or tamper at the HTTP boundary;
+  the only data-plane break stays F-01 (authenticated owner, Storage layer).
+
+### 2026-11-23 — Active penetration test (sandbox, rolled back) — Severity: no new finding
+- Tried to break in, as buyer / seller / anon, with **forged JWT claims** (any `sub`, any `role`) — a stronger attacker
+  than reality, since a real client can't mint a signed token. Each attempt ran as the attacker role and was rolled back.
+- **Held:** admin escalation (`admin_grant`/`admin_set_role`/`set_account_status`/`admin_product_remove`/
+  `admin_subscription_grant` all role-refused; `authenticated` can't even reference the `admin` schema); cross-tenant
+  reads (other users' phone/PAN/KYC/invoices/messages → column denied or RLS 0 rows); seller self-escalation (free VIP via
+  `plan_id`, self `is_verified`/`ad_verified_until`, own paid subscription/invoice, reprice a plan, another seller's plan,
+  own active ad → all blocked); payment internals (`subscription_fulfil`/`_activate`/`discount_reserve`/
+  `ad_order_refund_claim` → service-role only, permission denied); moderation bypass (INSERT `status='live'` persists as
+  `under_review`); quote money tampering (vendor self-accept blocked, buyer rewriting the vendor's price blocked, buyer
+  accept works); IDOR on support tickets and reviews; broadcasting to another user's Realtime hub topic. SQL injection:
+  the only 3 dynamic-SQL sites use a whitelisted `%I` and bound `$1..$4` params — none injectable.
+- **Only reproduced break:** F-01 (KYC file swap by Storage delete + re-upload; the row stays verified) — already logged
+  above. Analytics events stay client-asserted for any seller/product (`log_engagement_event`), bounded only by the
+  documented caps — a known design tradeoff, not a new hole.
+- Full attempt list and outputs: `~/security-audit-skill/cosora-platform/run-2/INLINE-AUDIT.md` → "Active penetration test".
+
+### 2026-11-23 — Security audit run-2 (inline, every endpoint) — Severity: Medium / Low
+- **Scope:** every endpoint of cosora.in, the blog and Cosora-Admin, listed one by one in
+  `~/security-audit-skill/cosora-platform/run-2/ENDPOINTS.md` (112 app routes, 2 Vercel functions, 8 blog routes, 52 admin
+  routes, 30 edge functions, 387 API-callable database functions, 71 API tables, 14 buckets, Realtime, 9 jobs). Proofs and
+  method in `INLINE-AUDIT.md` there. Production read only (metadata); nothing changed.
+- **Found:** the five Open rows dated 2026-11-23 (KYC swap by delete + re-upload, Bunny upload slots, staff-wide review
+  deletes and category writes, image-search cap, public plan and invoice GSTIN). Also: the deletion code can be sent to any
+  number while the dummy sign-in is on, once WhatsApp is configured (part of the 2026-09-27 accepted risk); the main
+  site's script CSP is still report-only (the admin's is enforced).
+- **Checked and holding:** RLS on all 71 API tables; all 387 callable functions called as a plain buyer (every staff
+  function refuses, 42501, or checks input first and the role before any write); all 16 staff guard helpers answer
+  false, never NULL, for buyer, seller, a token without a user and anon; listing and ad moderation; the product cap at
+  Free = 10; the repo's security harnesses (their failures were out-of-date fixtures, each re-tested); cross-account
+  reads on 48 private tables and 5 private buckets; payment signatures, server pricing, free orders, refunds; Realtime
+  hub topics (owner only, private, id-only payload); sign-in never reaching staff; user-written links (website, social,
+  buyer card); live headers.
+- **Sandbox = production:** policies and function bodies compared by checksum (CR stripped, grants sorted): identical,
+  except the local-only `business_docs_owner_update` and four internal non-API functions.
 
 ### 2026-11-20 — Medium batch 4 (built, not released) — Severity: Low
 - **Accepted (Mitra, 2026-11-19, "Leave as is"; review M-75):** every account's name stays readable (`profiles` is
