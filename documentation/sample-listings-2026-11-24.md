@@ -30,7 +30,8 @@ applying `update-sample-details.sql` puts the labels back.
   GSTIN, PAN or verified badge, and their auth accounts are banned, so nobody signs in as one. Every Call button
   (`useCallVendor()`) says "Sample listing" and dials nothing; Chat, Call and review buttons are hidden on their pages.
 - **Photos: 140 listings have a photo of their own, the other 140 keep Cosora's category picture** (Mitra,
-  2026-11-24, "get the images from internet"; Pexels issues no keys; ready 2026-11-24, released only on Mitra's go).
+  2026-11-24, "get the images from internet"; Pexels issues no keys; LIVE 2026-11-24, main 268d915, photos uploaded
+  and `update-sample-details.sql` applied with the CLI, not in the ledger).
   The photos are openly licensed files from Wikimedia Commons only: public domain, CC0, CC BY or CC BY-SA, never
   non-commercial or no-derivatives, and not files Commons marks as showing a trademark, insignia or a person's
   likeness. Each was chosen by eye from contact sheets, and left out when it showed an identifiable model (it reads as
