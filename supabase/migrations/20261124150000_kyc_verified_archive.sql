@@ -3,7 +3,7 @@
 -- seller could insert a throwaway row, delete the verified one, delete the throwaway (unverified, so allowed): the
 -- verified file was no longer referenced, so it could be deleted too. The KYC evidence was gone again.
 --
--- Now verification evidence outlives its row: deleting a verified row (anyone, any route: replaceVendorDocuments(),
+-- Now verification evidence outlives its row: deleting a verified row, or un-verifying it, (anyone, any route: replaceVendorDocuments(),
 -- submit_vendor_registration(), a direct API call) first copies it to admin.vendor_documents_archive, and
 -- storage_object_in_use() pins every business-docs object an archived row names. Nothing in the archive is deleted by
 -- a seller: the admin schema isn't reachable from the API. The time check goes, so it can't be gamed:
@@ -15,8 +15,10 @@
 
 begin;
 
+-- Its own key: a document id can be reused by a browser insert (the client may send one), so it is never unique here.
 create table if not exists admin.vendor_documents_archive (
-  id uuid primary key,
+  archive_id uuid primary key default gen_random_uuid(),
+  id uuid not null,
   vendor_id uuid not null,
   doc_type text not null,
   file_url text,
@@ -27,11 +29,13 @@ create table if not exists admin.vendor_documents_archive (
   detail jsonb,
   archived_at timestamptz not null default now(),
   archived_by uuid,
-  archived_session text not null default session_user
+  archived_session text not null default session_user,
+  archived_reason text not null default 'deleted'
 );
 comment on table admin.vendor_documents_archive is
   'Verified KYC rows as they stood when deleted (2026-11-24, securityflags F-01 follow-up). Their files stay pinned in business-docs (storage_object_in_use). Append-only; never shown to sellers.';
 create index if not exists vendor_documents_archive_vendor on admin.vendor_documents_archive (vendor_id);
+create index if not exists vendor_documents_archive_doc on admin.vendor_documents_archive (id);
 alter table admin.vendor_documents_archive enable row level security;
 revoke all on admin.vendor_documents_archive from public, anon, authenticated;
 
@@ -42,22 +46,23 @@ create or replace function public.vendor_documents_guard_verified_delete()
  set search_path to ''
 as $function$
 begin
-  -- Keep the evidence: a verified row is archived before it goes, and its file stays pinned.
-  if old.verified then
+  -- Keep the evidence: a verified row is archived before it goes, or when it stops being verified (staff un-verify
+  -- or reject it, or its file changes), and the archived file stays pinned.
+  if old.verified and (tg_op = 'DELETE' or not new.verified or new.file_url is distinct from old.file_url) then
     insert into admin.vendor_documents_archive
-      (id, vendor_id, doc_type, file_url, verified, created_at, reviewed_at, reviewed_by, detail, archived_by)
+      (id, vendor_id, doc_type, file_url, verified, created_at, reviewed_at, reviewed_by, detail, archived_by,
+       archived_reason)
     values (old.id, old.vendor_id, old.doc_type, old.file_url, old.verified, old.created_at, old.reviewed_at,
-            old.reviewed_by, old.detail, auth.uid())
-    on conflict (id) do nothing;
+            old.reviewed_by, old.detail, auth.uid(), case when tg_op = 'DELETE' then 'deleted' else 'unverified' end);
   end if;
-  return old;
+  return case when tg_op = 'DELETE' then old else new end;
 end
 $function$;
 revoke all on function public.vendor_documents_guard_verified_delete() from public, anon, authenticated;
 
 drop trigger if exists vendor_documents_guard_verified_delete on public.vendor_documents;
 create trigger vendor_documents_guard_verified_delete
-  before delete on public.vendor_documents
+  before delete or update on public.vendor_documents
   for each row execute function public.vendor_documents_guard_verified_delete();
 
 create or replace function public.storage_object_in_use(p_bucket text, p_name text)
@@ -110,6 +115,11 @@ begin
   end if;
   if position('raise exception' in pg_get_functiondef('public.vendor_documents_guard_verified_delete()'::regprocedure)) > 0 then
     raise exception 'self-check: the delete guard still refuses (it should archive)';
+  end if;
+  if exists (select 1 from pg_constraint where conrelid = 'admin.vendor_documents_archive'::regclass and contype in ('p', 'u')
+               and conkey <> array[(select attnum from pg_attribute where attrelid = 'admin.vendor_documents_archive'::regclass
+                                     and attname = 'archive_id')]::int2[]) then
+    raise exception 'self-check: the archive must not be unique on a document id';
   end if;
   if has_table_privilege('authenticated', 'admin.vendor_documents_archive', 'SELECT') then
     raise exception 'self-check: sellers can read the archive';
