@@ -669,6 +669,28 @@ not merged or pushed; a `main` push deploys production, so merging waits for Mit
 | 3.5 | done for search results | 24 cards at a time |
 | 3.8 | done | Radix toaster removed |
 
+### 9.1 Measured (2026-11-27, 8 key pages, phone profile, median of 3 runs)
+
+Live site against this branch served by `vite preview` with the same data and throttling. `vercel.json` doesn't apply
+to a local preview, so the year-long cache (1.1) isn't in these numbers; it shows only after a deploy.
+
+| Page | Live | Phase 1 | Phases 0–3 | TBT live → 0–3 | Requests live → 0–3 | Script KB live → 0–3 |
+|---|---:|---:|---:|---:|---:|---:|
+| `/` | 5.8 s | 5.5 s | **4.2 s** | 134 → 258 ms | 116 → 66 | 634 → 473 |
+| `/terms` | 3.7 s | 3.5 s | **3.4 s** | 57 → 171 ms | 114 → 64 | 640 → 479 |
+| `/home/new-arrivals` | 15.4 s | 13.8 s | **11.9 s** | 1355 → 2119 ms | 171 → 121 | 633 → 473 |
+| `/search/results?q=shirt` | 12.5 s | 10.1 s | **10.0 s** | 3219 → 1296 ms | 213 → 163 | 635 → 473 |
+| `/product/…` | 5.5 s | 5.4 s | 5.9 s (runs 7.5, 5.9, 5.5) | 938 → 753 ms | 154 → 104 | 633 → 473 |
+| `/vendor/…` | 7.0 s | 7.9 s | **6.8 s** | 718 → 1147 ms | 141 → 85 | 635 → 381 |
+| `/categories` | 6.5 s | 4.7 s | **3.8 s** | 17 → 158 ms | 123 → 52 | 634 → 325 |
+| `/seller` | 4.0 s | 4.2 s | **3.9 s** | 1444 → 1927 ms | 141 → 92 | 1537 → 1377 |
+
+Open: TBT rose on six pages. The sweep counts long tasks until the network has been quiet for 2.5 s, which now
+includes the warm-up (1.4 starts it once the network is quiet) parsing the three warmed pages and the files split out
+of the first script (the seller category table now arrives with SearchResults). The work moved after the first paint
+rather than grew, but it can still delay a tap; to check next: TBT with the warm-up blocked, and whether the warmed
+SearchResults should leave the category table for when it opens.
+
 ## Appendix A: Data behind this document
 
 - Raw results: `scratchpad/perf/prod.json` (production), `seller2.json` (re-runs of `/` and `/seller`),
