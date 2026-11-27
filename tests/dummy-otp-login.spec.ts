@@ -36,7 +36,8 @@ const TRACKING = /\/rest\/v1\/rpc\/(log_engagement_event|ad_impression|ad_click|
 
 const PROBE_DIGITS = "5550100001";
 const PROBE_EMAIL = `p1${PROBE_DIGITS}@phone.cosora.invalid`;
-const SIGNED_IN_ROUTE = /\/(auth\/role-selection|home\/new-arrivals|onboarding|seller-home)$/;
+// A Register buyer goes on to Sub-role (Mitra, 2026-11-20, review L-63/L-64; added here 2026-11-27).
+const SIGNED_IN_ROUTE = /\/(auth\/role-selection|auth\/sub-role|home\/new-arrivals|onboarding|seller-home)$/;
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(90_000);
@@ -85,7 +86,8 @@ test("register: any 6 digits finish signup from the form", async ({ page }) => {
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Full Name").fill("OTP Probe");
   await page.getByLabel(/Brand Name/).fill("OTP Probe");
-  await page.getByLabel("Country code").selectOption({ label: "🇺🇸 +1" });
+  // Options read "<code> <country>" since the country list was reworked (updated 2026-11-27).
+  await page.getByLabel("Country code").selectOption({ label: "+1 United States" });
   await page.getByPlaceholder("Phone Number").fill(PROBE_DIGITS);
   await page.getByRole("button", { name: /Send Code/ }).click();
   await enterAnyCode(page, "dummy-otp-register.png");

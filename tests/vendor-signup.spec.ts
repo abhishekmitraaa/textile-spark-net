@@ -94,39 +94,23 @@ ${BRAND}
 test("the seller branch no longer skips the details step", async ({ page }) => {
   // A regression guard for the specific bug: choosing Seller and pressing
   // Continue must show the details form, not navigate away to /seller.
+  // Sign-up is mobile + code since 2026-09-27, so the details step asks for a mobile number (updated 2026-11-27).
   await page.goto("/register");
   await page.getByRole("button", { name: /Seller/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/register/);
-  await expect(page.getByLabel("Email Address")).toBeVisible();
+  await expect(page.getByLabel("Mobile Number")).toBeVisible();
 });
 
-test("/auth/login offers email + password and no fake phone check", async ({ page }) => {
+test("/auth/login is mobile number + code, with no password field", async ({ page }) => {
+  // Sign-in is OTP-only (documentation/claude.md, "Authentication is OTP-only"): the email + password form this test
+  // used to check was removed in September. Nothing is sent here: the test only loads the page (updated 2026-11-27).
   const consoleErrors: string[] = [];
   page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
   page.on("pageerror", (e) => consoleErrors.push(String(e)));
 
   await page.goto("/auth/login");
-  await expect(page.getByPlaceholder("Email address")).toBeVisible();
-  await expect(page.getByPlaceholder("Password")).toBeVisible();
-  // Phone sign-in is not wired up and says so rather than pretending.
-  await expect(page.getByText(/Sign in with phone/)).toBeVisible();
-  await expect(page.getByText("coming soon")).toBeVisible();
-  // The old flow's control is gone.
-  await expect(page.getByRole("button", { name: "Send Code" })).toHaveCount(0);
-
-  // Everything above is a clean page load, so nothing should have been logged.
+  await expect(page.getByPlaceholder("Phone Number")).toBeVisible();
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
   expect(consoleErrors, "no console errors on /auth/login").toEqual([]);
-
-  // A wrong password produces a real error and stays put. Supabase answers 400,
-  // which the browser logs as a failed resource — that is the sign-in being
-  // genuinely refused by the server, so it is expected here and only here.
-  await page.getByPlaceholder("Email address").fill("demo-vendor@cosora.dev");
-  await page.getByPlaceholder("Password").fill("definitely-not-the-password");
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await expect(page.getByText(/don't match an account|Invalid/i)).toBeVisible({ timeout: 20_000 });
-  await expect(page).toHaveURL(/\/auth\/login/);
-
-  const unexpected = consoleErrors.filter((e) => !/status of 400/.test(e));
-  expect(unexpected, "only the expected 400 from the refused sign-in").toEqual([]);
 });

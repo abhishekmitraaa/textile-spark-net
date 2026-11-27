@@ -80,10 +80,12 @@ test("P3.b the curated look and suggested searches open REAL searches", async ({
   await expect(page).toHaveURL(/\/search\/results\?q=rugby(%20|\+)tee/);
 });
 
+/** The catalogue read behind the feeds, direct or through the edge cache (rpc/feed_products, escaped or not). */
+const FEED = (url: URL) => /rpc(\/|%2F)feed_products/i.test(url.href);
+
 test("P3.c with an EMPTY catalogue the feed is empty — no generated cards", async ({ page }) => {
-  await page.route("**/rest/v1/products?*", (r) =>
-    r.request().method() === "GET" ? r.fulfill({ status: 200, contentType: "application/json", body: "[]" }) : r.continue(),
-  );
+  // The feeds read feed_products() since 2026-10-14 (and, signed out on cosora.in, through /api/public-data).
+  await page.route(FEED, (r) => r.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
   await page.goto("/home/trends");
   await expect(page.getByText("No listings to show yet")).toBeVisible({ timeout: 25_000 });
   expect(await productHrefs(page), "no product cards at all").toEqual([]);
@@ -94,11 +96,7 @@ test("P3.c with an EMPTY catalogue the feed is empty — no generated cards", as
 
 test("P3.d a failed catalogue fetch is an error with Retry — not empty, not fake", async ({ page }) => {
   test.setTimeout(60_000); // React Query retries three times before surfacing an error.
-  await page.route("**/rest/v1/products?*", (r) =>
-    r.request().method() === "GET"
-      ? r.fulfill({ status: 500, contentType: "application/json", body: '{"message":"boom"}' })
-      : r.continue(),
-  );
+  await page.route(FEED, (r) => r.fulfill({ status: 500, contentType: "application/json", body: '{"message":"boom"}' }));
   await page.goto("/home/trends");
   await expect(page.getByText("Couldn't load listings")).toBeVisible({ timeout: 45_000 });
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
