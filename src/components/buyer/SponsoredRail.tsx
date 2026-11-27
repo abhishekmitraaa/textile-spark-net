@@ -7,6 +7,7 @@ import { useActiveAds, logAdClick, adDestination, type ActiveAd } from "@/lib/qu
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, adSlotBlock, type AdSlotId } from "@/lib/adSlots";
 import SponsoredNote, { AdMark } from "@/components/buyer/SponsoredNote";
+import { ThumbImg } from "@/components/buyer/CardPhotos";
 
 // Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (eligible,
 // promoting a live product) as tappable cards. Impressions are logged once per
@@ -112,7 +113,7 @@ export default function SponsoredRail({
             className="group relative w-36 shrink-0 overflow-hidden rounded-2xl border border-gray-200 bg-white text-left"
           >
             <div className="relative aspect-[3/4] bg-gray-100">
-              {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? "Sponsored product"} className="h-full w-full object-cover" loading="lazy" />}
+              {a.imageUrl && <ThumbImg src={a.imageUrl} alt={a.productName ?? "Sponsored product"} className="h-full w-full object-cover" loading="lazy" />}
             </div>
             <div className="p-2">
               <p className="truncate text-[11px] font-bold text-gray-900">{a.productName ?? a.title}</p>

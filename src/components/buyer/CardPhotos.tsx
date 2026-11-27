@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ImgHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { thumbUrl } from "@/lib/thumbs";
 
@@ -26,6 +26,25 @@ function CardImg({ src, alt, className, priority }: { src: string; alt: string; 
       {...(priority ? { fetchpriority: "high" } : {})}
       onError={thumb && !failed ? () => setFailed(true) : undefined}
       className={className}
+    />
+  );
+}
+
+/**
+ * Any small listing picture outside a product card (the New Arrivals carousel, sponsored rails, a store's grids):
+ * the server-made 480 px thumbnail, else the full photo (speed plan 2.4, 2026-11-27). The home feed's carousel and
+ * rails loaded 1206 px originals to show them at 112–169 px. Not for a picture shown large (the product page's own
+ * photos keep the original).
+ */
+export function ThumbImg({ src, ...rest }: Omit<ImgHTMLAttributes<HTMLImageElement>, "src"> & { src: string }) {
+  const thumb = thumbUrl(src);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  return (
+    <img
+      {...rest}
+      src={thumb && !failed ? thumb : src}
+      onError={thumb && !failed ? () => setFailed(true) : rest.onError}
     />
   );
 }

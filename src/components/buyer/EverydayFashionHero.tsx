@@ -8,6 +8,7 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { HOME_TRENDING_COUNT, useFeedSlice } from "@/lib/queries/feed";
 import type { ProductCardData } from "@/lib/queries/products";
 import { useHeroSlideIds } from "@/lib/siteConfig";
+import { ThumbImg } from "@/components/buyer/CardPhotos";
 
 // ─────────────────────────────────────────────────────────────
 // EVERYDAY FASHION HERO — center-emphasis auto-advancing carousel
@@ -112,7 +113,7 @@ function Slide({ slide, offset, saved, reducedMotion, wasDragged }: SlideProps) 
         draggable={false}
         onClick={(e) => { if (wasDragged()) e.preventDefault(); }}
       >
-        <img
+        <ThumbImg
           src={slide.image}
           alt={slide.name}
           className="absolute inset-0 w-full h-full object-cover"

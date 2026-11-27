@@ -46,6 +46,7 @@ import { useUrlState } from "@/hooks/useUrlState";
 import { useSavedVendors, useToggleSavedVendor } from "@/lib/queries/savedVendors";
 import { SampleListingNotice } from "@/components/buyer/SampleProfile";
 import { SAMPLES_LABELLED, SAMPLE_CONTACT_COPY, useIsSampleVendor } from "@/lib/samples";
+import { ThumbImg } from "@/components/buyer/CardPhotos";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -886,7 +887,7 @@ const VendorProfile = () => {
               return (
                 <motion.div variants={listItem} key={product.id} className="rounded-xl border border-gray-200 overflow-hidden bg-white">
                   <div className="relative aspect-[3/4] bg-gray-100">
-                    <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
+                    <ThumbImg src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
                     <button onClick={() => openSaveModal(toSavePayload(product))}
                       aria-label="Save" className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm">
                       {isSaved ? <BookmarkCheck className="h-3 w-3 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="h-3 w-3 text-gray-500" />}
@@ -1075,7 +1076,7 @@ const VendorProfile = () => {
                 <div key={product.id} className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col">
                   {/* The picture and the text under it open the product (2026-10-14: neither did). */}
                   <Link to={`/product/${product.id}`} className="relative block aspect-[3/4] bg-gray-100 shrink-0">
-                    <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
+                    <ThumbImg src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
                     <button onClick={(e) => { e.preventDefault(); openSaveModal({ ...toSavePayload(product), location: product.location }); }}
                       aria-label="Save" className={cn("absolute top-2 right-2 flex items-center justify-center rounded-full bg-white/90 shadow", gridCols === 2 ? "h-7 w-7" : "h-6 w-6")}>
                       {isSaved ? <BookmarkCheck className={cn("text-brand-buyer fill-brand-buyer/15", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} /> : <Bookmark className={cn("text-gray-500", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} />}

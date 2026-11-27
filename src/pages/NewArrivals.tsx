@@ -67,7 +67,7 @@ import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { usePreferences } from "@/lib/preferencesStore";
 import { usePrefCategoryMap } from "@/lib/queries/forYou";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
-import { CardPhotos, PRIORITY_CARDS } from "@/components/buyer/CardPhotos";
+import { CardPhotos, PRIORITY_CARDS, ThumbImg } from "@/components/buyer/CardPhotos";
 import { useShowsSampleTag } from "@/lib/samples";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
@@ -196,7 +196,7 @@ function LookingForCard({ product, className }: { product: Product; className?: 
       {/* The photo is the card's link for a keyboard and a screen reader (review L-11); the text's overlay link is
           mouse and touch only. */}
       <Link to={`/product/${product.id}`} className="relative block aspect-square bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-buyer">
-        <img src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
+        <ThumbImg src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
         <RatingChip rating={product.rating} size="xs" className="absolute bottom-1 left-1" />
       </Link>
       <div className="p-1.5 lg:p-2.5 flex flex-col flex-1">
@@ -271,7 +271,7 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
           <div key={a.adId} ref={track(a.adId)} className="shrink-0 w-32 lg:w-48">
             <button onClick={() => onOpen(a)} className="w-full text-left">
               <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
-                {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? a.title} className="w-full h-full object-cover" loading="lazy" />}
+                {a.imageUrl && <ThumbImg src={a.imageUrl} alt={a.productName ?? a.title} className="w-full h-full object-cover" loading="lazy" />}
               </div>
               <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.productName ?? a.title}</p>
               <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.categoryName ?? a.vendorName ?? ""}</p>
@@ -739,7 +739,7 @@ const NewArrivals = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             {topVendors.map((v) => (
               <Link key={v.id} to={`/vendor/${v.id}`} className="relative rounded-xl overflow-hidden aspect-square bg-gray-100">
-                {v.imageUrl && <img src={v.imageUrl} alt={v.brandName} className="w-full h-full object-cover" loading="lazy" />}
+                {v.imageUrl && <ThumbImg src={v.imageUrl} alt={v.brandName} className="w-full h-full object-cover" loading="lazy" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 {v.verified && (
                   <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5 text-[9px] lg:text-[10px] font-bold text-brand-success">
