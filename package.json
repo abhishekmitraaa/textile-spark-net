@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/spa-routes.mjs && vite build && node scripts/emit-404.mjs && node scripts/csp-inline-hashes.mjs",
+    "build": "node scripts/spa-routes.mjs && vite build && node scripts/emit-404.mjs && node scripts/csp-inline-hashes.mjs && node scripts/perf/bundle-budget.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
@@ -16,7 +16,10 @@
     "i18n:check": "node scripts/i18n-coverage-check.mjs",
     "rls:check": "node scripts/rls-policy-check.mjs",
     "routes:sync": "node scripts/spa-routes.mjs --write",
-    "csp:sync": "node scripts/csp-inline-hashes.mjs --write"
+    "csp:sync": "node scripts/csp-inline-hashes.mjs --write",
+    "perf": "node scripts/perf/page-speed.mjs",
+    "perf:local": "node scripts/perf/page-speed.mjs --base http://localhost:8191",
+    "perf:bundle": "vite build --sourcemap --outDir .perf-dist --emptyOutDir && node scripts/perf/bundle-report.mjs .perf-dist"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

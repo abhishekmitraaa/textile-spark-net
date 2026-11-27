@@ -44,3 +44,7 @@ playwright-report-local/
 
 # Python bytecode (scripts/samples, 2026-11-24)
 __pycache__/
+
+# speed plan: source-map build and sweep output (scripts/perf)
+.perf-dist/
+perf-*.json
