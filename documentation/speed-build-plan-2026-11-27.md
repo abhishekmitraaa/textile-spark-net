@@ -675,7 +675,9 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 3.7 | not done | CSS split; small |
 | CI | fixed (main ed3b6df) | E2E ran nothing for weeks (runner OS, Node 18, `.env` read at import, local-stack specs, no Supabase settings in the build, stale specs); now green: Checks and E2E pass |
 | 4.1 | live (main 0528865) | checked: `X-Vercel-Cache: HIT` from `bom1`, private reads refused; `api/public-data.ts` (bom1) + `src/lib/publicData.ts`: signed-out reads of listed functions and public tables from Vercel's edge cache (60 s, stale 120 s); signed-in, writes, counts, search, analytics direct. Local check: calls to Sydney home 10 → 1, product 13 → 0, store 7 → 1, search 13 → 3, page text identical |
-| 4.2, 4.6 | not started | need migrations (page RPCs, batched analytics) |
+| 4.2 | not started | page RPCs (migrations) |
+| 4.6 | live (main 3616f00) | `log_engagement_events(jsonb)` applied 2026-11-27 (md5 checked); the app queues events 2 s / 25 and sends them together: search results 27 calls → 2 |
+| 2.4 (rest) | live (main 3616f00) | `ThumbImg` on the carousel, sponsored rails, New Arrivals rails and store grids: home feed 12 full photos (1.7 MB) → 0 |
 | 4.3 | not needed yet | GET RPCs matter for a read replica (4.7) |
 | 4.4 | live | `src/lib/routeData.ts`: product and store data start with the app (first call ~0.6 s → ~0.1 s after start) |
 | 4.5 | not started | persisted query cache needs a new package |
