@@ -673,6 +673,14 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 3.8 | done | Radix toaster removed |
 | 3.9 | done | `TooltipProvider` moved into Onboarding, the only page with a tooltip; first load 318.2 → 305.4 KB gzip |
 | 3.7 | not done | CSS split; small |
+| 4.1 | built, not pushed | `api/public-data.ts` (bom1) + `src/lib/publicData.ts`: signed-out reads of listed functions and public tables from Vercel's edge cache (60 s, stale 120 s); signed-in, writes, counts, search, analytics direct. Local check: calls to Sydney home 10 → 1, product 13 → 0, store 7 → 1, search 13 → 3, page text identical |
+| 4.2, 4.6 | not started | need migrations (page RPCs, batched analytics) |
+| 4.3 | not needed yet | GET RPCs matter for a read replica (4.7) |
+| 4.4 | built, not pushed | `src/lib/routeData.ts`: product and store data start with the app (first call ~0.6 s → ~0.1 s after start) |
+| 4.5 | not started | persisted query cache needs a new package |
+| 4.7 | waits on D-2 | region |
+| 4.8 | built, not pushed | `pref_category_map` read once (2 → 1); the two `active_ads` calls are different slots, left for 4.2 |
+| 4.9 | built, not pushed | product page reads its category's questions only (535 KB → 24–110 KB uncompressed) |
 
 ### 9.1 Measured (2026-11-27, 8 key pages, phone profile, median of 3 runs)
 
