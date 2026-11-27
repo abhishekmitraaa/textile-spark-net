@@ -1451,6 +1451,13 @@ undocumented. Deep technical rationale for each lives in
   doesn't change with its content under `public/assets/`. The libraries that never import app code (React, the
   router, Supabase, React Query) are one `vendor-core` file (`manualChunks` in `vite.config.ts`), so a deploy that
   changes only app code leaves it cached; don't add a package that imports app code, or anything else, to it.
+- **Signed-out reads of public data go through the site's edge cache** (speed plan 4.1, 2026-11-27): the Supabase
+  client's fetch (`src/lib/publicData.ts`) sends an anon-key read of a listed function or table to
+  `/api/public-data` (Vercel, `bom1`, `CDN-Cache-Control: s-maxage=60, stale-while-revalidate=120`); anything signed in,
+  any write, count, search or analytics call goes to Supabase as before, and a refusal or edge error falls back to it.
+  A signed-out visitor may see a change up to ~3 minutes late (a takedown included). Add a read to the lists in BOTH
+  files only if it is the same for every signed-out visitor and feeds nothing (no logging, no session argument); never
+  a table with private rows. `node scripts/public-data-check.mjs` holds the rules.
 - **A file in the first script animates with `m`, never `motion`** (speed plan 3.3, 2026-11-27): `import { m as motion }
   from "framer-motion"`. `<LazyMotion>` in `App.tsx` loads the engine (`lib/motionFeatures.ts`, `domMax`) after the first
   script; a plain `motion` import there puts all of framer-motion back into it. Pages that load on their own may use

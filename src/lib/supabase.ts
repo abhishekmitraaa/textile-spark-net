@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { publicDataFetch } from "@/lib/publicData";
 
 // Single Supabase client for the whole app. URL + anon key come from Vite env
 // (see .env / .env.example). The anon key is safe to ship to the browser — row
@@ -20,4 +21,6 @@ export const supabase = createClient<Database>(url, anonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
+  // Signed-out reads of public data through the site's edge cache (speed plan 4.1, src/lib/publicData.ts).
+  global: { fetch: publicDataFetch(url, anonKey) },
 });
