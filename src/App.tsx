@@ -152,6 +152,8 @@ const queryClient = new QueryClient({
   },
 });
 prefetchRouteData(queryClient, window.location.pathname, window.location.search);
+// Public page data kept between visits (speed plan 4.5): loaded beside the app, so it adds nothing to the first script.
+void import("./lib/queryPersist").then((m) => m.persistPublicQueries(queryClient)).catch(() => undefined);
 
 // The pages people open next are fetched in the background after the first one (review M-34).
 scheduleWarmPages();

@@ -1458,6 +1458,12 @@ undocumented. Deep technical rationale for each lives in
   A signed-out visitor may see a change up to ~3 minutes late (a takedown included). Add a read to the lists in BOTH
   files only if it is the same for every signed-out visitor and feeds nothing (no logging, no session argument); never
   a table with private rows. `node scripts/public-data-check.mjs` holds the rules.
+- **Public page data is kept in the browser between visits** (speed plan 4.5, 2026-11-28; `src/lib/queryPersist.ts`):
+  React Query's results for the keys in `PUBLIC_KEYS` (feeds, listings, stores, reviews, categories, search results)
+  are saved to IndexedDB and shown at once on the next visit, then refreshed as usual. One record, for one account
+  ("anon" signed out), same build, data under 24 hours old; deleted at sign-out. Add a key only if its data is the
+  same for every visitor: never ads or paid placements, never For You or anything of an account's own. A listing
+  taken down can show from the saved copy until the refresh lands (about a second).
 - **A file in the first script animates with `m`, never `motion`** (speed plan 3.3, 2026-11-27): `import { m as motion }
   from "framer-motion"`. `<LazyMotion>` in `App.tsx` loads the engine (`lib/motionFeatures.ts`, `domMax`) after the first
   script; a plain `motion` import there puts all of framer-motion back into it. Pages that load on their own may use
