@@ -15,6 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { readEnvText } from "./support/envFile";
 
 /**
  * Video Closeups on Bunny Stream — BROWSER layer.
@@ -70,7 +71,7 @@ import { pipeline } from "node:stream/promises";
 // This repo is ESM ("type": "module"), so __dirname does not exist.
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),

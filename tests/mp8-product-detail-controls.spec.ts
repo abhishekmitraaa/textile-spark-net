@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnvText } from "./support/envFile";
 
 /**
  * Master Prompt 8, Phase 6 — no control on /product/:id that does nothing.
@@ -19,7 +20,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),

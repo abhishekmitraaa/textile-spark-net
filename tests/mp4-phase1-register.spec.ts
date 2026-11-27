@@ -4,6 +4,7 @@ test.skip(!optionalCredential("MP_VENDOR_PASSWORD"), "set MP_VENDOR_PASSWORD in 
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnvText } from "./support/envFile";
 
 /**
  * Master Prompt 4, Phase 1 — part 1 of 2.
@@ -22,7 +23,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),

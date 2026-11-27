@@ -11,6 +11,11 @@ jobs:
     name: E2E (Playwright)
     # ubuntu-latest became 26.04, which Playwright 1.60 cannot install browsers on (2026-11-27).
     runs-on: ubuntu-24.04
+    # The project's public address and anon key (both ship in every page), as repository variables. Without them the
+    # build has no Supabase settings and the app stops at start-up; the specs read them too.
+    env:
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,7 +23,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          # 22: the specs use node:zlib's crc32 and the app is built with 22 locally.
+          node-version: 22
 
       - name: Install dependencies
         run: npm ci

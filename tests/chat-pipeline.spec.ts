@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnvText } from "./support/envFile";
 
 /**
  * Chat + chat-moderation pipeline — UI layer.
@@ -28,7 +29,7 @@ import { fileURLToPath } from "node:url";
 // This repo is ESM ("type": "module"), so __dirname does not exist.
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),

@@ -4,6 +4,7 @@ import { createClient, type Session, type SupabaseClient } from "@supabase/supab
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnvText } from "./support/envFile";
 
 /**
  * Support writes FAQs (Phase 22 of the My Profile brief, 2026-09-24; Phase 9 Q3).
@@ -30,7 +31,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),

@@ -19,6 +19,9 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests",
+  // tests/local/ runs against the Docker copy of the database (playwright.local.config.ts), never here: CI picked
+  // them up and failed on their local-only setup (2026-11-27).
+  testIgnore: ["local/**"],
   // The chat specs drive two browser contexts against one shared database and
   // flip moderation state on fixture rows. Running them in parallel would have
   // one spec's suspension land in the middle of another's assertion.

@@ -6,6 +6,7 @@ import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SUPPLIER_AGREEMENT_VERSION } from "../src/lib/supplierAgreement";
+import { readEnvText } from "./support/envFile";
 
 /**
  * Master Prompt 4, Phases 1 (verify) + 2 + 4.3 — part 2 of 2.
@@ -22,7 +23,7 @@ import { SUPPLIER_AGREEMENT_VERSION } from "../src/lib/supplierAgreement";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),

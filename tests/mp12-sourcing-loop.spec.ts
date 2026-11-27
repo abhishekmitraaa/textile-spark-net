@@ -4,6 +4,7 @@ import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEnvText } from "./support/envFile";
 
 /**
  * The sourcing loop through the real UI — Master Prompt 12, Part F.
@@ -32,7 +33,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = Object.fromEntries(
-  readFileSync(path.join(REPO_ROOT, ".env"), "utf8")
+  readEnvText(REPO_ROOT)
     .split(/\r?\n/)
     .filter((l) => l.includes("=") && !l.trimStart().startsWith("#"))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
