@@ -311,7 +311,9 @@ costs ~0.4–1.3 s instead of ~0.05 s.
 Other script weight:
 - `index.html` loads **six Google font families** (Barlow Condensed, Dancing Script, DM Sans, Open Sans, Playfair
   Display, Roboto) in one **render-blocking** stylesheet from two extra origins; pages then download 79–172 KB of font
-  files. Tailwind's `font-sans` is DM Sans; the other five appear in 1–4 files each.
+  files. Tailwind's `font-sans` is DM Sans, but the live site theme (Cosora-Admin › Site theme) sets the body to
+  **Open Sans with Roboto** (checked on production 2026-11-27: those are the faces that load; DM Sans loads on none
+  of the measured pages). The other families appear in 1–4 files each.
 - `index.css` is 181 KB (28 KB gzip), one file for every page.
 - The Hindi and Gujarati catalogues are **562 KB and 558 KB** (245 KB gzip each), and `main.tsx` holds the first
   paint up to 3 s for them.
@@ -585,7 +587,7 @@ paints ≤ 3.0 s on the phone profile against the local stack plus a simulated 8
 | D-2 | Where should the database live? | (A) **Move the project to `ap-south-1` Mumbai.** Every call, Auth, Storage, Realtime and edge function gets ~5–10× lower latency from India. Needs a paid plan ("Restore to another project") or a CLI dump/restore, plus the runbook in §7 and a short maintenance window. (B) **Keep Sydney, add a Mumbai read replica** behind the API load balancer (paid plan + at least Small compute): only REST `GET`s and `get: true` RPCs are geo-routed; Auth, Storage, writes and Realtime stay in Sydney. (C) **Keep Sydney**, rely on the edge cache (4.1) and an image CDN (2.3): fixes signed-out browsing, not signed-in users or sellers. | **(A), before public launch.** The data is small today (43 sellers, 423 photos, ~95 MB of Storage), so this is the cheapest it will ever be. Do 4.1 either way. |
 | D-3 | How should photos be resized? | (a) Supabase image transformations (Pro plan; simplest, no new vendor, replaces `product-thumbs`). (b) Bunny CDN + Optimizer in front of Storage (India edges, cheap per GB, already a vendor). (c) Extend `product-thumbs` to more sizes (no new cost, but images still come from Sydney unless D-2 is A). | **(a) if the project moves to Mumbai and the plan is upgraded; (b) if it stays in Sydney.** Either way, 2.1 and 2.2 first. |
 | D-4 | Real-user speed data? | Vercel Speed Insights (paid per data point) / own `web_vitals` table / none | **Own table**, batched, behind the analytics consent; no new vendor. |
-| D-5 | Fonts | keep all six / DM Sans + Playfair only / DM Sans only | **DM Sans + Playfair Display**, loaded the new way; the other four only where a design really needs them. |
+| D-5 | Fonts | keep all six / the theme's body font (Open Sans + Roboto today) + Playfair only / one body font | **The theme's body font + Playfair Display**, self-hosted; the others only where a design really needs them. Since 1.2 (2026-11-27) the six no longer block the first paint, so this now saves bytes, not paint time. |
 | D-6 | Thumbnail backfill job | run it / skip | **Run it** (a one-off job, ~20 photos a minute, 423 photos ≈ 25 minutes). It is a new job, so it needs your yes. |
 | D-7 | Sign-in pages in the first script (rule from review M-34) | keep eager / load them as their own files, warmed on Landing and on any "Sign in" button's hover/touch | **Keep eager for now.** With input-otp they are ~35 KB minified (~11 KB gzip), against the ~125 KB gzip that 3.1–3.3 and 3.8 remove (§3.9); revisit only if the entry is still over budget after Phase 3. Sign-in itself is not touched either way. |
 
@@ -640,6 +642,32 @@ waves). They are not promises: each phase is re-measured with `npm run perf`, an
 numbers as each phase ships.
 
 ---
+
+## 9. Progress (D-1, started 2026-11-27)
+
+Mitra said "start the D1" on 2026-11-27. Work is on branch `perf/phase-0-1` (worktree `.worktrees/perf-p01`),
+not merged or pushed; a `main` push deploys production, so merging waits for Mitra.
+
+| Item | State | Note |
+|---|---|---|
+| 0.1–0.3 | done | `npm run perf`, `perf:local`, `perf:bundle`; the budget runs at the end of `npm run build` |
+| 0.4 | waits on D-4 | |
+| 1.1 | done | `/assets/*` cached a year; takes effect on deploy (a local preview doesn't apply `vercel.json`) |
+| 1.2 | done, partly | fonts no longer block the first paint; self-hosting and fewer families wait on D-5 |
+| 1.3 | done | preconnect to Supabase |
+| 1.4 | done | 3 pages per side, after the network is quiet; `import()` kept, no hover prefetch |
+| 1.5 | deferred | its own branch; the year-long cache already saves returning Hindi/Gujarati visitors the download |
+| 1.6 | skipped | the two functions aren't on any page's load path; revisit with D-2 |
+| 1.7 | done | `vendor-core` 116.7 KB gzip, imports nothing from the app file |
+| 2.1 | migration written, **not applied** | `20261127100000`, rehearsed on the local stack; backfill `scripts/perf/thumbs-backfill.sql` waits on D-6 |
+| 2.2 | not needed | with 2.1 and the backfill every live photo has its thumbnail; the fallback stays |
+| 2.4 | done, partly | the first 4 cards on the home feed and search results load at once with high priority; `srcset` waits on D-3 |
+| 2.7 | done | Landing hero `fetchpriority="high"` |
+| 3.1 | done | the 4 tap-to-open dialogs load on first open (`LazyModals.tsx`) |
+| 3.2 | done | `errorMessage` no longer pulls the registration validator and the category table (`registrationErrors.ts`) |
+| 3.3 | waits on Mitra | 3 of the 14 first-script users of framer-motion are the sign-in pages (D-7) |
+| 3.5 | done for search results | 24 cards at a time |
+| 3.8 | done | Radix toaster removed |
 
 ## Appendix A: Data behind this document
 
