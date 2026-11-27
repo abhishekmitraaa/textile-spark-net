@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { lazyPage, scheduleWarmPages } from "./lib/lazyPage";
-import { Toaster } from "@/components/ui/toaster";
 const BusinessProfileScorePage = lazyPage(() => import("./pages/BusinessProfileScorePage"));
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -122,8 +121,7 @@ const HelpGuide = lazyPage(() => import("./pages/HelpGuide"));
 const VendorBlogs = lazyPage(() => import("./pages/VendorBlogs"));
 const VendorBlogArticle = lazyPage(() => import("./pages/VendorBlogArticle"));
 const GoPostRfq = lazyPage(() => import("./pages/GoPostRfq"));
-import SaveToFolderModal from "./components/buyer/SaveToFolderModal";
-import CallNumberModal from "./components/buyer/CallNumberModal";
+import { SaveToFolderModal, CallNumberModal } from "./components/buyer/LazyModals";
 import { PendingEnquiry } from "./hooks/usePendingEnquiry";
 import AutoTranslate from "./components/i18n/AutoTranslate";
 import LanguageSync from "./components/i18n/LanguageSync";
@@ -168,7 +166,6 @@ const App = () => (
     <UserRoleProvider>
     <DisplayCurrencyProvider>
       <TooltipProvider>
-        <Toaster />
         <Sonner />
         <RealtimeHubProvider>
         <BrowserRouter>

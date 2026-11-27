@@ -1,4 +1,4 @@
-import { registrationErrorText } from "@/lib/registrationValidation";
+import { registrationErrorText } from "@/lib/registrationErrors";
 
 /**
  * The human-readable message of anything a `catch` can receive.
