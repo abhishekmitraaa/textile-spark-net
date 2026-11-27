@@ -707,11 +707,20 @@ to a local preview, so the year-long cache (1.1) isn't in these numbers; it show
 | `/categories` | 6.5 s | 4.7 s | **3.8 s** | 17 → 158 ms | 123 → 52 | 634 → 325 |
 | `/seller` | 4.0 s | 4.2 s | **3.9 s** | 1444 → 1927 ms | 141 → 92 | 1537 → 1377 |
 
-Open: TBT rose on six pages. The sweep counts long tasks until the network has been quiet for 2.5 s, which now
-includes the warm-up (1.4 starts it once the network is quiet) parsing the three warmed pages and the files split out
-of the first script (the seller category table now arrives with SearchResults). The work moved after the first paint
-rather than grew, but it can still delay a tap; to check next: TBT with the warm-up blocked, and whether the warmed
-SearchResults should leave the category table for when it opens.
+TBT rose on six pages (checked 2026-11-28 with Chrome traces and a source-mapped CPU profile, phone profile, live
+site): **the warm-up was not the cause.** On `/`, `/terms`, the home feed and `/categories` all blocking time comes
+before the warm-up starts; its first file adds one ~50–100 ms task. What blocks:
+
+- `/seller`: the embedded YouTube player, ~2 s of YouTube's scripts whether or not anyone pressed play. **Fixed**:
+  `<YouTubeFacade>` shows the video's picture and loads the player on the first tap. TBT 1316 → 539 ms (median of 3,
+  local builds of main and the change, same data).
+- Home feed: one ~0.7 s task when the feed first renders (React, then the page's first full layout, ~0.3–0.4 s),
+  and layout work as photos and rails arrive. framer-motion's shared-layout indicator in the bottom bar forced extra
+  page measurements (`measureScroll`, ~0.45 s in one profile); replacing it and moving the tab strip's reads out of
+  React's commit removed that work from the profile but **did not lower TBT** (685 → 808 ms, median of 7, within
+  noise): the first layout simply happened elsewhere. Reverted; not worth the visual change.
+- Search results (~0.5 s) and the store page (~0.3 s): the first render of the results grid. Left as is: lowering it
+  means rendering fewer cards at first (virtualising the grid), a bigger change than its gain.
 
 ## Appendix A: Data behind this document
 

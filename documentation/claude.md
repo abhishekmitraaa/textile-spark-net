@@ -1468,6 +1468,9 @@ undocumented. Deep technical rationale for each lives in
   from "framer-motion"`. `<LazyMotion>` in `App.tsx` loads the engine (`lib/motionFeatures.ts`, `domMax`) after the first
   script; a plain `motion` import there puts all of framer-motion back into it. Pages that load on their own may use
   `motion`. `npm run perf:bundle` shows framer-motion's share of the first load (≈ 8 KB gzip now).
+- **A third-party player loads on tap** (speed plan §9.1, 2026-11-28): `<YouTubeFacade>` shows the video's picture
+  (shipped in `src/assets`, never hotlinked) and puts the player in its place on the first tap. The embedded YouTube
+  player cost `/seller` ~2 s of main-thread work on a phone whether or not anyone pressed play (TBT 1316 → 539 ms).
 - **A deleted account's live listings go to draft** (Mitra, 2026-11-19, review M-37, "Hide deleted only"):
   `trg_profiles_products_off_when_deleted`. Suspension leaves them live.
 - **A browser sets pictures only from this project's Storage** (2026-11-20, review M-75): `admin.image_urls_check` on

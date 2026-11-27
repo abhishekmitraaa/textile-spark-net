@@ -37,6 +37,8 @@ import { useOverlayState } from "@/hooks/useBackCloses";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHomePath } from "@/hooks/useHomePath";
 import { useCareersPageOn } from "@/lib/queries/careers";
+import { YouTubeFacade } from "@/components/YouTubeFacade";
+import sellerVideoPoster from "@/assets/seller-video-poster.jpg";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 24 },
@@ -217,13 +219,8 @@ const VendorLanding = () => {
 
             <div className="mt-4 overflow-hidden rounded-2xl border border-brand-border bg-[#f5f5f5]">
               <div className="aspect-video w-full">
-                <iframe
-                  className="h-full w-full"
-                  src="https://www.youtube.com/embed/quogY2hgYFY"
-                  title="Cosora Onboarding Video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                {/* YouTube loads on the first tap (speed plan §9.1): the embedded player cost ~2 s of blocking on a phone. */}
+                <YouTubeFacade videoId="quogY2hgYFY" title="Cosora Onboarding Video" poster={sellerVideoPoster} />
               </div>
             </div>
 
