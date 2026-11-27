@@ -155,21 +155,6 @@
     }
   }
 
-  /* Preserve original fonts for Landing page */
-  .landing-page,
-  .landing-page body {
-    font-family: "DM Sans", system-ui, sans-serif;
-  }
-
-  .landing-page h1,
-  .landing-page h2,
-  .landing-page h3,
-  .landing-page h4,
-  .landing-page h5,
-  .landing-page h6 {
-    font-family: "Playfair Display", Georgia, serif;
-  }
-
   /* The vendor side uses the exact same typography as the buyer side:
      Open Sans for body text, Roboto for headings (see the body / h1–h6
      rules above). Keep this stack identical to `body` — the vendor UI

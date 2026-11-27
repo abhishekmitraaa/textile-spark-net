@@ -672,7 +672,7 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 3.6 | done | recharts loads with the first chart (`components/vendor/Recharts.tsx`): Analytics' file 119 → 11.7 KB gzip |
 | 3.8 | done | Radix toaster removed |
 | 3.9 | done | `TooltipProvider` moved into Onboarding, the only page with a tooltip; first load 318.2 → 305.4 KB gzip |
-| 3.7 | not done | CSS split; small |
+| 3.7 | measured, nothing to split | one stylesheet, 174 KB (27 KB gzip): utilities the pages use (88 KB) and one-off values like `text-[#363636]` (48 KB, ~7 KB gzip, spread over hundreds of files: not worth the rewrite). Tailwind's `content` covers `src/**`, and custom classes are already left out when unused. The Landing-only rules (`.landing-page`) matched nothing; the build already left them out, and they are deleted from `index.css` (the built CSS is unchanged). Dropping the two rarely used font families from the preload (Playfair Display, Dancing Script) would save 0.3 KB gzip: left as is |
 | CI | fixed (main ed3b6df) | E2E ran nothing for weeks (runner OS, Node 18, `.env` read at import, local-stack specs, no Supabase settings in the build, stale specs); now green: Checks and E2E pass |
 | 4.1 | live (main 0528865) | checked: `X-Vercel-Cache: HIT` from `bom1`, private reads refused; `api/public-data.ts` (bom1) + `src/lib/publicData.ts`: signed-out reads of listed functions and public tables from Vercel's edge cache (60 s, stale 120 s); signed-in, writes, counts, search, analytics direct. Local check: calls to Sydney home 10 → 1, product 13 → 0, store 7 → 1, search 13 → 3, page text identical |
 | 4.2 | not started | page RPCs (migrations) |
