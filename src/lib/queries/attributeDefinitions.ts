@@ -151,3 +151,46 @@ export function useVocabulary(): VocabularyState {
     };
   }, [data, lang]);
 }
+
+/** The code categories a listing filed under `categoryName` (a category's or sub-category's name) belongs to. */
+export function categoryIdsForName(categoryName: string | null | undefined): string[] {
+  const name = categoryName?.trim().toLowerCase();
+  if (!name) return [];
+  return codeVocabulary.categories
+    .filter((c) => c.name.trim().toLowerCase() === name || c.subCategories.some((s) => s.name.trim().toLowerCase() === name))
+    .map((c) => c.id);
+}
+
+/** The product form's base questions and one set of categories' own questions (speed plan 4.9). */
+async function fetchProductAttributesFor(categoryIds: string[]): Promise<AttributeDefinition[]> {
+  const ids = categoryIds.filter((id) => /^[a-z0-9_-]+$/i.test(id));
+  const scope = ids.length ? `layer.eq.base,category_id.in.(${ids.join(",")})` : "layer.eq.base";
+  const { data, error } = await supabase.from("attribute_definitions").select(COLUMNS)
+    .eq("active", true).eq("form", "product").or(scope).order("id").limit(PAGE);
+  if (error) throw error;
+  return (data ?? []) as unknown as AttributeDefinition[];
+}
+
+/**
+ * The listing form's questions for one listing's category, for the product page's specifications (speed plan 4.9,
+ * 2026-11-27). The page used to download every question of both forms (~96 KB, 1.4–2.8 s on a phone) to label one
+ * listing's answers; this asks for the base questions and that category's (~3 KB). Questions of other categories are
+ * left empty, which attributeSpecs() never reads for this listing. A failed or empty read falls back to the code lists,
+ * as useVocabulary() does; when the full set is already cached (a form or search results was open) it is used as is.
+ */
+export function useCategoryVocabulary(categoryName: string | null | undefined): Vocabulary {
+  const lang = useLang();
+  const ids = useMemo(() => categoryIdsForName(categoryName), [categoryName]);
+  const full = useQuery<AttributeDefinition[]>({ queryKey: ["attribute_definitions"], enabled: false });
+  const { data } = useQuery({
+    queryKey: ["attribute_definitions", "product", ...ids],
+    queryFn: () => fetchProductAttributesFor(ids),
+    enabled: Boolean(categoryName) && !full.data,
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+  return useMemo(() => {
+    const rows = full.data ?? data;
+    return rows?.some((r) => r.form === "product") ? buildVocabulary(rows, lang) : codeVocabulary;
+  }, [full.data, data, lang]);
+}

@@ -1,5 +1,5 @@
 import { socialLinksForDisplay } from "@/lib/socialLinks";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
 import { mapProductRow, PRODUCT_CARD_SELECT, registeredCountry, type ProductCardData, type RawProduct, type RawVendor } from "@/lib/queries/products";
@@ -190,6 +190,11 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     liveCount,
     videos,
   };
+}
+
+/** Starts useVendorProfile's read before the store page's file has loaded (speed plan 4.4, src/lib/routeData.ts). */
+export function prefetchVendorProfile(qc: QueryClient, id: string) {
+  return qc.prefetchQuery({ queryKey: ["vendor_profile", id], queryFn: () => fetchVendorProfile(id), staleTime: 5 * 60_000 });
 }
 
 export function useVendorProfile(id: string | undefined) {

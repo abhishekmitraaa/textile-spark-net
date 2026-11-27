@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { attributeSpecs } from "@/lib/attributeSpecs";
-import { useVocabulary } from "@/lib/queries/attributeDefinitions";
+import { useCategoryVocabulary } from "@/lib/queries/attributeDefinitions";
 import type { Vocabulary } from "@/data/sellerCategories";
 import trustedSeal from "@/assets/Trustedseal.png";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
@@ -376,7 +376,7 @@ const ProductDetail = () => {
   const { data: row, isPending: rowPending, isError, refetch } = useProductById(validId);
   // A disabled query (invalid id) reports "pending" forever; that is not loading.
   const isPending = Boolean(validId) && rowPending;
-  const { vocabulary } = useVocabulary();
+  const vocabulary = useCategoryVocabulary(row?.categoryName);
   const baseProduct = row ? toViewModel(row, vocabulary) : null;
   // The listing's own approved videos (Video Closeups tagged to it, e.g. added in the product form) play in its
   // carousel after the photos; its PDFs are listed under the specifications (2026-10-17).

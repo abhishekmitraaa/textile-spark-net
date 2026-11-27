@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { LazyMotion } from "framer-motion";
 import { lazyPage, scheduleWarmPages } from "./lib/lazyPage";
+import { prefetchRouteData } from "./lib/routeData";
 const BusinessProfileScorePage = lazyPage(() => import("./pages/BusinessProfileScorePage"));
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -150,6 +151,7 @@ const queryClient = new QueryClient({
     },
   },
 });
+prefetchRouteData(queryClient, window.location.pathname);
 
 // The pages people open next are fetched in the background after the first one (review M-34).
 scheduleWarmPages();

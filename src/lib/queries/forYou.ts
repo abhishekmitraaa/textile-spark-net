@@ -91,25 +91,41 @@ export type PrefCategoryMap = Record<string, string[]>;
  * PREF_TO_DB_CATEGORY_NAMES pointed at legacy flat category names that no live
  * product uses any more.
  */
-export async function fetchPrefCategoryMap(): Promise<PrefCategoryMap> {
+type PrefCategoryRow = { pref_id: string; category_id: string; categories: { name: string } | { name: string }[] | null };
+
+/**
+ * One read of the map for both views below (speed plan 4.8, 2026-11-27): the id view and the name view were two
+ * requests on every New Arrivals load.
+ */
+async function fetchPrefCategoryRows(): Promise<PrefCategoryRow[]> {
   const { data, error } = await supabase
     .from("pref_category_map")
-    .select("pref_id, category_id");
+    .select("pref_id, category_id, categories(name)");
   if (error) throw error;
+  return (data ?? []) as unknown as PrefCategoryRow[];
+}
+
+const PREF_MAP_QUERY = {
+  queryKey: ["pref_category_map"],
+  queryFn: fetchPrefCategoryRows,
+  // Reference data: changes only when a migration changes it.
+  staleTime: 60 * 60_000,
+  gcTime: 24 * 60 * 60_000,
+  refetchOnWindowFocus: false,
+} as const;
+
+function toIdMap(rows: PrefCategoryRow[]): PrefCategoryMap {
   const out: PrefCategoryMap = {};
-  for (const r of data ?? []) (out[r.pref_id] ??= []).push(r.category_id);
+  for (const r of rows) (out[r.pref_id] ??= []).push(r.category_id);
   return out;
 }
 
+export async function fetchPrefCategoryMap(): Promise<PrefCategoryMap> {
+  return toIdMap(await fetchPrefCategoryRows());
+}
+
 export function usePrefCategoryMap() {
-  return useQuery({
-    queryKey: ["pref_category_map"],
-    queryFn: fetchPrefCategoryMap,
-    // Reference data: changes only when a migration changes it.
-    staleTime: 60 * 60_000,
-    gcTime: 24 * 60 * 60_000,
-    refetchOnWindowFocus: false,
-  });
+  return useQuery({ ...PREF_MAP_QUERY, select: toIdMap });
 }
 
 /**
@@ -140,29 +156,23 @@ export function usePrefCategoryMap() {
  * One round trip via an embedded select rather than two, and cached as long as
  * the id map next to it — both are reference data that only a migration changes.
  */
-export async function fetchPrefCategoryNames(): Promise<PrefCategoryMap> {
-  const { data, error } = await supabase
-    .from("pref_category_map")
-    .select("pref_id, categories(name)");
-  if (error) throw error;
+function toNameMap(rows: PrefCategoryRow[]): PrefCategoryMap {
   const out: PrefCategoryMap = {};
-  for (const r of data ?? []) {
+  for (const r of rows) {
     // PostgREST types a to-one embed as possibly-array; narrow without asserting.
-    const cat = r.categories as { name: string } | { name: string }[] | null;
+    const cat = r.categories;
     const name = Array.isArray(cat) ? cat[0]?.name : cat?.name;
     if (name) (out[r.pref_id] ??= []).push(name);
   }
   return out;
 }
 
+export async function fetchPrefCategoryNames(): Promise<PrefCategoryMap> {
+  return toNameMap(await fetchPrefCategoryRows());
+}
+
 export function usePrefCategoryNames() {
-  return useQuery({
-    queryKey: ["pref_category_map", "names"],
-    queryFn: fetchPrefCategoryNames,
-    staleTime: 60 * 60_000,
-    gcTime: 24 * 60 * 60_000,
-    refetchOnWindowFocus: false,
-  });
+  return useQuery({ ...PREF_MAP_QUERY, select: toNameMap });
 }
 
 /**

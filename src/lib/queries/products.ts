@@ -1,6 +1,6 @@
 import { moqWithUnit } from "@/lib/moq";
 import { priceText } from "@/lib/currency";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { viewerKey } from "@/lib/viewerKey";
 import type { Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
@@ -472,6 +472,11 @@ export function useProductById(id: string | undefined) {
     queryFn: () => fetchProductById(id as string),
     enabled: Boolean(id),
   });
+}
+
+/** Starts useProductById's read before the product page's file has loaded (speed plan 4.4, src/lib/routeData.ts). */
+export function prefetchProductById(qc: QueryClient, id: string) {
+  return qc.prefetchQuery({ queryKey: ["products", "detail", id], queryFn: () => fetchProductById(id) });
 }
 
 // ── Real engagement counters ──

@@ -87,9 +87,12 @@ async function openContext(browser, prof) {
   });
   cdp.on("Network.responseReceived", (e) => {
     const r = state.reqs.get(e.requestId);
-    if (r) { r.status = e.response.status; r.cached = !!(e.response.fromDiskCache || e.response.fromServiceWorker || e.response.fromPrefetchCache); }
+    if (r) { r.status = e.response.status; r.cached = r.cached || !!(e.response.fromDiskCache || e.response.fromServiceWorker || e.response.fromPrefetchCache); }
     state.last = Date.now();
   });
+  // A file Chrome serves from its memory cache raises this, not fromDiskCache (2026-11-27: the sweep reported 0 cached
+  // on repeat visits while 68 of 74 requests came from memory).
+  cdp.on("Network.requestServedFromCache", (e) => { const r = state.reqs.get(e.requestId); if (r) r.cached = true; });
   cdp.on("Network.loadingFinished", (e) => { const r = state.reqs.get(e.requestId); if (r) { r.end = e.timestamp; r.bytes = e.encodedDataLength; } state.last = Date.now(); });
   cdp.on("Network.loadingFailed", (e) => { const r = state.reqs.get(e.requestId); if (r) r.end = e.timestamp; state.last = Date.now(); });
   return { ctx, page, state };
