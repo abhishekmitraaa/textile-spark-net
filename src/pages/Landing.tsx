@@ -188,6 +188,8 @@ const Landing = () => {
                 alt="Fashion studio shoot for a Cosora brand"
                 className="aspect-[4/3] w-full object-cover lg:aspect-[5/4]"
                 loading="eager"
+                // The page's main picture (LCP on /): fetched before the rest (speed plan 2.7).
+                {...{ fetchpriority: "high" }}
               />
             </div>
             {/* single real stat, not a decorative caption */}

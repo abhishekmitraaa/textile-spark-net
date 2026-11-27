@@ -11,8 +11,8 @@ import SponsoredRail from "@/components/buyer/SponsoredRail";
 import SpotlightRail from "@/components/buyer/SpotlightRail";
 import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
 import SponsoredNote from "@/components/buyer/SponsoredNote";
-import QuickRfqModal from "@/components/buyer/QuickRfqModal";
-import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
+import { QuickRfqModal, VideoCloseUpsViewer } from "@/components/buyer/LazyModals";
+import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import { BadgeCheck, Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -67,7 +67,7 @@ import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { usePreferences } from "@/lib/preferencesStore";
 import { usePrefCategoryMap } from "@/lib/queries/forYou";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
-import { CardPhotos } from "@/components/buyer/CardPhotos";
+import { CardPhotos, PRIORITY_CARDS } from "@/components/buyer/CardPhotos";
 import { useShowsSampleTag } from "@/lib/samples";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
@@ -107,7 +107,7 @@ const VIDEO_RAIL_MAX = 12;
 // PRODUCT CARD — standard card format used across all listing pages
 // ─────────────────────────────────────────────────────────────
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ product, priority }: { product: Product; priority?: boolean }) {
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   // A sample listing (2026-11-24) carries a tag where Call Now would be.
@@ -125,7 +125,7 @@ function ProductCard({ product }: { product: Product }) {
       <div className="relative aspect-[4/5] bg-gray-100">
         {/* The Save button sits beside the photo's link, not inside it (review L-12). */}
         <Link to={`/product/${product.id}`} className="absolute inset-0 block">
-          <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} />
+          <CardPhotos primary={product.image} secondary={product.secondaryImage} alt={product.name} hovered={hovered} priority={priority} />
           <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
   
           {product.verified && (
@@ -469,7 +469,7 @@ const NewArrivals = () => {
 
   const feedNodes: JSX.Element[] = [];
   displayProducts.forEach((product, i) => {
-    feedNodes.push(<ProductCard key={product.id} product={product} />);
+    feedNodes.push(<ProductCard key={product.id} product={product} priority={i < PRIORITY_CARDS} />);
     const n = i + 1;
     if (n >= displayProducts.length) return; // never trail the last loaded product
     // Once per device, not every 5 rows (review L-22: "Looking for products?" twice on the first screens): after the

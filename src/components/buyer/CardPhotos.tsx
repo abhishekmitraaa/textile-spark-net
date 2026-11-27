@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { thumbUrl } from "@/lib/thumbs";
 
+/** How many cards at the top of a grid count as the first screen (two rows of two on a phone). */
+export const PRIORITY_CARDS = 4;
+
 const PHOTO = "absolute inset-0 w-full h-full object-cover transition-opacity duration-300";
 
 /**
  * A card photo: the 480 px thumbnail the server made from the approved photo, else the full photo — also when the
  * thumbnail can't be loaded (not made yet, or a format the server doesn't read). See src/lib/thumbs.ts.
  */
-function CardImg({ src, alt, className }: { src: string; alt: string; className: string }) {
+function CardImg({ src, alt, className, priority }: { src: string; alt: string; className: string; priority?: boolean }) {
   const thumb = thumbUrl(src);
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
@@ -16,8 +19,11 @@ function CardImg({ src, alt, className }: { src: string; alt: string; className:
     <img
       src={thumb && !failed ? thumb : src}
       alt={alt}
-      loading="lazy"
+      loading={priority ? "eager" : "lazy"}
       decoding="async"
+      // The first cards on screen are the page's main picture (LCP): fetch them first, not lazily (speed plan 2.4).
+      // React 18 has no fetchPriority prop; the lowercase attribute reaches the DOM as written.
+      {...(priority ? { fetchpriority: "high" } : {})}
       onError={thumb && !failed ? () => setFailed(true) : undefined}
       className={className}
     />
@@ -31,11 +37,13 @@ function CardImg({ src, alt, className }: { src: string; alt: string; className:
  * of 24, against Supabase's 5 GB a month. Now each is the server-made 480 px thumbnail (full photo as the fallback),
  * loaded lazily, and the second one is fetched only after the first hover, then kept for the fade.
  */
-export function CardPhotos({ primary, secondary, alt, hovered }: {
+export function CardPhotos({ primary, secondary, alt, hovered, priority }: {
   primary: string;
   secondary?: string | null;
   alt: string;
   hovered: boolean;
+  /** One of the first cards on screen (the first {@link PRIORITY_CARDS}): loaded at once, at high priority. */
+  priority?: boolean;
 }) {
   const [hoveredOnce, setHoveredOnce] = useState(false);
   useEffect(() => {
@@ -45,7 +53,7 @@ export function CardPhotos({ primary, secondary, alt, hovered }: {
 
   return (
     <>
-      <CardImg src={primary} alt={alt} className={cn(PHOTO, second && hovered ? "opacity-0" : "opacity-100")} />
+      <CardImg src={primary} alt={alt} priority={priority} className={cn(PHOTO, second && hovered ? "opacity-0" : "opacity-100")} />
       {second && <CardImg src={second} alt="" className={cn(PHOTO, hovered ? "opacity-100" : "opacity-0")} />}
     </>
   );

@@ -47,7 +47,7 @@ import { useT } from "@/lib/i18n";
 import { useStepBack } from "@/hooks/useStepBack";
 import { currentState, useUrlState } from "@/hooks/useUrlState";
 import { afterOverlay, useBackCloses, useOverlayState } from "@/hooks/useBackCloses";
-import { CardPhotos } from "@/components/buyer/CardPhotos";
+import { CardPhotos, PRIORITY_CARDS } from "@/components/buyer/CardPhotos";
 
 // Swatch colours for the Colour facet (names must match the facet options).
 const COLOUR_HEX: Record<string, string> = {
@@ -133,6 +133,8 @@ interface RProduct {
 // Thumbnails rendered in the Video Close-Ups teaser rail. The viewer still
 // receives the full related list; this only caps images fetched by the page.
 const VIDEO_RAIL_MAX = 12;
+// Results rendered per step (speed plan 3.5): a multiple of every column count (2, 3, 4, 6) and of both ad intervals.
+const RENDER_STEP = 24;
 
 // Price-slider bounds are ALWAYS derived from the rows actually on screen (see
 // priceBounds below). This is only the degenerate fallback for when there are
@@ -188,7 +190,7 @@ function brandsFromProducts(rows: RProduct[]): BrandResult[] {
 // ─────────────────────────────────────────────────────────────
 // Product card
 // ─────────────────────────────────────────────────────────────
-function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; compact: boolean; query?: string; featured?: boolean; tiers?: boolean }) {
+function ProductCard({ p, compact, query, featured, tiers, priority }: { p: RProduct; compact: boolean; query?: string; featured?: boolean; tiers?: boolean; priority?: boolean }) {
   const { show } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const t = useT();
@@ -218,7 +220,7 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
           onClick={openFromSearch}
           className="absolute inset-0 block"
         >
-          <CardPhotos primary={p.image} secondary={p.secondaryImage} alt={p.name} hovered={hovered} />
+          <CardPhotos primary={p.image} secondary={p.secondaryImage} alt={p.name} hovered={hovered} priority={priority} />
           {p.verified && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-0 left-0 h-5 lg:h-6 w-auto" />}
           {/* Subscriptions P10: the seal's Gold and VIP variants, and the Featured tag. */}
           {tiers && (p.sealTier === "gold" || p.sealTier === "vip") && (
@@ -971,16 +973,34 @@ const SearchResults = () => {
   // column counts, so a rail always lands on a row boundary at either
   // breakpoint instead of splitting a row in half.
   const adInterval = desktopCols * 2;       // 8 or 12
+  // Render the results a screenful at a time (speed plan 3.5, 2026-11-27): all 200 at once built ~5,600 elements and
+  // held a phone's main thread for 3-4 s. The rest render as the visitor nears the end of what is shown.
+  const resetKey = `${query}|${sort}|${JSON.stringify(selections)}`;
+  const [shownState, setShownState] = useState({ key: resetKey, n: RENDER_STEP });
+  const shown = shownState.key === resetKey ? shownState.n : RENDER_STEP;
+  const shownProducts = products.slice(0, shown);
+  const renderMoreRef = useRef<HTMLDivElement | null>(null);
+  const moreToRender = shown < products.length;
+  useEffect(() => {
+    const target = renderMoreRef.current;
+    if (!target || !moreToRender) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) setShownState({ key: resetKey, n: shown + RENDER_STEP });
+    }, { rootMargin: "800px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [moreToRender, resetKey, shown]);
+
   const feedNodes: JSX.Element[] = [];
-  products.forEach((p, i) => {
+  shownProducts.forEach((p, i) => {
     feedNodes.push(
       <motion.div variants={reduced ? {} : listItem} key={p.id}>
-        <ProductCard p={p} compact={cols === 3} query={query} tiers={tiersOn}
+        <ProductCard p={p} compact={cols === 3} query={query} tiers={tiersOn} priority={i < PRIORITY_CARDS}
           featured={categoryBrowse && sort === "new" && featuredSlot.has(p.id)} />
       </motion.div>
     );
     const n = i + 1;
-    if (n >= products.length) return; // never trail the last loaded product
+    if (n >= shownProducts.length) return; // never trail the last product shown
     if (n % desktopInterval === 0) {
       feedNodes.push(
         <div key={`req-${i}`} className="col-span-full lg:max-w-4xl lg:mx-auto my-2 lg:my-4">
@@ -1251,6 +1271,7 @@ const SearchResults = () => {
                     className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>
                     {feedNodes}
                   </motion.div>
+                  {moreToRender && <div ref={renderMoreRef} aria-hidden="true" className="h-px" />}
                   <div ref={browseMoreRef} className="py-6 text-center text-xs text-gray-400" aria-live="polite">
                     {products.length}{!hasQuery && browse.hasNextPage ? "+" : ""} {products.length === 1 ? "result" : "results"}
                     {hasQuery && !semanticActive && " · keyword match only"}
