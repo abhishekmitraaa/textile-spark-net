@@ -682,6 +682,11 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 4.4 | live | `src/lib/routeData.ts`: product and store data start with the app (first call ~0.6 s → ~0.1 s after start) |
 | 4.5 | not started | persisted query cache needs a new package |
 | 4.7 | waits on D-2 | region |
+| 4.2 (product page) | committed (bfec2eb), push waits | no new RPC: `routeData.ts` starts the row, related, videos, documents and reviews with the app and the seller's stats and listings when the row arrives; calls start 0–43 ms after the first instead of 1,265 ms |
+| 5.1 | already done | Seller Home reads `seller_home_summary()`, one call (SH-006) |
+| 5.2, 5.3 | measured, not built | signed in on the local stack, Seller Home's ~20 and Analytics' ~38 calls already go out together (one wave at ~0.3–0.7 s, a few trailing): a bootstrap RPC would merge parallel calls for little gain and much risk. The second `chat_unread_counts` and the extra waves seen locally come from the local copy's switches being off (production has `live_updates_hub` on) |
+| 5.4 | measured, not built | a 4000×3000 photo shrinks with no main-thread freeze (longest task 0 ms, also at 4× CPU slowdown): Chrome already decodes and encodes off the main thread; a worker gave identical output and no gain, so it was removed |
+| 5.5 | done in 1.4 | seller warm-up: Seller Home, Products, Leads |
 | 4.8 | live | `pref_category_map` read once (2 → 1); the two `active_ads` calls are different slots, left for 4.2 |
 | 4.9 | live | product page reads its category's questions only (535 KB → 24–110 KB uncompressed) |
 
