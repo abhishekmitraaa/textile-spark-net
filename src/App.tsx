@@ -151,7 +151,7 @@ const queryClient = new QueryClient({
     },
   },
 });
-prefetchRouteData(queryClient, window.location.pathname);
+prefetchRouteData(queryClient, window.location.pathname, window.location.search);
 
 // The pages people open next are fetched in the background after the first one (review M-34).
 scheduleWarmPages();

@@ -9,7 +9,7 @@ import { prefetchVendorProfile } from "@/lib/queries/vendor";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function prefetchRouteData(qc: QueryClient, pathname: string): void {
+export function prefetchRouteData(qc: QueryClient, pathname: string, search = ""): void {
   try {
     const product = pathname.match(/^\/product\/([^/]+)\/?$/);
     if (product && UUID_RE.test(product[1])) {
@@ -38,8 +38,26 @@ export function prefetchRouteData(qc: QueryClient, pathname: string): void {
       }).catch(() => { /* a head start only */ });
       return;
     }
+    if (/^\/search\/results\/?$/.test(pathname)) {
+      // A typed search (?q=) reads search_products with the same key the page uses; it starts with the app.
+      const q = new URLSearchParams(search).get("q")?.trim();
+      if (q) {
+        void import("@/lib/queries/search").then((m) => qc.prefetchQuery(m.productSearchQuery(q))).catch(() => undefined);
+      }
+      return;
+    }
     const store = pathname.match(/^\/vendor\/([^/]+)\/?$/);
-    if (store) void prefetchVendorProfile(qc, decodeURIComponent(store[1]));
+    if (store) {
+      const id = decodeURIComponent(store[1]);
+      void prefetchVendorProfile(qc, id);
+      // Catalogues and reviews need only the store's id: start them with the row, not a wave after it.
+      if (UUID_RE.test(id)) {
+        void Promise.all([import("@/lib/queries/catalogues"), import("@/lib/queries/reviews")]).then(([catalogues, reviews]) => {
+          void qc.prefetchQuery(catalogues.vendorCataloguesQuery(id));
+          void qc.prefetchQuery(reviews.vendorReviewsQuery(id));
+        }).catch(() => { /* a head start only */ });
+      }
+    }
   } catch {
     // A prefetch is only a head start: the page reads its data itself either way.
   }

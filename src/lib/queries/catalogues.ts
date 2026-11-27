@@ -114,12 +114,12 @@ async function fetchVendorCatalogues(vendorId: string): Promise<MyCatalogueRow[]
   return ((data ?? []) as RawCatalogue[]).map(mapCatalogue);
 }
 
+export function vendorCataloguesQuery(vendorId: string | undefined) {
+  return { queryKey: ["catalogues", "vendor", vendorId], queryFn: () => fetchVendorCatalogues(vendorId as string) };
+}
+
 export function useVendorCatalogues(vendorId: string | undefined) {
-  return useQuery({
-    queryKey: ["catalogues", "vendor", vendorId],
-    queryFn: () => fetchVendorCatalogues(vendorId as string),
-    enabled: Boolean(vendorId),
-  });
+  return useQuery({ ...vendorCataloguesQuery(vendorId), enabled: Boolean(vendorId) });
 }
 
 export interface NewCatalogue {

@@ -135,11 +135,11 @@ async function fetchSearch(query: string, matchCount: number): Promise<SearchRes
   return { rows, embeddingUsed };
 }
 
-export function useProductSearch(query: string, matchCount = SEARCH_MATCH_COUNT) {
+export function productSearchQuery(query: string, matchCount = SEARCH_MATCH_COUNT) {
   const q = query.trim();
-  return useQuery({
-    queryKey: ["search", "results", q, matchCount],
-    enabled: q.length > 0,
-    queryFn: () => fetchSearch(q, matchCount),
-  });
+  return { queryKey: ["search", "results", q, matchCount], queryFn: () => fetchSearch(q, matchCount) };
+}
+
+export function useProductSearch(query: string, matchCount = SEARCH_MATCH_COUNT) {
+  return useQuery({ ...productSearchQuery(query, matchCount), enabled: query.trim().length > 0 });
 }

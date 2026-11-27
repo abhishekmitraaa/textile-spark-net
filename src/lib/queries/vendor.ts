@@ -91,6 +91,25 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
   // A slug or an old demo id ("v5") is no vendor: answer "not found" without a
   // request that could only fail on the uuid cast.
   if (!UUID_RE.test(id)) return null;
+  // The listings and the videos need only the id, so they are read alongside the store row, not after it (speed
+  // plan 4.2, 2026-11-27: the store page read them ~1 s later, in a second wave).
+  const listingsAndVideos = Promise.all([
+    supabase
+      .from("products")
+      .select(PRODUCT_CARD_SELECT, { count: "exact" })
+      .eq("vendor_id", id)
+      .eq("status", "live")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(0, STORE_LISTING_LIMIT - 1),
+    supabase
+      .from("product_videos")
+      .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, product_id, products ( id, status )")
+      .eq("vendor_id", id)
+      .eq("status", "live")
+      .order("views_count", { ascending: false })
+      .limit(24),
+  ]);
   // Public columns only. Never add phone, whatsapp, owner_email, pan or the street
   // address here: they are private (admin completion Phase 4).
   const { data: v, error } = await supabase
@@ -114,25 +133,8 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     country_code: v.country_code, onboarding_complete: v.onboarding_complete,
   };
 
-  // Bounded, and a failed read is the page's failed state, never an empty store (review M-23). The listings and the
-  // videos are read together.
-  const [prodRes, vidRes] = await Promise.all([
-    supabase
-      .from("products")
-      .select(PRODUCT_CARD_SELECT, { count: "exact" })
-      .eq("vendor_id", id)
-      .eq("status", "live")
-      .order("created_at", { ascending: false })
-      .order("id")
-      .range(0, STORE_LISTING_LIMIT - 1),
-    supabase
-      .from("product_videos")
-      .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, product_id, products ( id, status )")
-      .eq("vendor_id", id)
-      .eq("status", "live")
-      .order("views_count", { ascending: false })
-      .limit(24),
-  ]);
+  // Bounded, and a failed read is the page's failed state, never an empty store (review M-23).
+  const [prodRes, vidRes] = await listingsAndVideos;
   if (prodRes.error) throw prodRes.error;
   if (vidRes.error) throw vidRes.error;
   const prodRows = (prodRes.data ?? []) as unknown as RawProduct[];

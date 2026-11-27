@@ -98,12 +98,12 @@ async function fetchVendorReviews(vendorId: string, limit = REVIEW_PAGE): Promis
   return { reviews, avg: stats?.avg != null ? Number(stats.avg) : 0, count, breakdown, productCount: Number(stats?.product_count ?? 0) };
 }
 
+export function vendorReviewsQuery(vendorId: string | undefined, limit = REVIEW_PAGE) {
+  return { queryKey: ["reviews", "vendor", vendorId, limit], queryFn: () => fetchVendorReviews(vendorId as string, limit) };
+}
+
 export function useVendorReviews(vendorId: string | undefined, limit = REVIEW_PAGE) {
-  return useQuery({
-    queryKey: ["reviews", "vendor", vendorId, limit],
-    queryFn: () => fetchVendorReviews(vendorId as string, limit),
-    enabled: Boolean(vendorId),
-  });
+  return useQuery({ ...vendorReviewsQuery(vendorId, limit), enabled: Boolean(vendorId) });
 }
 
 /**
