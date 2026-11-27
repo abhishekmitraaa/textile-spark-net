@@ -1441,8 +1441,16 @@ undocumented. Deep technical rationale for each lives in
   `useAdImpressions()` (half the card visible, once per mount); `logAdImpression()` sends the ids together a second later
   through `ad_impressions()` (each campaign once per call, at most 48). A new ad surface uses the hook, never a mount effect.
 - **Pages load as their own files** (2026-11-20, review M-34): a route in `App.tsx` is `lazyPage(() => import(…))`;
-  `{ warm: true }` fetches a common page when the browser is idle. Sign-in pages, Landing, New Arrivals and Not Found
+  `{ warm: "buyer" }` / `{ warm: "seller" }` fetches a common page of that side once the first page's files and data
+  have arrived and the browser is idle, never on data saver, a slower-than-4G link or a low-memory phone. At most three
+  pages per side (buyer: ProductDetail, SearchResults, VendorProfile; seller: SellerHome, Products, Leads; speed plan
+  1.4, 2026-11-27): every warmed file costs every first visit. Sign-in pages, Landing, New Arrivals and Not Found
   stay in the first script.
+- **Built files are cached for a year; the HTML never is** (speed plan 1.1, 2026-11-27). `vercel.json` gives
+  `/assets/*` `max-age=31536000, immutable`: Vite names every file there by its content. Never put a file whose name
+  doesn't change with its content under `public/assets/`. The libraries that never import app code (React, the
+  router, Supabase, React Query) are one `vendor-core` file (`manualChunks` in `vite.config.ts`), so a deploy that
+  changes only app code leaves it cached; don't add a package that imports app code, or anything else, to it.
 - **A deleted account's live listings go to draft** (Mitra, 2026-11-19, review M-37, "Hide deleted only"):
   `trg_profiles_products_off_when_deleted`. Suspension leaves them live.
 - **A browser sets pictures only from this project's Storage** (2026-11-20, review M-75): `admin.image_urls_check` on

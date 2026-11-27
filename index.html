@@ -9,10 +9,24 @@
     <title>Cosora | B2B Fashion Marketplace for Manufacturers</title>
     <meta name="description" content="Connect with global fashion buyers. Upload products, create advertisements, and generate quality leads for your manufacturing business." />
     <meta name="author" content="Cosora" />
+    <!-- Start the Supabase connection while the first script downloads (speed plan 1.3). -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin>
+    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,700;1,800&family=Dancing+Script:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Open+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- The fonts no longer hold the first paint (speed plan 1.2): the file is fetched early
+         here and applied by the script below, which a stylesheet added from a script never blocks.
+         The text shows in the fallback font for a moment, as display=swap already allowed. -->
+    <link rel="preload" as="style" id="cosora-fonts" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,700;1,800&family=Dancing+Script:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Open+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&family=Roboto:wght@300;400;500;700;900&display=swap">
     <script>
+      (function () {
+        var pre = document.getElementById("cosora-fonts");
+        if (!pre) return;
+        var css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = pre.href;
+        document.head.appendChild(css);
+      })();
       // Site theme (admin completion Phase 9): apply the theme saved on the last visit before
       // the first paint, so a changed theme doesn't flash the defaults. SiteThemeApplier writes
       // it (src/components/SiteThemeApplier.tsx); every value is checked before it becomes CSS.
