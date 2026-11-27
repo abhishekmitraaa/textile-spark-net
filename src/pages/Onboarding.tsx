@@ -18,7 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { AddBusinessCategoriesModal } from "@/components/vendor/AddBusinessCategoriesModal";
@@ -1402,6 +1402,8 @@ export default function Onboarding() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm font-medium text-brand-ink">Generated E-Signature</Label>
+                    {/* The app's only tooltip: its provider lives here, not around the whole app (speed plan 3.9). */}
+                    <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -1416,6 +1418,7 @@ export default function Onboarding() {
                         Generated from the name above. It records that you agreed to the Supplier Agreement.
                       </TooltipContent>
                     </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
                 <div className="rounded-xl border border-brand-border bg-[#f8fafc] p-4">

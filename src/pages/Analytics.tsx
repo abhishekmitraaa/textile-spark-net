@@ -32,10 +32,7 @@ import {
   Phone, PhoneIncoming, Users, Megaphone, Info, ChevronRight, Minus, MapPin, Home,
   Search, MousePointerClick, UserCircle,
 } from "lucide-react";
-import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+import { Recharts } from "@/components/vendor/Recharts";
 
 // ─────────────────────────────────────────────────────────────
 // Vendor Analytics.
@@ -610,18 +607,20 @@ const Analytics = () => {
             scope={<ScopePill window={activeTime} />}
           >
             <div className="h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={series}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 12%, 87%)" />
-                  <XAxis dataKey="name" stroke="hsl(0, 0%, 45%)" fontSize={11} tickLine={false}
+              <Recharts>{(R) => (
+              <R.ResponsiveContainer width="100%" height="100%">
+                <R.LineChart data={series}>
+                  <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 12%, 87%)" />
+                  <R.XAxis dataKey="name" stroke="hsl(0, 0%, 45%)" fontSize={11} tickLine={false}
                     interval={Math.max(0, Math.floor(series.length / 7) - 1)} />
-                  <YAxis stroke="hsl(0, 0%, 45%)" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }} />
-                  <Legend />
-                  <Line type="monotone" dataKey="views" stroke="hsl(352, 85%, 62%)" strokeWidth={2} dot={false} name="Views" />
-                  <Line type="monotone" dataKey="adClicks" stroke="hsl(220, 70%, 55%)" strokeWidth={2} dot={false} name="Ad clicks" />
-                </LineChart>
-              </ResponsiveContainer>
+                  <R.YAxis stroke="hsl(0, 0%, 45%)" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <R.Tooltip contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }} />
+                  <R.Legend />
+                  <R.Line type="monotone" dataKey="views" stroke="hsl(352, 85%, 62%)" strokeWidth={2} dot={false} name="Views" />
+                  <R.Line type="monotone" dataKey="adClicks" stroke="hsl(220, 70%, 55%)" strokeWidth={2} dot={false} name="Ad clicks" />
+                </R.LineChart>
+              </R.ResponsiveContainer>
+              )}</Recharts>
             </div>
             {/* 3.4 — unique visitors ALONGSIDE total views, never instead of it. */}
             <div className="mt-3 grid grid-cols-2 gap-2 px-2">
@@ -904,16 +903,18 @@ const Analytics = () => {
               scope={<ScopePill window={activeTime} />}
             >
               <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={series}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,12%,87%)" />
-                    <XAxis dataKey="name" stroke="hsl(0,0%,45%)" fontSize={11}
+                <Recharts>{(R) => (
+                <R.ResponsiveContainer width="100%" height="100%">
+                  <R.BarChart data={series}>
+                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(220,12%,87%)" />
+                    <R.XAxis dataKey="name" stroke="hsl(0,0%,45%)" fontSize={11}
                       interval={Math.max(0, Math.floor(series.length / 7) - 1)} />
-                    <YAxis stroke="hsl(0,0%,45%)" fontSize={11} allowDecimals={false} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }} />
-                    <Bar dataKey="views" fill="hsl(352,85%,62%)" radius={[4, 4, 0, 0]} name="Views" />
-                  </BarChart>
-                </ResponsiveContainer>
+                    <R.YAxis stroke="hsl(0,0%,45%)" fontSize={11} allowDecimals={false} />
+                    <R.Tooltip contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }} />
+                    <R.Bar dataKey="views" fill="hsl(352,85%,62%)" radius={[4, 4, 0, 0]} name="Views" />
+                  </R.BarChart>
+                </R.ResponsiveContainer>
+                )}</Recharts>
               </div>
             </EventPanel>
 
@@ -928,9 +929,10 @@ const Analytics = () => {
                 {categoryBreakdown.length >= 2 ? (
                   <>
                     <div className="h-[220px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
+                      <Recharts>{(R) => (
+                      <R.ResponsiveContainer width="100%" height="100%">
+                        <R.PieChart>
+                          <R.Pie
                             data={categoryBreakdown}
                             dataKey="views"
                             nameKey="name"
@@ -939,18 +941,19 @@ const Analytics = () => {
                             paddingAngle={4}
                           >
                             {categoryBreakdown.map((entry, index) => (
-                              <Cell key={entry.name} fill={categoryColors[index % categoryColors.length]} />
+                              <R.Cell key={entry.name} fill={categoryColors[index % categoryColors.length]} />
                             ))}
-                          </Pie>
-                          <Tooltip
+                          </R.Pie>
+                          <R.Tooltip
                             contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }}
                             formatter={(value: number, _name: string, payload: { payload?: { name?: string; percent?: number } }) => [
                               `${value} view${value === 1 ? "" : "s"} (${payload?.payload?.percent ?? 0}%)`,
                               payload?.payload?.name ?? "",
                             ]}
                           />
-                        </PieChart>
-                      </ResponsiveContainer>
+                        </R.PieChart>
+                      </R.ResponsiveContainer>
+                      )}</Recharts>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2 px-2 text-xs text-muted-foreground sm:grid-cols-3">
                       {categoryBreakdown.map((item, index) => (
@@ -988,18 +991,20 @@ const Analytics = () => {
               scope={<ScopePill window={activeTime} />}
             >
               <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sources} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,12%,87%)" />
-                    <XAxis type="number" allowDecimals={false} stroke="hsl(0,0%,45%)" fontSize={11} />
-                    <YAxis dataKey="label" type="category" stroke="hsl(0,0%,45%)" fontSize={10} width={110} />
-                    <Tooltip
+                <Recharts>{(R) => (
+                <R.ResponsiveContainer width="100%" height="100%">
+                  <R.BarChart data={sources} layout="vertical">
+                    <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(220,12%,87%)" />
+                    <R.XAxis type="number" allowDecimals={false} stroke="hsl(0,0%,45%)" fontSize={11} />
+                    <R.YAxis dataKey="label" type="category" stroke="hsl(0,0%,45%)" fontSize={10} width={110} />
+                    <R.Tooltip
                       contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }}
                       formatter={(v: number, _n: string, pl: { payload?: { percent?: number } }) => [`${v} view${v === 1 ? "" : "s"} (${pl?.payload?.percent ?? 0}%)`, "Views"]}
                     />
-                    <Bar dataKey="count" fill="hsl(0,0%,21%)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                    <R.Bar dataKey="count" fill="hsl(0,0%,21%)" radius={[0, 4, 4, 0]} />
+                  </R.BarChart>
+                </R.ResponsiveContainer>
+                )}</Recharts>
               </div>
             </EventPanel>
           </TabsContent>
@@ -1098,18 +1103,20 @@ const Analytics = () => {
               <CardContent className="px-2 pb-4">
                 {calls.byContext.length > 0 ? (
                   <div className="h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={calls.byContext.slice(0, 6)} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,12%,87%)" />
-                        <XAxis type="number" allowDecimals={false} stroke="hsl(0,0%,45%)" fontSize={11} />
-                        <YAxis dataKey="context" type="category" stroke="hsl(0,0%,45%)" fontSize={10} width={110} />
-                        <Tooltip
+                    <Recharts>{(R) => (
+                    <R.ResponsiveContainer width="100%" height="100%">
+                      <R.BarChart data={calls.byContext.slice(0, 6)} layout="vertical">
+                        <R.CartesianGrid strokeDasharray="3 3" stroke="hsl(220,12%,87%)" />
+                        <R.XAxis type="number" allowDecimals={false} stroke="hsl(0,0%,45%)" fontSize={11} />
+                        <R.YAxis dataKey="context" type="category" stroke="hsl(0,0%,45%)" fontSize={10} width={110} />
+                        <R.Tooltip
                           contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }}
                           formatter={(v: number) => [`${v} call${v === 1 ? "" : "s"}`, "Calls"]}
                         />
-                        <Bar dataKey="count" fill="hsl(352,85%,62%)" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                        <R.Bar dataKey="count" fill="hsl(352,85%,62%)" radius={[0, 4, 4, 0]} />
+                      </R.BarChart>
+                    </R.ResponsiveContainer>
+                    )}</Recharts>
                   </div>
                 ) : (
                   <p className="px-2 text-sm text-muted-foreground">

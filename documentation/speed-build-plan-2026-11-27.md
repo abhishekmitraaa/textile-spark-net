@@ -645,8 +645,9 @@ numbers as each phase ships.
 
 ## 9. Progress (D-1, started 2026-11-27)
 
-Mitra said "start the D1" on 2026-11-27. Work is on branch `perf/phase-0-1` (worktree `.worktrees/perf-p01`),
-not merged or pushed; a `main` push deploys production, so merging waits for Mitra.
+Mitra said "start the D1" on 2026-11-27, then "push and merge" the same day: Phases 0–3 up to 2b3bfe3 are on
+`main` and live (checked: `/assets/*` served `max-age=31536000, immutable`, HTML `max-age=0`). Later commits on
+branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in the repo but **not applied**.
 
 | Item | State | Note |
 |---|---|---|
@@ -654,11 +655,11 @@ not merged or pushed; a `main` push deploys production, so merging waits for Mit
 | 0.4 | waits on D-4 | |
 | 1.1 | done | `/assets/*` cached a year; takes effect on deploy (a local preview doesn't apply `vercel.json`) |
 | 1.2 | done, partly | fonts no longer block the first paint; self-hosting and fewer families wait on D-5 |
-| 1.3 | done | preconnect to Supabase |
+| 1.3 | done | preconnect to Supabase, added by a build plugin (`vite.config.ts`) only when `VITE_SUPABASE_URL` is set: the `%VITE_…%` placeholder failed CI's e2e build, which has no Supabase env (fixed the same day) |
 | 1.4 | done | 3 pages per side, after the network is quiet; `import()` kept, no hover prefetch |
 | 1.5 | deferred | its own branch; the year-long cache already saves returning Hindi/Gujarati visitors the download |
 | 1.6 | skipped | the two functions aren't on any page's load path; revisit with D-2 |
-| 1.7 | done | `vendor-core` 116.7 KB gzip, imports nothing from the app file |
+| 1.7 | done | `vendor-core` 116.7 KB gzip, imports nothing from the app file; its name changes when the app starts or stops using one of its exports |
 | 2.1 | migration written, **not applied** | `20261127100000`, rehearsed on the local stack; backfill `scripts/perf/thumbs-backfill.sql` waits on D-6 |
 | 2.2 | not needed | with 2.1 and the backfill every live photo has its thumbnail; the fallback stays |
 | 2.4 | done, partly | the first 4 cards on the home feed and search results load at once with high priority; `srcset` waits on D-3 |
@@ -666,8 +667,12 @@ not merged or pushed; a `main` push deploys production, so merging waits for Mit
 | 3.1 | done | the 4 tap-to-open dialogs load on first open (`LazyModals.tsx`) |
 | 3.2 | done | `errorMessage` no longer pulls the registration validator and the category table (`registrationErrors.ts`) |
 | 3.3 | waits on Mitra | 3 of the 14 first-script users of framer-motion are the sign-in pages (D-7) |
-| 3.5 | done for search results | 24 cards at a time |
+| 3.4 | skipped | the hub already connects only for signed-in accounts behind its switch; delaying it makes callers that wait up to 5 s for it open their own channels |
+| 3.5 | done for search results | 24 cards at a time; the storefront (≤ 200 listings, ~10 today) left as is |
+| 3.6 | done | recharts loads with the first chart (`components/vendor/Recharts.tsx`): Analytics' file 119 → 11.7 KB gzip |
 | 3.8 | done | Radix toaster removed |
+| 3.9 | done | `TooltipProvider` moved into Onboarding, the only page with a tooltip; first load 318.2 → 305.4 KB gzip |
+| 3.7 | not done | CSS split; small |
 
 ### 9.1 Measured (2026-11-27, 8 key pages, phone profile, median of 3 runs)
 

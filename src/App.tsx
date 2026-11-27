@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { lazyPage, scheduleWarmPages } from "./lib/lazyPage";
 const BusinessProfileScorePage = lazyPage(() => import("./pages/BusinessProfileScorePage"));
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
@@ -165,7 +164,7 @@ const App = () => (
     <AuthProvider>
     <UserRoleProvider>
     <DisplayCurrencyProvider>
-      <TooltipProvider>
+      <>
         <Sonner />
         <RealtimeHubProvider>
         <BrowserRouter>
@@ -336,7 +335,7 @@ const App = () => (
           <DevAccountSwitcher />
         </BrowserRouter>
         </RealtimeHubProvider>
-      </TooltipProvider>
+      </>
     </DisplayCurrencyProvider>
     </UserRoleProvider>
     </AuthProvider>
