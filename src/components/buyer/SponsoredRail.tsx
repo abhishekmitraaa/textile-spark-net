@@ -2,7 +2,7 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useMemo } from "react";
 import { useAdImpressions } from "@/hooks/useAdImpressions";
 import { useNavigate } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import { m as motion, useReducedMotion } from "framer-motion";
 import { useActiveAds, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, adSlotBlock, type AdSlotId } from "@/lib/adSlots";

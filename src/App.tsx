@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { LazyMotion } from "framer-motion";
 import { lazyPage, scheduleWarmPages } from "./lib/lazyPage";
 const BusinessProfileScorePage = lazyPage(() => import("./pages/BusinessProfileScorePage"));
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -159,7 +160,13 @@ function AliasRedirect({ to }: { to: string }) {
   return <Navigate to={`${to}${search}${hash}`} replace />;
 }
 
+// framer-motion's engine loads after the first script (speed plan 3.3): the request starts now, while the app renders.
+// A failed load is a replaced deploy's file, which main.tsx's vite:preloadError handler reloads once.
+const motionFeatures = import("./lib/motionFeatures").then((mod) => mod.default);
+const loadMotionFeatures = () => motionFeatures;
+
 const App = () => (
+  <LazyMotion features={loadMotionFeatures}>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
     <UserRoleProvider>
@@ -340,6 +347,7 @@ const App = () => (
     </UserRoleProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </LazyMotion>
 );
 
 export default App;

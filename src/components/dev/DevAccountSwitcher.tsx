@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m as motion } from "framer-motion";
 import { UserCog, X, LogOut, Loader2 } from "lucide-react";
 import { useAuth, DEMO_ACCOUNTS, type DemoRole } from "@/contexts/AuthContext";
 import { toast } from "sonner";

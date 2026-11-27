@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Package,

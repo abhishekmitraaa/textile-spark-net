@@ -666,7 +666,7 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 2.7 | done | Landing hero `fetchpriority="high"` |
 | 3.1 | done | the 4 tap-to-open dialogs load on first open (`LazyModals.tsx`) |
 | 3.2 | done | `errorMessage` no longer pulls the registration validator and the category table (`registrationErrors.ts`) |
-| 3.3 | waits on Mitra | 3 of the 14 first-script users of framer-motion are the sign-in pages (D-7) |
+| 3.3 | done | Mitra (2026-11-27): "do what will make the site faster". The 12 first-script files import `m as motion` inside `<LazyMotion features={domMax}>` (loaded after the first script, `lib/motionFeatures.ts`); sign-in pages keep their animations and stay in the first script (D-7 unchanged). First load 305.4 → 275.4 KB gzip |
 | 3.4 | skipped | the hub already connects only for signed-in accounts behind its switch; delaying it makes callers that wait up to 5 s for it open their own channels |
 | 3.5 | done for search results | 24 cards at a time; the storefront (≤ 200 listings, ~10 today) left as is |
 | 3.6 | done | recharts loads with the first chart (`components/vendor/Recharts.tsx`): Analytics' file 119 → 11.7 KB gzip |

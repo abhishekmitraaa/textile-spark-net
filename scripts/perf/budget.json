@@ -1,7 +1,7 @@
 {
-  "_note": "Speed plan 0.3. Sizes in KB gzip. Lower each as a phase lands (target: firstLoad <= 250). 2026-11-27: Phase 1 build 377.5 / 260.8 / 116.7; after Phases 2-3 318.2 / 201.5 / 116.7. After 3.6/3.9: 305.4 / 188.7 / 116.7.",
-  "firstLoadGzipKB": 310,
-  "entryGzipKB": 195,
+  "_note": "Speed plan 0.3. Sizes in KB gzip. Lower each as a phase lands (target: firstLoad <= 250). 2026-11-27: Phase 1 build 377.5 / 260.8 / 116.7; after Phases 2-3 318.2 / 201.5 / 116.7. After 3.6/3.9: 305.4 / 188.7 / 116.7. After 3.3: 275.4 / 158.7 / 116.7.",
+  "firstLoadGzipKB": 280,
+  "entryGzipKB": 165,
   "vendorCoreGzipKB": 120,
   "imageMaxKB": 150,
   "imageAllow": [

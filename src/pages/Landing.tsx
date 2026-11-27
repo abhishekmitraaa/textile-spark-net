@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { m as motion, useReducedMotion, type Variants } from "framer-motion";
 import {
   ArrowRight,
   ShoppingBag,

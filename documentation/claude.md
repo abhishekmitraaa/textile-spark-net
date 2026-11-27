@@ -1451,6 +1451,10 @@ undocumented. Deep technical rationale for each lives in
   doesn't change with its content under `public/assets/`. The libraries that never import app code (React, the
   router, Supabase, React Query) are one `vendor-core` file (`manualChunks` in `vite.config.ts`), so a deploy that
   changes only app code leaves it cached; don't add a package that imports app code, or anything else, to it.
+- **A file in the first script animates with `m`, never `motion`** (speed plan 3.3, 2026-11-27): `import { m as motion }
+  from "framer-motion"`. `<LazyMotion>` in `App.tsx` loads the engine (`lib/motionFeatures.ts`, `domMax`) after the first
+  script; a plain `motion` import there puts all of framer-motion back into it. Pages that load on their own may use
+  `motion`. `npm run perf:bundle` shows framer-motion's share of the first load (≈ 8 KB gzip now).
 - **A deleted account's live listings go to draft** (Mitra, 2026-11-19, review M-37, "Hide deleted only"):
   `trg_profiles_products_off_when_deleted`. Suspension leaves them live.
 - **A browser sets pictures only from this project's Storage** (2026-11-20, review M-75): `admin.image_urls_check` on

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { AlertCircle, Loader2, MessageSquareOff } from "lucide-react";
 import { toast } from "sonner";
 import { useUserRole } from "@/contexts/UserRoleContext";
