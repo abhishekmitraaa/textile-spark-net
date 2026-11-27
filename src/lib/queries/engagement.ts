@@ -150,7 +150,7 @@ export interface LogEngagementInput {
  */
 export async function logEngagement(input: LogEngagementInput): Promise<void> {
   try {
-    await supabase.rpc("log_engagement_event", {
+    queue.push({
       p_event_type: input.eventType,
       p_vendor_id: input.vendorId ?? undefined,
       p_product_id: input.productId ?? undefined,
@@ -160,9 +160,45 @@ export async function logEngagement(input: LogEngagementInput): Promise<void> {
       p_query_text: input.queryText ?? undefined,
       p_cta_name: input.ctaName ?? undefined,
     });
+    if (queue.length >= FLUSH_AT) void flushEngagement();
+    else if (!timer) timer = setTimeout(() => void flushEngagement(), FLUSH_AFTER_MS);
   } catch {
     // Telemetry must never be load-bearing.
   }
+}
+
+// Events wait up to 2 s and go together (speed plan 4.6, 2026-11-27; log_engagement_events() in migration
+// 20261127110000): search results sent 27 calls to Sydney, one per card. Every event still goes through
+// log_engagement_event() in the database, so its limits are unchanged. Hiding the tab sends what is waiting.
+type QueuedEvent = Record<string, string | undefined>;
+const queue: QueuedEvent[] = [];
+const FLUSH_AT = 25;
+const FLUSH_AFTER_MS = 2000;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let batchMissing = false; // the app reached a database without the batch function yet: one call per event
+
+async function flushEngagement(): Promise<void> {
+  if (timer) { clearTimeout(timer); timer = null; }
+  while (queue.length) {
+    const batch = queue.splice(0, 50);
+    try {
+      if (!batchMissing) {
+        const { error } = await supabase.rpc("log_engagement_events" as never, { p_events: batch } as never);
+        if (!error) continue;
+        if (error.code !== "PGRST202") continue; // refused or failed: dropped, as a single call's failure was
+        batchMissing = true;
+      }
+      await Promise.all(batch.map((e) => supabase.rpc("log_engagement_event", e as never).then(() => undefined, () => undefined)));
+    } catch {
+      // Telemetry must never be load-bearing.
+    }
+  }
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && queue.length) void flushEngagement();
+  });
 }
 
 // ── Reading ──────────────────────────────────────────────────────────────────
