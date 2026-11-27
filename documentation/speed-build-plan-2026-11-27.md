@@ -660,7 +660,7 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 1.5 | deferred | its own branch; the year-long cache already saves returning Hindi/Gujarati visitors the download |
 | 1.6 | skipped | the two functions aren't on any page's load path; revisit with D-2 |
 | 1.7 | done | `vendor-core` 116.7 KB gzip, imports nothing from the app file; its name changes when the app starts or stops using one of its exports |
-| 2.1 | migration written, **not applied** | `20261127100000`, rehearsed on the local stack; backfill `scripts/perf/thumbs-backfill.sql` waits on D-6 |
+| 2.1 | done | `20261127100000` applied 2026-11-27 (CLI, md5 checked); backfill run the same day (D-6: Mitra "fix both"), 280 → 0 live photos without a thumbnail. Home feed: 12 thumbnails, 0 missing; 12 full photos still load from surfaces that don't use `<CardPhotos>` (carousel, ad rails): next |
 | 2.2 | not needed | with 2.1 and the backfill every live photo has its thumbnail; the fallback stays |
 | 2.4 | done, partly | the first 4 cards on the home feed and search results load at once with high priority; `srcset` waits on D-3 |
 | 2.7 | done | Landing hero `fetchpriority="high"` |
@@ -673,14 +673,15 @@ branch `perf/phase-0-1` wait for the next push. Migration `20261127100000` is in
 | 3.8 | done | Radix toaster removed |
 | 3.9 | done | `TooltipProvider` moved into Onboarding, the only page with a tooltip; first load 318.2 → 305.4 KB gzip |
 | 3.7 | not done | CSS split; small |
-| 4.1 | built, not pushed | `api/public-data.ts` (bom1) + `src/lib/publicData.ts`: signed-out reads of listed functions and public tables from Vercel's edge cache (60 s, stale 120 s); signed-in, writes, counts, search, analytics direct. Local check: calls to Sydney home 10 → 1, product 13 → 0, store 7 → 1, search 13 → 3, page text identical |
+| CI | fixed (main ed3b6df) | E2E ran nothing for weeks (runner OS, Node 18, `.env` read at import, local-stack specs, no Supabase settings in the build, stale specs); now green: Checks and E2E pass |
+| 4.1 | live (main 0528865) | checked: `X-Vercel-Cache: HIT` from `bom1`, private reads refused; `api/public-data.ts` (bom1) + `src/lib/publicData.ts`: signed-out reads of listed functions and public tables from Vercel's edge cache (60 s, stale 120 s); signed-in, writes, counts, search, analytics direct. Local check: calls to Sydney home 10 → 1, product 13 → 0, store 7 → 1, search 13 → 3, page text identical |
 | 4.2, 4.6 | not started | need migrations (page RPCs, batched analytics) |
 | 4.3 | not needed yet | GET RPCs matter for a read replica (4.7) |
-| 4.4 | built, not pushed | `src/lib/routeData.ts`: product and store data start with the app (first call ~0.6 s → ~0.1 s after start) |
+| 4.4 | live | `src/lib/routeData.ts`: product and store data start with the app (first call ~0.6 s → ~0.1 s after start) |
 | 4.5 | not started | persisted query cache needs a new package |
 | 4.7 | waits on D-2 | region |
-| 4.8 | built, not pushed | `pref_category_map` read once (2 → 1); the two `active_ads` calls are different slots, left for 4.2 |
-| 4.9 | built, not pushed | product page reads its category's questions only (535 KB → 24–110 KB uncompressed) |
+| 4.8 | live | `pref_category_map` read once (2 → 1); the two `active_ads` calls are different slots, left for 4.2 |
+| 4.9 | live | product page reads its category's questions only (535 KB → 24–110 KB uncompressed) |
 
 ### 9.1 Measured (2026-11-27, 8 key pages, phone profile, median of 3 runs)
 
