@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -6,6 +6,23 @@ import path from "path";
 // 2026-11-27: supabase-js 2.110 also pulls tslib and base64-arraybuffer). Rollup keeps app code out of it.
 const VENDOR_CORE =
   /\/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom|@remix-run\/router|@supabase\/[^/]+|iceberg-js|@tanstack\/[^/]+|tslib|base64-arraybuffer)\//;
+
+// Start the Supabase connection while the first script downloads (speed plan 1.3). Added by the build, and only when
+// VITE_SUPABASE_URL is set: a `%VITE_SUPABASE_URL%` placeholder in index.html stays literal without it and fails the
+// build ("URI malformed"), which is what CI's e2e build hit on 2026-11-27.
+function supabasePreconnect(url: string | undefined): Plugin {
+  return {
+    name: "cosora-supabase-preconnect",
+    transformIndexHtml() {
+      if (!url || !/^https?:\/\/[^\s"'<>]+$/.test(url)) return [];
+      const href = url.replace(/\/+$/, "");
+      return [
+        { tag: "link", attrs: { rel: "preconnect", href, crossorigin: true }, injectTo: "head-prepend" },
+        { tag: "link", attrs: { rel: "dns-prefetch", href }, injectTo: "head-prepend" },
+      ];
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
@@ -28,7 +45,7 @@ export default defineConfig(({ command, mode }) => {
     define: {
       __DEMO_PASSWORDS__: JSON.stringify(demoPasswords),
     },
-    plugins: [react()],
+    plugins: [react(), supabasePreconnect(loadEnv(mode, process.cwd(), "VITE_").VITE_SUPABASE_URL)],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
