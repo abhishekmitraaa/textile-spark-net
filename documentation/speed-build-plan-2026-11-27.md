@@ -713,7 +713,7 @@ before the warm-up starts; its first file adds one ~50–100 ms task. What block
 
 - `/seller`: the embedded YouTube player, ~2 s of YouTube's scripts whether or not anyone pressed play. **Fixed**:
   `<YouTubeFacade>` shows the video's picture and loads the player on the first tap. TBT 1316 → 539 ms (median of 3,
-  local builds of main and the change, same data).
+  local builds of main and the change, same data); live after the deploy (main a2356c7) 460–766 ms over 6 runs.
 - Home feed: one ~0.7 s task when the feed first renders (React, then the page's first full layout, ~0.3–0.4 s),
   and layout work as photos and rails arrive. framer-motion's shared-layout indicator in the bottom bar forced extra
   page measurements (`measureScroll`, ~0.45 s in one profile); replacing it and moving the tab strip's reads out of
