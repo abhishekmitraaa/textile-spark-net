@@ -874,8 +874,8 @@ export async function validateVideoFile(file: File): Promise<VideoProbe> {
 }
 
 /** A listing's live videos (Video Closeups tagged to it), for its own page's carousel. */
-export function useListingVideos(productId: string | null | undefined) {
-  return useQuery({
+export function listingVideosQuery(productId: string | null | undefined) {
+  return {
     queryKey: ["product_videos", "listing", productId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -888,7 +888,10 @@ export function useListingVideos(productId: string | null | undefined) {
       if (error) throw error;
       return (data ?? []).filter((v) => v.video_url) as { id: string; video_url: string; thumbnail_url: string | null }[];
     },
-    enabled: Boolean(productId),
     staleTime: 5 * 60_000,
-  });
+  };
+}
+
+export function useListingVideos(productId: string | null | undefined) {
+  return useQuery({ ...listingVideosQuery(productId), enabled: Boolean(productId) });
 }

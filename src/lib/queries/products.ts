@@ -570,21 +570,24 @@ async function fetchVendorOtherProducts(vendorId: string, excludeId: string, lim
  * signal. The RPC falls back to the same category when the anchor has no
  * embedding yet, so the strip degrades rather than emptying.
  */
+export function relatedProductsQuery(currentId: string | undefined) {
+  return { queryKey: ["products", "related", currentId], queryFn: () => fetchRelatedProducts(currentId as string, RELATED_LIMIT) };
+}
+
 export function useYouMightLike(currentId: string | undefined) {
-  return useQuery({
-    queryKey: ["products", "related", currentId],
-    enabled: Boolean(currentId),
-    queryFn: () => fetchRelatedProducts(currentId as string, RELATED_LIMIT),
-  });
+  return useQuery({ ...relatedProductsQuery(currentId), enabled: Boolean(currentId) });
 }
 
 /** "Brand Picks": other live products from the current product's vendor. */
-export function useVendorOtherProducts(vendorId: string | undefined, excludeId: string | undefined) {
-  return useQuery({
+export function vendorOtherProductsQuery(vendorId: string | undefined, excludeId: string | undefined) {
+  return {
     queryKey: ["products", "brandpicks", vendorId, excludeId],
-    enabled: Boolean(vendorId && excludeId),
     queryFn: () => fetchVendorOtherProducts(vendorId as string, excludeId as string, RELATED_LIMIT),
-  });
+  };
+}
+
+export function useVendorOtherProducts(vendorId: string | undefined, excludeId: string | undefined) {
+  return useQuery({ ...vendorOtherProductsQuery(vendorId, excludeId), enabled: Boolean(vendorId && excludeId) });
 }
 
 // ─────────────────────────────────────────────────────────────

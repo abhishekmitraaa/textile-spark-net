@@ -51,6 +51,10 @@ export async function uploadProductDocuments(vendorId: string, productId: string
   return stored;
 }
 
+export function productDocumentsQuery(productId: string) {
+  return { queryKey: ["product_documents", productId], queryFn: () => fetchProductDocuments(productId), staleTime: 5 * 60_000 };
+}
+
 export async function fetchProductDocuments(productId: string): Promise<ProductDocument[]> {
   const { data, error } = await supabase
     .from("product_documents")
@@ -68,10 +72,8 @@ export async function fetchProductDocuments(productId: string): Promise<ProductD
 
 export function useProductDocuments(productId: string | null | undefined) {
   return useQuery({
-    queryKey: ["product_documents", productId],
-    queryFn: () => fetchProductDocuments(productId as string),
+    ...productDocumentsQuery(productId as string),
     enabled: Boolean(productId),
-    staleTime: 5 * 60_000,
   });
 }
 

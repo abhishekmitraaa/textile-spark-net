@@ -111,8 +111,8 @@ export function useVendorReviews(vendorId: string | undefined, limit = REVIEW_PA
  * reviews: the product page downloaded 100 reviews for them (review M-25). Shares the ["reviews"] key family, so a
  * review written or reported refreshes it with the rest.
  */
-export function useVendorReviewStats(vendorId: string | undefined) {
-  return useQuery({
+export function vendorReviewStatsQuery(vendorId: string | undefined) {
+  return {
     queryKey: ["reviews", "vendor_stats", vendorId],
     queryFn: async (): Promise<{ avg: number; count: number }> => {
       const { data, error } = await supabase.rpc("vendor_review_stats", { p_vendor: vendorId as string });
@@ -120,8 +120,11 @@ export function useVendorReviewStats(vendorId: string | undefined) {
       const stats = data as unknown as ReviewStats | null;
       return { avg: stats?.avg != null ? Number(stats.avg) : 0, count: Number(stats?.count ?? 0) };
     },
-    enabled: Boolean(vendorId),
-  });
+  };
+}
+
+export function useVendorReviewStats(vendorId: string | undefined) {
+  return useQuery({ ...vendorReviewStatsQuery(vendorId), enabled: Boolean(vendorId) });
 }
 
 /** The 5..1 buckets from a stats row's breakdown, as percentages of `count`. */
@@ -202,12 +205,12 @@ async function fetchProductReviews(productId: string): Promise<ProductReviewsDat
   return { reviews, avg: stats?.avg != null ? Number(stats.avg) : 0, count, breakdown: bucketsFrom(count, stats?.breakdown) };
 }
 
+export function productReviewsQuery(productId: string | undefined) {
+  return { queryKey: ["product_reviews", productId], queryFn: () => fetchProductReviews(productId as string) };
+}
+
 export function useProductReviews(productId: string | undefined) {
-  return useQuery({
-    queryKey: ["product_reviews", productId],
-    queryFn: () => fetchProductReviews(productId as string),
-    enabled: Boolean(productId),
-  });
+  return useQuery({ ...productReviewsQuery(productId), enabled: Boolean(productId) });
 }
 
 // ── Reviews of a vendor's own products (vendor Reviews page, Products tab) ──
