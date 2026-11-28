@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { m as motion, useReducedMotion } from "framer-motion";
-import { Bookmark, BookmarkCheck, Pause, Play } from "lucide-react";
+import { Bookmark, BookmarkCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
@@ -15,7 +15,7 @@ import { ThumbImg } from "@/components/buyer/CardPhotos";
 //
 // Layout: a light-grey card. The active slide sits at the visual center
 // at full scale; the previous and next slides peek in from the sides,
-// scaled down and faded. Every ~4.2s the active index advances by one;
+// scaled down and faded. Every 3 s the active index advances by one;
 // each slide animates to its new role (center / peek / off-screen) via
 // the same set of x + scale + opacity transitions, so the impression is
 // "next product slides into the center, current product slides out left."
@@ -29,7 +29,8 @@ import { ThumbImg } from "@/components/buyer/CardPhotos";
 //
 // Accessibility:
 //  - Honors prefers-reduced-motion (no auto-advance, instant transitions).
-//  - Pauses on hover so users can read the active slide.
+//  - Pauses while a mouse is over it (desktop) and while a finger drags it; there is no pause button
+//    (2026-11-28, Mitra: "remove the pause option ... auto rotate every 3 second").
 //  - aria-live=polite on the heading region announces slide changes
 //    indirectly through the slide counter.
 // ─────────────────────────────────────────────────────────────
@@ -46,7 +47,7 @@ import { ThumbImg } from "@/components/buyer/CardPhotos";
 // pick drops out on its own.
 const AUTOMATIC_SLIDES = HOME_TRENDING_COUNT; // the slice Home's "Looking for these?" reads too (review M-31)
 
-const AUTO_ADVANCE_MS = 4200;
+const AUTO_ADVANCE_MS = 3000;
 // Each slide's size is now driven by HEIGHT (h-full of the stage) with
 // aspect-[3/4] determining width, instead of a container-relative width
 // percentage. This guarantees a slide can never grow taller than the
@@ -161,10 +162,9 @@ function Slide({ slide, offset, saved, reducedMotion, wasDragged }: SlideProps) 
 export default function EverydayFashionHero() {
   const prefersReducedMotion = useReducedMotion() ?? false;
   const [activeIndex, setActiveIndex] = useState(0);
+  // A mouse over it or a drag holds it for the moment only. Focus no longer pauses it: on a phone a tapped dot keeps
+  // focus, and the slideshow then stood still until the buyer tapped somewhere else.
   const [paused, setPaused] = useState(false);
-  // Paused by the buyer's own button (review L-13: a phone has no hover, so nothing could stop it); hover, focus and a
-  // drag pause it for the moment only.
-  const [userPaused, setUserPaused] = useState(false);
   const dragged = useRef(false);
   const savedState = useSaved();
 
@@ -195,15 +195,15 @@ export default function EverydayFashionHero() {
     if (activeIndex >= total && total > 0) setActiveIndex(0);
   }, [activeIndex, total]);
 
-  // Auto-advance interval. Cleared on unmount, paused on hover/drag,
+  // Auto-advance: 3 s after each change of slide (a tapped dot or a swipe gets its full 3 s too). Held on hover/drag,
   // suspended entirely for users who prefer reduced motion.
   useEffect(() => {
-    if (prefersReducedMotion || paused || userPaused || total < 2) return;
-    const id = window.setInterval(goNext, AUTO_ADVANCE_MS);
-    return () => window.clearInterval(id);
+    if (prefersReducedMotion || paused || total < 2) return;
+    const id = window.setTimeout(goNext, AUTO_ADVANCE_MS);
+    return () => window.clearTimeout(id);
     // goNext is stable (no deps); ignore lint complaint about leaving it out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused, userPaused, prefersReducedMotion, total]);
+  }, [activeIndex, paused, prefersReducedMotion, total]);
 
   // Compute shortest-path offset for each slide so wrap-around feels smooth.
   const offsetFor = (i: number): number => {
@@ -219,10 +219,9 @@ export default function EverydayFashionHero() {
   return (
     <section
       className="relative rounded-2xl bg-gray-100 overflow-hidden"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      // Mouse only: a tap on a phone fires a mouseenter with no mouseleave after it, which held the slideshow for good.
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") setPaused(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse") setPaused(false); }}
       aria-roledescription="carousel"
       aria-label="New everyday fashion arrivals"
     >
@@ -272,18 +271,8 @@ export default function EverydayFashionHero() {
 
       {/* Counter + dot indicators */}
       <footer className="flex items-center justify-between px-4 lg:px-6 py-3 lg:py-4">
-        {/* Pause / play, then the dot indicators (clickable) */}
+        {/* The dot indicators (clickable) */}
         <div className="flex items-center gap-1.5">
-          {total > 1 && !prefersReducedMotion && (
-            <button
-              type="button"
-              onClick={() => setUserPaused((p) => !p)}
-              aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
-              className="mr-1 flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-            >
-              {userPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-            </button>
-          )}
           {slides.map((s, i) => (
             <button
               key={s.id}

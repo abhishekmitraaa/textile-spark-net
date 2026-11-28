@@ -849,6 +849,9 @@ undocumented. Deep technical rationale for each lives in
   - A number is revealed only when the buyer asks (Show phone number, Call Now, WhatsApp),
     never on page load, so browsing sellers never uses up the limit. `has_phone` /
     `has_whatsapp` say a number is on file without revealing it.
+  - **The store page has no WhatsApp button** (Mitra, 2026-11-28: "there should not be any WhatsApp button"): Follow,
+    Chat and Call Now only, at least 48 px tall (`STORE_ACTION` in `VendorProfile.tsx`). Don't add a fourth button
+    back: four in a row ran past their boxes on a phone.
   - An empty field on the public vendor page reads "Not provided" or is left out. Never fall
     back to a demo value: the page used to invent an owner, phone, email, address, GSTIN
     and PAN for every vendor that hadn't filled them in.

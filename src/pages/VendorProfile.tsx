@@ -52,6 +52,12 @@ import { ThumbImg } from "@/components/buyer/CardPhotos";
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
 const TAP_T = { duration: 0.13, ease: E };
+// The store's Follow / Chat / Call Now buttons: at least 48 px tall, the type stepping up with the phone's width so
+// "Unfollow" and "Call Now" sit on one line from a 320 px phone up; a longer Hindi or Gujarati label wraps inside
+// its box instead of running past it.
+const STORE_ACTION =
+  "flex min-h-12 min-w-0 items-center justify-center gap-1 rounded-xl px-1.5 py-1 text-center text-[13px] font-bold leading-tight transition-colors min-[360px]:gap-1.5 min-[360px]:text-sm min-[400px]:text-[15px] sm:text-base";
+const STORE_ACTION_ICON = "h-4 w-4 shrink-0 min-[400px]:h-[18px] min-[400px]:w-[18px]";
 const page = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.03 } } };
 const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } } };
 const listContainer = { show: { transition: { staggerChildren: 0.05 } } };
@@ -131,12 +137,11 @@ const VendorProfile = () => {
   // whole point is never to paint a contact channel and take it back.
   const contactVisible = Boolean(user) && !contactLoading && !contactBlocked;
   // The vendor's phone and WhatsApp are private (admin completion Phase 4).
-  // call_vendor_contact() reveals them on request ("Show phone number", Call Now,
-  // WhatsApp), applying the same rule in the database and limiting how many
+  // call_vendor_contact() reveals them on request ("Show phone number", Call Now),
+  // applying the same rule in the database and limiting how many
   // sellers' numbers one account opens. Nothing is revealed on page load, so
   // browsing sellers never uses up that limit.
   const { numbers, refusal: numbersRefusal, failed: numbersFailed, revealing, reveal } = useVendorContact(vendorId);
-  const revealContact = useRevealVendorContact();
   const following = brands.find((b) => b.id === vendorId)?.isFollowing ?? false;
   const toggleFollow = () => (following ? unfollow(vendorId) : follow(vendorId));
 
@@ -158,41 +163,6 @@ const VendorProfile = () => {
     }
   };
 
-  // Interim buyer→vendor messaging (Phase 7). Gated on the SAME contact rule
-  // the Call button uses — a vendor whose contact details are withheld by
-  // moderation must not be reachable through a different button on the same
-  // card. Shown when the vendor has a WhatsApp number on file; the tap reveals
-  // it. Once revealed, a number that cannot be normalised into a plausible one
-  // hides the button rather than opening a stranger's chat.
-  const canWhatsApp =
-    Boolean(vendor?.hasWhatsapp) && !contactLoading && !contactBlocked &&
-    (numbers ? messaging().canReach({ vendorId, brandName, whatsapp: numbers.whatsapp }) : true);
-  const openWhatsApp = async () => {
-    if (!user) {
-      toast.info("Sign in to message sellers on WhatsApp", {
-        description: "Contact numbers are shared with signed-in Cosora accounts.",
-        action: { label: "Sign in", onClick: () => navigate("/login") },
-      });
-      return;
-    }
-    let result: VendorContactResult;
-    try {
-      result = await revealContact(vendorId);
-    } catch (e) {
-      toast.error("Couldn't open WhatsApp", { description: errorMessage(e) });
-      return;
-    }
-    if (result.refusal) {
-      toastBlock(CONTACT_REFUSAL_COPY[result.refusal], navigate);
-      return;
-    }
-    const ok = messaging().open({ vendorId, brandName, whatsapp: result.numbers?.whatsapp ?? null });
-    if (!ok) {
-      toast.error("Couldn't open WhatsApp", { description: "This seller hasn't added a valid WhatsApp number." });
-      return;
-    }
-    void logEngagement({ eventType: "cta_click", vendorId, ctaName: "message", source: "direct" });
-  };
   const vendorLocation = [vendor?.city, vendor?.country].filter(Boolean).join(", ");
   // The vendor's own words, or nothing. This used to be an invented paragraph
   // about T-shirts, sweaters and hospital uniforms, the same for every vendor.
@@ -481,34 +451,25 @@ const VendorProfile = () => {
             </div>
           </div>
 
-          {/* Action buttons (Follow / Chat / Call / WhatsApp).
-              WhatsApp appears only when THIS vendor has a reachable number of
-              their own (vendor_profiles.whatsapp, collected at onboarding) and
-              the same contact gate the Call button obeys allows it. It is a
-              click-to-chat link, not the Cloud API — see lib/messaging.ts. */}
-          <div className={cn("bg-white px-3 py-3 grid gap-2", hideContact ? "grid-cols-1" : canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
+          {/* Action buttons (Follow / Chat / Call Now). The WhatsApp button is gone (2026-11-28, Mitra: "there
+              should not be any WhatsApp button"): with four in a row the labels ran past their boxes on a phone.
+              The three left share its room: taller, larger type, one line each. */}
+          <div className={cn("bg-white px-3 py-3 grid gap-2", hideContact ? "grid-cols-1" : "grid-cols-3")}>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={toggleFollow}
-              className={cn("flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors",
-                following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-brand-buyer/10 text-brand-buyer hover:bg-brand-buyer/15")}>
-              {following ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+              className={cn(STORE_ACTION, following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-brand-buyer/10 text-brand-buyer hover:bg-brand-buyer/15")}>
+              {following ? <X className={STORE_ACTION_ICON} /> : <Check className={STORE_ACTION_ICON} />}
               {following ? "Unfollow" : "Follow"}
             </motion.button>
             {!hideContact && (
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => (isSample ? sampleContact() : navigate(chatHref))}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
-                <MessageCircle className="h-4 w-4" /> Chat
+                className={cn(STORE_ACTION, "border border-gray-200 text-gray-700 hover:border-gray-300")}>
+                <MessageCircle className={STORE_ACTION_ICON} /> Chat
               </motion.button>
             )}
             {!hideContact && (
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => callVendor(vendorId, brandName)}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors">
-                <Phone className="h-4 w-4" /> Call Now
-              </motion.button>
-            )}
-            {canWhatsApp && !isSample && (
-              <motion.button whileTap={TAP} transition={TAP_T} onClick={openWhatsApp}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
-                <Send className="h-4 w-4" /> WhatsApp
+                className={cn(STORE_ACTION, "bg-brand-buyer text-white hover:bg-brand-buyer/90")}>
+                <Phone className={STORE_ACTION_ICON} /> Call Now
               </motion.button>
             )}
           </div>

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -10,6 +11,12 @@ import { cn } from "@/lib/utils";
  * - a woven-cloth texture over the brand colour (a few lines of CSS: nothing to download, sharp at any size);
  * - the store's first letter as a large faint monogram on the right, sized to the box, so it never overflows;
  * - the dark wash only at the bottom, under the text, so the banner itself shows.
+ *
+ * 2026-11-28 (Mitra: the default "is optimised for the desktop view but not for phone view"). On a phone the letter
+ * filled the whole box and ran behind the name and counts, so it read as a cropped store name ("T" of "Teenplus").
+ * Below `sm` the default now shows the whole name as a faint wordmark across the top, sized to fit the width
+ * (<FittedWordmark>), clear of the back button and of the text at the bottom; from `sm` up the monogram stays.
+ * A seller's own banner is untouched.
  *
  * The parent sets the box size; this fills it.
  */
@@ -53,9 +60,14 @@ export default function StoreHeroBackground({
                 "repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 9px), repeating-linear-gradient(-45deg, #fff 0 1px, transparent 1px 9px)",
             }}
           />
+          {/* Phone: the whole name, between the top buttons (top-12) and the name block (the bottom ~58%). */}
+          <div aria-hidden className="absolute inset-x-5 top-12 bottom-[58%] text-white/[0.16] sm:hidden">
+            <FittedWordmark text={brandName.trim() || "Cosora"} />
+          </div>
+          {/* Wider screens: the first letter as a monogram on the right. */}
           <span
             aria-hidden
-            className="absolute right-[6%] top-1/2 -translate-y-[58%] select-none text-[min(52vw,15rem)] font-extrabold leading-none text-white/[0.12]"
+            className="absolute right-[6%] top-1/2 hidden -translate-y-[58%] select-none text-[15rem] font-extrabold leading-none text-white/[0.12] sm:block"
           >
             {initial}
           </span>
@@ -64,6 +76,48 @@ export default function StoreHeroBackground({
       {/* Readable text at the bottom only; the top two thirds of the banner stay as uploaded. */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
     </>
+  );
+}
+
+/**
+ * One line of text scaled to fill its box, never cut: drawn at a fixed size in an SVG, measured, and the SVG's
+ * viewBox set to the text's own bounds, so the browser scales it to the box (`meet`). Measured again when the box
+ * changes size (it is display:none on wider screens) and once the web font has loaded (other letter widths).
+ */
+function FittedWordmark({ text }: { text: string }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const textRef = useRef<SVGTextElement>(null);
+  const [viewBox, setViewBox] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = textRef.current;
+      if (!el) return;
+      try {
+        const b = el.getBBox();
+        if (b.width > 0 && b.height > 0) setViewBox(`${b.x} ${b.y} ${b.width} ${b.height}`);
+      } catch {
+        // Not rendered (display:none): measured when it is.
+      }
+    };
+    measure();
+    let alive = true;
+    void document.fonts?.ready.then(() => { if (alive) measure(); });
+    const ro = typeof ResizeObserver === "undefined" || !svgRef.current ? null : new ResizeObserver(measure);
+    if (ro && svgRef.current) ro.observe(svgRef.current);
+    return () => { alive = false; ro?.disconnect(); };
+  }, [text]);
+  return (
+    <svg
+      ref={svgRef}
+      viewBox={viewBox ?? "0 0 1 1"}
+      preserveAspectRatio="xMidYMid meet"
+      className="h-full w-full select-none"
+      style={{ visibility: viewBox ? "visible" : "hidden" }}
+    >
+      <text ref={textRef} x={0} y={0} fontSize={100} fontWeight={800} letterSpacing={4} fill="currentColor">
+        {text.toUpperCase()}
+      </text>
+    </svg>
   );
 }
 
